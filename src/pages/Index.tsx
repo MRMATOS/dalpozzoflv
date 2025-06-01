@@ -1,4 +1,3 @@
-
 import { ShoppingCart, Users, TrendingUp, FileText, Smartphone, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,8 +48,8 @@ const Index = () => {
                 <p className="text-sm text-green-600">Super Dal Pozzo</p>
               </div>
             </div>
-            <Button className="bg-green-600 hover:bg-green-700">
-              Acessar Sistema
+            <Button asChild className="bg-green-600 hover:bg-green-700">
+              <a href="/login">Acessar Sistema</a>
             </Button>
           </div>
         </div>
@@ -69,9 +68,11 @@ const Index = () => {
               Sistema completo para requisições, cotações e pedidos.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="bg-green-600 hover:bg-green-700 text-lg px-8">
-                <Clock className="w-5 h-5 mr-2" />
-                Começar Agora
+              <Button size="lg" asChild className="bg-green-600 hover:bg-green-700 text-lg px-8">
+                <a href="/login">
+                  <Clock className="w-5 h-5 mr-2" />
+                  Começar Agora
+                </a>
               </Button>
               <Button size="lg" variant="outline" className="text-lg px-8 border-green-200 hover:bg-green-50">
                 Ver Demonstração
@@ -140,8 +141,8 @@ const Index = () => {
               Configure o sistema com seus fornecedores, produtos e usuários. 
               Comece a economizar tempo e papel hoje mesmo.
             </p>
-            <Button size="lg" className="bg-white text-green-600 hover:bg-gray-100 text-lg px-8">
-              Iniciar Configuração
+            <Button size="lg" asChild className="bg-white text-green-600 hover:bg-gray-100 text-lg px-8">
+              <a href="/login">Iniciar Configuração</a>
             </Button>
           </div>
         </div>
