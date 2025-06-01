@@ -1,5 +1,7 @@
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,34 +21,27 @@ import {
 const Login = () => {
   const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, loading, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirecionar se já estiver logado
+  if (user) {
+    navigate("/dashboard");
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accessCode.trim()) return;
 
-    setIsLoading(true);
     setError("");
+    const result = await login(accessCode);
 
-    // Simular validação do código
-    // TODO: Implementar validação real com Supabase
-    setTimeout(() => {
-      const trimmedCode = accessCode.trim();
-      
-      if (trimmedCode === "expired") {
-        setError("Código expirado. Solicite um novo.");
-      } else if (trimmedCode === "first") {
-        setError("Primeiro acesso detectado. Altere seu código.");
-      } else if (trimmedCode !== "1234") {
-        setError("Código incorreto");
-      } else {
-        // Código válido - redirecionar para dashboard
-        console.log("Login successful");
-        // TODO: Implementar redirecionamento
-      }
-      
-      setIsLoading(false);
-    }, 1000);
+    if (result.success) {
+      navigate("/dashboard");
+    } else {
+      setError(result.error || "Erro desconhecido");
+    }
   };
 
   const isFormValid = accessCode.trim().length > 0;
@@ -93,10 +88,10 @@ const Login = () => {
             {/* Submit Button */}
             <Button
               type="submit"
-              disabled={!isFormValid || isLoading}
+              disabled={!isFormValid || loading}
               className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50"
             >
-              {isLoading ? "Verificando..." : "Entrar"}
+              {loading ? "Verificando..." : "Entrar"}
             </Button>
           </form>
 
