@@ -682,9 +682,7 @@ const Cotacao = () => {
                       Ver Resumo
                     </Button>
                   </div>
-                </div>
-
-                {/* Header fixo da tabela - FORA da box */}
+                  {/* Header fixo da tabela - FORA da box */}
                 <div className="sticky top-[120px] bg-white z-20 border rounded-t-lg shadow-sm">
                   <div className="grid grid-cols-[200px_200px_1fr] border-b bg-gray-50">
                     <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
@@ -702,6 +700,7 @@ const Cotacao = () => {
                       ))}
                     </div>
                   </div>
+                </div>
                 </div>
                 
                 {/* Conteúdo da tabela com scroll */}
