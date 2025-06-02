@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Plus, Trash2, ArrowLeft, Calculator } from 'lucide-react';
+import { Upload, Plus, Trash2, ArrowLeft, Calculator, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Interfaces para tipagem
@@ -384,6 +383,13 @@ const Cotacao = () => {
   const [fornecedores, setFornecedores] = useState<string[]>([]);
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
+  const [buscaProduto, setBuscaProduto] = useState('');
+
+  // Filtrar produtos baseado na busca
+  const produtosFiltrados = tabelaComparativa.filter(item => 
+    item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
+    item.tipo.toLowerCase().includes(buscaProduto.toLowerCase())
+  );
 
   // Função para extrair produtos de uma mensagem usando o dicionário hierárquico - MANTENDO LÓGICA ORIGINAL
   const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
@@ -654,26 +660,43 @@ const Cotacao = () => {
             {/* Tabela Comparativa */}
             {tabelaComparativa.length > 0 && (
               <div className="mb-8">
-                <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
-                <div className="overflow-x-auto">
+                {/* Header fixo com busca */}
+                <div className="sticky top-0 bg-white z-10 pb-4 border-b mb-4">
+                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
+                  
+                  {/* Input de busca */}
+                  <div className="relative max-w-md">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar produto..."
+                      value={buscaProduto}
+                      onChange={(e) => setBuscaProduto(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                {/* Container da tabela com scroll */}
+                <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
                   <Table>
-                    <TableHeader>
+                    {/* Header fixo da tabela */}
+                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
                       <TableRow>
-                        <TableHead>Produto</TableHead>
-                        <TableHead>Tipo</TableHead>
+                        <TableHead className="bg-white">Produto</TableHead>
+                        <TableHead className="bg-white">Tipo</TableHead>
                         {fornecedores.map(fornecedor => (
-                          <TableHead key={fornecedor} className="text-center min-w-[150px]">
+                          <TableHead key={fornecedor} className="text-center min-w-[150px] bg-white">
                             {fornecedor}
                           </TableHead>
                         ))}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tabelaComparativa.map((item, index) => {
+                      {produtosFiltrados.map((item, index) => {
                         // Calcular menor preço para este produto
                         const precos = fornecedores
                           .map(f => item.fornecedores[f])
-                          .filter(p => p !== null);
+                          .filter(p => p !== null) as number[];
                         const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
 
                         return (
@@ -689,7 +712,7 @@ const Cotacao = () => {
                               return (
                                 <TableCell key={fornecedor} className="text-center">
                                   {preco !== null ? (
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 flex flex-col items-center">
                                       <div className={`font-semibold ${
                                         isMelhorPreco 
                                           ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
@@ -726,14 +749,14 @@ const Cotacao = () => {
                         const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
 
                         return (
-                          <TableRow className="border-t-2 bg-gray-50 font-semibold">
-                            <TableCell colSpan={2}>TOTAL GERAL</TableCell>
+                          <TableRow className="border-t-2 bg-gray-50 font-semibold sticky bottom-0">
+                            <TableCell colSpan={2} className="bg-gray-50">TOTAL GERAL</TableCell>
                             {fornecedores.map(fornecedor => {
                               const total = calcularTotalFornecedor(fornecedor);
                               const isMelhorTotal = total === menorTotal && total > 0;
                               
                               return (
-                                <TableCell key={fornecedor} className="text-center">
+                                <TableCell key={fornecedor} className="text-center bg-gray-50">
                                   <div className={`text-lg font-bold ${
                                     isMelhorTotal 
                                       ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
@@ -787,8 +810,9 @@ const Cotacao = () => {
                   <li>1. Clique em "Adicionar Fornecedor" para cada fornecedor</li>
                   <li>2. Digite o nome do fornecedor e cole a mensagem do WhatsApp</li>
                   <li>3. Clique em "Processar Mensagens" para extrair os produtos</li>
-                  <li>4. Na tabela, insira as quantidades desejadas para cada produto</li>
-                  <li>5. Compare os totais por fornecedor na última linha</li>
+                  <li>4. Use a busca para encontrar produtos rapidamente</li>
+                  <li>5. Na tabela, insira as quantidades desejadas para cada produto</li>
+                  <li>6. Compare os totais por fornecedor na última linha</li>
                 </ol>
               </CardContent>
             </Card>
