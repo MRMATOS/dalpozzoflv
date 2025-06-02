@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Fornecedor {
   id: string;
@@ -10,14 +11,25 @@ export const useFornecedores = () => {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
 
   useEffect(() => {
-    // Simulando fornecedores cadastrados - depois será integrado com Supabase
-    const fornecedoresMock = [
-      { id: '1', nome: 'Fornecedor 1' },
-      { id: '2', nome: 'Fornecedor 2' },
-      { id: '3', nome: 'Fornecedor 3' },
-      { id: '4', nome: 'Fornecedor 4' },
-    ];
-    setFornecedores(fornecedoresMock);
+    const fetchFornecedores = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('fornecedores')
+          .select('id, nome')
+          .order('nome');
+
+        if (error) {
+          console.error('Erro ao buscar fornecedores:', error);
+          return;
+        }
+
+        setFornecedores(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar fornecedores:', error);
+      }
+    };
+
+    fetchFornecedores();
   }, []);
 
   return { fornecedores };
