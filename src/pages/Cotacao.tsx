@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, ArrowLeft, Calculator, Search, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
+import { useRequisicoes } from '@/hooks/useRequisicoes';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -35,6 +36,7 @@ const Cotacao = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
+  const { requisicoes, lojasComRequisicoes } = useRequisicoes();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
   const dicionarioProdutos = {
@@ -396,6 +398,50 @@ const Cotacao = () => {
   // Lista de fornecedores únicos dos produtos extraídos
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
 
+  // Função para calcular percentual de suprimento por loja
+  const calcularPercentualSuprimento = (loja: string) => {
+    const requisicoesDaLoja = requisicoes.filter(req => req.loja === loja);
+    
+    if (requisicoesDaLoja.length === 0) return 0;
+
+    let totalRequisitado = 0;
+    let totalSuprido = 0;
+
+    requisicoesDaLoja.forEach(requisicao => {
+      totalRequisitado += requisicao.quantidade_calculada;
+
+      // Encontrar o produto na tabela comparativa
+      const produtoTabela = tabelaComparativa.find(item => {
+        // Aqui você pode ajustar a lógica de match baseado no seu mapeamento de produtos
+        return item.produto.toLowerCase().includes(requisicao.produto_id.toLowerCase());
+      });
+
+      if (produtoTabela) {
+        // Somar todas as quantidades definidas para este produto
+        const quantidadesTotais = Object.values(produtoTabela.quantidades).reduce((sum, qtd) => sum + qtd, 0);
+        totalSuprido += Math.min(quantidadesTotais, requisicao.quantidade_calculada);
+      }
+    });
+
+    return totalRequisitado > 0 ? Math.round((totalSuprido / totalRequisitado) * 100) : 0;
+  };
+
+  // Função para obter quantidade requisitada para um produto
+  const obterQuantidadeRequisitada = (produto: string, tipo: string) => {
+    // Buscar nas requisições um produto que corresponda
+    const requisicaoEncontrada = requisicoes.find(req => {
+      // Lógica simplificada de match - pode ser refinada conforme necessário
+      return produto.toLowerCase().includes(req.produto_id.toLowerCase()) ||
+             req.produto_id.toLowerCase().includes(produto.toLowerCase());
+    });
+
+    if (requisicaoEncontrada) {
+      return `${requisicaoEncontrada.quantidade_calculada} ${requisicaoEncontrada.unidade}`;
+    }
+
+    return '-';
+  };
+
   // Função para extrair produtos de uma mensagem usando o dicionário hierárquico - MANTENDO LÓGICA ORIGINAL
   const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
     const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
@@ -714,11 +760,11 @@ const Cotacao = () => {
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
                 
-                {/* Área fixa com busca e botão resumo */}
+                {/* Área fixa com busca, cards de loja e botão resumo */}
                 <div className="sticky top-0 bg-white z-30 pb-4 border-b mb-4">
-                  <div className="flex justify-between items-center gap-4">
-                    {/* Input de busca */}
-                    <div className="relative flex-1 max-w-md">
+                  <div className="flex justify-between items-center gap-4 mb-4">
+                    {/* Input de busca - tamanho reduzido */}
+                    <div className="relative flex-1 max-w-xs">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         placeholder="Buscar produto..."
@@ -728,11 +774,36 @@ const Cotacao = () => {
                       />
                     </div>
                     
-                    {/* Botão Ver Resumo */}
+                    {/* Cards das lojas */}
+                    <div className="flex gap-3">
+                      {lojasComRequisicoes.map((loja) => {
+                        const percentual = calcularPercentualSuprimento(loja);
+                        const corFundo = percentual >= 80 ? 'bg-green-100' : percentual >= 50 ? 'bg-yellow-100' : 'bg-red-100';
+                        const corTexto = percentual >= 80 ? 'text-green-800' : percentual >= 50 ? 'text-yellow-800' : 'text-red-800';
+                        
+                        return (
+                          <div key={loja} className={`px-4 py-2 rounded-lg border ${corFundo} ${corTexto} min-w-[100px]`}>
+                            <div className="flex justify-between items-center text-sm font-medium">
+                              <span>{loja}</span>
+                              <span>{percentual}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                              <div 
+                                className={`h-1.5 rounded-full transition-all duration-300 ${
+                                  percentual >= 80 ? 'bg-green-500' : percentual >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${percentual}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Botão Ver Resumo - azul com texto branco */}
                     <Button 
                       onClick={irParaResumo}
-                      variant="outline" 
-                      className="flex items-center gap-2"
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                     >
                       <FileText className="w-4 h-4" />
                       Ver Resumo
@@ -741,10 +812,11 @@ const Cotacao = () => {
                 </div>
 
                 {/* Header fixo da tabela */}
-                <div className="sticky top-[120px] bg-white z-20 border rounded-t-lg shadow-sm">
-                  <div className="grid grid-cols-[200px_200px_1fr] border-b bg-gray-50">
+                <div className="sticky top-[140px] bg-white z-20 border rounded-t-lg shadow-sm">
+                  <div className="grid grid-cols-[200px_200px_150px_1fr] border-b bg-gray-50">
                     <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
                     <div className="p-4 font-medium text-muted-foreground border-r">Tipo</div>
+                    <div className="p-4 font-medium text-muted-foreground border-r">Requisição</div>
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                       {fornecedoresComProdutos.map((fornecedor, index) => (
                         <div 
@@ -770,10 +842,13 @@ const Cotacao = () => {
                     const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
 
                     return (
-                      <div key={index} className="grid grid-cols-[200px_200px_1fr] border-b last:border-b-0 hover:bg-gray-50">
+                      <div key={index} className="grid grid-cols-[200px_200px_150px_1fr] border-b last:border-b-0 hover:bg-gray-50">
                         <div className="p-4 font-medium border-r flex items-center">{item.produto}</div>
                         <div className="p-4 border-r flex items-center">
                           <Badge variant="secondary">{item.tipo}</Badge>
+                        </div>
+                        <div className="p-4 border-r flex items-center text-sm text-gray-600">
+                          {obterQuantidadeRequisitada(item.produto, item.tipo)}
                         </div>
                         <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                           {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
@@ -803,7 +878,7 @@ const Cotacao = () => {
                                       min="0"
                                       value={item.quantidades[fornecedor] || ''}
                                       onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                      className="w-16 text-center"
+                                      className="w-20 text-center"
                                     />
                                   </>
                                 ) : (
@@ -820,8 +895,9 @@ const Cotacao = () => {
                 
                 {/* Linha de Totais fixa no bottom */}
                 <div className="sticky bottom-0 bg-gray-50 border border-t-2 rounded-b-lg">
-                  <div className="grid grid-cols-[200px_200px_1fr] font-semibold">
+                  <div className="grid grid-cols-[200px_200px_150px_1fr] font-semibold">
                     <div className="p-4 bg-gray-50 border-r flex items-center">TOTAL GERAL</div>
+                    <div className="p-4 bg-gray-50 border-r"></div>
                     <div className="p-4 bg-gray-50 border-r"></div>
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                       {(() => {
