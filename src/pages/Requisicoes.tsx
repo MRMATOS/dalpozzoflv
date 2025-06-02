@@ -61,7 +61,7 @@ const Requisicoes = () => {
     mutationFn: async (items: RequisitionItem[]) => {
       // Primeiro, criar a requisição
       const { data: requisicao, error: requisicaoError } = await supabase
-        .from('requisoes')
+        .from('requisicoes')
         .insert([{
           usuario_id: user?.id,
           loja: user?.loja,
