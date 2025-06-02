@@ -12,14 +12,26 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Save, Trash2, Edit } from 'lucide-react';
 import { useLojas } from '@/hooks/useLojas';
 import { useAuth } from '@/contexts/AuthContext';
+import { z } from 'zod';
 
 const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'];
+
+const userSchema = z.object({
+  email: z.string().email("Email inválido"),
+  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
+  nome: z.string().min(1, "Nome é obrigatório"),
+  loja: z.string().min(1, "Loja é obrigatória"),
+  codigo_acesso: z.string().min(3, "Código de acesso deve ter pelo menos 3 caracteres"),
+  tipo: z.enum(['master', 'comprador', 'requisitante', 'estoque'])
+});
 
 const UsuariosTab = () => {
   const queryClient = useQueryClient();
   const { lojas } = useLojas();
-  const { user } = useAuth();
+  const { hasRole, signUp } = useAuth();
   const [newUser, setNewUser] = useState({
+    email: '',
+    password: '',
     nome: '',
     codigo_acesso: '',
     tipo: 'requisitante',
@@ -27,76 +39,122 @@ const UsuariosTab = () => {
   });
   const [showNewUser, setShowNewUser] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // Verificar se o usuário atual é master
-  const isMaster = user?.tipo === 'master';
+  const isMaster = hasRole('master');
 
   const { data: usuarios, isLoading } = useQuery({
-    queryKey: ['usuarios'],
+    queryKey: ['profiles-with-roles'],
     queryFn: async () => {
-      console.log('Buscando usuários...');
+      console.log('Buscando perfis de usuários...');
       const { data, error } = await supabase
-        .from('usuarios')
-        .select('*')
+        .from('profiles')
+        .select(`
+          *,
+          user_roles!inner(role)
+        `)
         .order('nome');
       
       if (error) {
-        console.error('Erro ao buscar usuários:', error);
+        console.error('Erro ao buscar perfis:', error);
         throw error;
       }
-      console.log('Usuários encontrados:', data);
-      return data;
+      
+      // Format the data to include roles
+      const formattedData = data?.map(profile => ({
+        ...profile,
+        tipo: (profile.user_roles as any)?.[0]?.role || 'requisitante'
+      })) || [];
+      
+      console.log('Perfis encontrados:', formattedData);
+      return formattedData;
     },
-    enabled: isMaster, // Só buscar se for master
+    enabled: isMaster,
   });
 
   const createUserMutation = useMutation({
-    mutationFn: async (user: any) => {
-      console.log('Criando usuário:', user);
-      const { data, error } = await supabase
-        .from('usuarios')
-        .insert([user])
-        .select()
-        .single();
+    mutationFn: async (userData: any) => {
+      console.log('Criando usuário:', userData);
       
-      if (error) {
-        console.error('Erro ao criar usuário:', error);
-        throw error;
+      // Validate input
+      const result = userSchema.safeParse(userData);
+      if (!result.success) {
+        const errors: Record<string, string> = {};
+        result.error.errors.forEach(err => {
+          if (err.path[0]) {
+            errors[err.path[0].toString()] = err.message;
+          }
+        });
+        setValidationErrors(errors);
+        throw new Error('Dados inválidos');
       }
-      console.log('Usuário criado:', data);
-      return data;
+      
+      setValidationErrors({});
+      
+      // Create user with Supabase Auth
+      const signupResult = await signUp(userData.email, userData.password, {
+        nome: userData.nome,
+        loja: userData.loja,
+        codigo_acesso: userData.codigo_acesso,
+        tipo: userData.tipo
+      });
+      
+      if (!signupResult.success) {
+        throw new Error(signupResult.error || 'Erro ao criar usuário');
+      }
+      
+      return signupResult;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
       toast.success('Usuário criado com sucesso!');
-      setNewUser({ nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
+      setNewUser({ email: '', password: '', nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
       setShowNewUser(false);
     },
     onError: (error: any) => {
       console.error('Erro na mutation:', error);
-      toast.error('Erro ao criar usuário: ' + error.message);
+      if (error.message !== 'Dados inválidos') {
+        toast.error('Erro ao criar usuário: ' + error.message);
+      }
     },
   });
 
   const updateUserMutation = useMutation({
     mutationFn: async (user: any) => {
-      console.log('Atualizando usuário:', user);
-      const { data, error } = await supabase
-        .from('usuarios')
-        .update(user)
-        .eq('id', user.id)
-        .select()
-        .single();
+      console.log('Atualizando perfil:', user);
       
-      if (error) {
-        console.error('Erro ao atualizar usuário:', error);
-        throw error;
+      // Update profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          nome: user.nome,
+          loja: user.loja,
+          codigo_acesso: user.codigo_acesso,
+          ativo: user.ativo
+        })
+        .eq('id', user.id);
+      
+      if (profileError) {
+        console.error('Erro ao atualizar perfil:', profileError);
+        throw profileError;
       }
-      console.log('Usuário atualizado:', data);
-      return data;
+      
+      // Update role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: user.tipo })
+        .eq('user_id', user.id);
+      
+      if (roleError) {
+        console.error('Erro ao atualizar role:', roleError);
+        throw roleError;
+      }
+      
+      console.log('Perfil atualizado');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
       toast.success('Usuário atualizado com sucesso!');
       setEditingUser(null);
     },
@@ -109,10 +167,9 @@ const UsuariosTab = () => {
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: string) => {
       console.log('Deletando usuário:', userId);
-      const { error } = await supabase
-        .from('usuarios')
-        .delete()
-        .eq('id', userId);
+      
+      // Delete from auth.users (this will cascade to profiles and user_roles)
+      const { error } = await supabase.auth.admin.deleteUser(userId);
       
       if (error) {
         console.error('Erro ao deletar usuário:', error);
@@ -121,7 +178,7 @@ const UsuariosTab = () => {
       console.log('Usuário deletado');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
       toast.success('Usuário removido com sucesso!');
     },
     onError: (error: any) => {
@@ -184,11 +241,37 @@ const UsuariosTab = () => {
           <div className="mb-6 p-4 border rounded-lg bg-gray-50">
             <h3 className="font-semibold mb-4">Novo Usuário</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Input
-                placeholder="Nome completo"
-                value={newUser.nome}
-                onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
-              />
+              <div>
+                <Input
+                  placeholder="Email"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                />
+                {validationErrors.email && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.email}</p>
+                )}
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Senha (min. 6 caracteres)"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                />
+                {validationErrors.password && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.password}</p>
+                )}
+              </div>
+              <div>
+                <Input
+                  placeholder="Nome completo"
+                  value={newUser.nome}
+                  onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
+                />
+                {validationErrors.nome && (
+                  <p className="text-sm text-red-600 mt-1">{validationErrors.nome}</p>
+                )}
+              </div>
               <div className="flex space-x-2">
                 <Input
                   placeholder="Código de acesso"
@@ -199,6 +282,9 @@ const UsuariosTab = () => {
                   Gerar
                 </Button>
               </div>
+              {validationErrors.codigo_acesso && (
+                <p className="text-sm text-red-600 mt-1">{validationErrors.codigo_acesso}</p>
+              )}
               <Select value={newUser.tipo} onValueChange={(value) => setNewUser({ ...newUser, tipo: value })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -223,10 +309,13 @@ const UsuariosTab = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {validationErrors.loja && (
+                <p className="text-sm text-red-600 mt-1">{validationErrors.loja}</p>
+              )}
               <div className="flex space-x-2">
                 <Button
                   onClick={() => createUserMutation.mutate(newUser)}
-                  disabled={!newUser.nome.trim() || !newUser.codigo_acesso.trim() || !newUser.loja.trim() || createUserMutation.isPending}
+                  disabled={createUserMutation.isPending}
                 >
                   {createUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Salvar
@@ -243,6 +332,7 @@ const UsuariosTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
               <TableHead>Código de Acesso</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Loja</TableHead>
@@ -263,6 +353,9 @@ const UsuariosTab = () => {
                   ) : (
                     usuario.nome
                   )}
+                </TableCell>
+                <TableCell className="text-sm text-gray-600">
+                  Email não disponível
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   {editingUser?.id === usuario.id ? (

@@ -42,18 +42,21 @@ export type Database = {
           fornecedor_id: string | null
           id: string
           requisicao_id: string | null
+          user_id: string | null
         }
         Insert: {
           data?: string | null
           fornecedor_id?: string | null
           id?: string
           requisicao_id?: string | null
+          user_id?: string | null
         }
         Update: {
           data?: string | null
           fornecedor_id?: string | null
           id?: string
           requisicao_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -331,6 +334,7 @@ export type Database = {
           fornecedor_id: string | null
           id: string
           status: string | null
+          user_id: string | null
         }
         Insert: {
           criado_em?: string | null
@@ -338,6 +342,7 @@ export type Database = {
           fornecedor_id?: string | null
           id?: string
           status?: string | null
+          user_id?: string | null
         }
         Update: {
           criado_em?: string | null
@@ -345,6 +350,7 @@ export type Database = {
           fornecedor_id?: string | null
           id?: string
           status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -393,12 +399,43 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          ativo: boolean | null
+          codigo_acesso: string
+          created_at: string | null
+          id: string
+          loja: string
+          nome: string
+          ultimo_login: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          codigo_acesso: string
+          created_at?: string | null
+          id: string
+          loja: string
+          nome: string
+          ultimo_login?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          codigo_acesso?: string
+          created_at?: string | null
+          id?: string
+          loja?: string
+          nome?: string
+          ultimo_login?: string | null
+        }
+        Relationships: []
+      }
       requisicoes: {
         Row: {
           data_requisicao: string | null
           id: string
           loja: string
           status: string | null
+          user_id: string | null
           usuario_id: string | null
         }
         Insert: {
@@ -406,6 +443,7 @@ export type Database = {
           id?: string
           loja: string
           status?: string | null
+          user_id?: string | null
           usuario_id?: string | null
         }
         Update: {
@@ -413,6 +451,7 @@ export type Database = {
           id?: string
           loja?: string
           status?: string | null
+          user_id?: string | null
           usuario_id?: string | null
         }
         Relationships: []
@@ -442,6 +481,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
       }
       usuarios: {
         Row: {
@@ -481,13 +541,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_profile: {
+        Args: { _user_id: string }
+        Returns: {
+          ativo: boolean | null
+          codigo_acesso: string
+          created_at: string | null
+          id: string
+          loja: string
+          nome: string
+          ultimo_login: string | null
+        }
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
       is_master_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "master" | "comprador" | "requisitante" | "estoque"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -602,6 +681,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["master", "comprador", "requisitante", "estoque"],
+    },
   },
 } as const
