@@ -669,46 +669,85 @@ const Cotacao = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {tabelaComparativa.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="font-medium">{item.produto}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{item.tipo}</Badge>
-                          </TableCell>
-                          {fornecedores.map(fornecedor => (
-                            <TableCell key={fornecedor} className="text-center">
-                              {item.fornecedores[fornecedor] !== null ? (
-                                <div className="space-y-2">
-                                  <div className="font-semibold text-green-600">
-                                    R$ {item.fornecedores[fornecedor]!.toFixed(2)}
-                                  </div>
-                                  <Input
-                                    type="number"
-                                    placeholder="Qtd"
-                                    min="0"
-                                    value={item.quantidades[fornecedor] || ''}
-                                    onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                    className="w-16 text-center"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="text-gray-400">-</div>
-                              )}
+                      {tabelaComparativa.map((item, index) => {
+                        // Calcular menor preço para este produto
+                        const precos = fornecedores
+                          .map(f => item.fornecedores[f])
+                          .filter(p => p !== null);
+                        const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+
+                        return (
+                          <TableRow key={index}>
+                            <TableCell className="font-medium">{item.produto}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{item.tipo}</Badge>
                             </TableCell>
-                          ))}
-                        </TableRow>
-                      ))}
+                            {fornecedores.map(fornecedor => {
+                              const preco = item.fornecedores[fornecedor];
+                              const isMelhorPreco = preco === menorPreco && preco !== null;
+                              
+                              return (
+                                <TableCell key={fornecedor} className="text-center">
+                                  {preco !== null ? (
+                                    <div className="space-y-2">
+                                      <div className={`font-semibold ${
+                                        isMelhorPreco 
+                                          ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
+                                          : 'text-gray-700'
+                                      }`}>
+                                        R$ {preco.toFixed(2)}
+                                        {isMelhorPreco && ' 🏆'}
+                                      </div>
+                                      <Input
+                                        type="number"
+                                        placeholder="Qtd"
+                                        min="0"
+                                        value={item.quantidades[fornecedor] || ''}
+                                        onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
+                                        className="w-16 text-center"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="text-gray-400">-</div>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        );
+                      })}
+                      
                       {/* Linha de Totais */}
-                      <TableRow className="border-t-2 bg-gray-50 font-semibold">
-                        <TableCell colSpan={2}>TOTAL GERAL</TableCell>
-                        {fornecedores.map(fornecedor => (
-                          <TableCell key={fornecedor} className="text-center">
-                            <div className="text-lg font-bold text-blue-600">
-                              R$ {calcularTotalFornecedor(fornecedor).toFixed(2)}
-                            </div>
-                          </TableCell>
-                        ))}
-                      </TableRow>
+                      {(() => {
+                        // Calcular totais e encontrar o menor
+                        const totais = fornecedores
+                          .map(f => calcularTotalFornecedor(f))
+                          .filter(t => t > 0);
+                        const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
+
+                        return (
+                          <TableRow className="border-t-2 bg-gray-50 font-semibold">
+                            <TableCell colSpan={2}>TOTAL GERAL</TableCell>
+                            {fornecedores.map(fornecedor => {
+                              const total = calcularTotalFornecedor(fornecedor);
+                              const isMelhorTotal = total === menorTotal && total > 0;
+                              
+                              return (
+                                <TableCell key={fornecedor} className="text-center">
+                                  <div className={`text-lg font-bold ${
+                                    isMelhorTotal 
+                                      ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
+                                      : 'text-blue-600'
+                                  }`}>
+                                    R$ {total.toFixed(2)}
+                                    {isMelhorTotal && ' 🏆'}
+                                  </div>
+                                </TableCell>
+                              );
+                            })}
+                          </TableRow>
+                        );
+                      })()}
                     </TableBody>
                   </Table>
                 </div>
