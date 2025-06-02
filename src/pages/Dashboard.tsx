@@ -324,7 +324,7 @@ const Dashboard = () => {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{profile?.roles?.[0]} - {profile?.loja}</p>
+                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
               </div>
               <Button variant="outline" onClick={signOut} size="sm">
                 Sair
