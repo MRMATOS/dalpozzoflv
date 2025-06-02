@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +13,7 @@ import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +39,11 @@ const App = () => (
             <Route path="/requisicoes" element={
               <ProtectedRoute>
                 <Requisicoes />
+              </ProtectedRoute>
+            } />
+            <Route path="/historico-requisicoes" element={
+              <ProtectedRoute>
+                <HistoricoRequisicoes />
               </ProtectedRoute>
             } />
             <Route path="/cotacao" element={

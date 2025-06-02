@@ -198,6 +198,14 @@ const Requisicoes = () => {
             </div>
             
             <div className="flex items-center space-x-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/historico-requisicoes')}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Ver Histórico
+              </Button>
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{user?.nome}</p>
                 <p className="text-xs text-gray-500">Requisitante</p>
