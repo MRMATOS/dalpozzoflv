@@ -10,6 +10,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Upload, Plus, Trash2, ArrowLeft, Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Interfaces para tipagem
+interface ProdutoExtraido {
+  produto: string;
+  tipo: string;
+  preco: number;
+  fornecedor: string;
+  linhaOriginal: string;
+  aliasUsado: string;
+}
+
+interface ItemTabelaComparativa {
+  produto: string;
+  tipo: string;
+  fornecedores: { [fornecedor: string]: number | null };
+  quantidades: { [fornecedor: string]: number };
+}
+
+interface MensagemFornecedor {
+  fornecedor: string;
+  mensagem: string;
+}
+
 const Cotacao = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -88,15 +110,15 @@ const Cotacao = () => {
     }
   };
 
-  const [mensagens, setMensagens] = useState([]);
-  const [fornecedores, setFornecedores] = useState([]);
-  const [produtosExtraidos, setProdutosExtraidos] = useState([]);
-  const [tabelaComparativa, setTabelaComparativa] = useState([]);
+  const [mensagens, setMensagens] = useState<MensagemFornecedor[]>([]);
+  const [fornecedores, setFornecedores] = useState<string[]>([]);
+  const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
+  const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
 
   // Função para extrair produtos de uma mensagem usando o dicionário hierárquico
-  const extrairProdutos = (mensagem, nomeFornecedor) => {
+  const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
     const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
-    const produtos = [];
+    const produtos: ProdutoExtraido[] = [];
 
     linhas.forEach(linha => {
       const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
@@ -105,7 +127,7 @@ const Cotacao = () => {
       if (precos && precos.length > 0) {
         const preco = precos[precos.length - 1].replace(',', '.');
         const linhaNormalizada = linha.toLowerCase();
-        let melhorMatch = { length: 0, produto: null, tipo: null, alias: '' };
+        let melhorMatch = { length: 0, produto: null as string | null, tipo: null as string | null, alias: '' };
 
         for (const [nomeProduto, tipos] of Object.entries(dicionarioProdutos)) {
           for (const [nomeTipo, aliases] of Object.entries(tipos)) {
@@ -124,7 +146,7 @@ const Cotacao = () => {
           }
         }
 
-        if (melhorMatch.produto) {
+        if (melhorMatch.produto && melhorMatch.tipo) {
           let infoAdicional = linha;
           precos.forEach(p => {
             infoAdicional = infoAdicional.replace(p, '');
@@ -173,20 +195,20 @@ const Cotacao = () => {
     setMensagens([...mensagens, { fornecedor: '', mensagem: '' }]);
   };
 
-  const atualizarMensagem = (index, campo, valor) => {
+  const atualizarMensagem = (index: number, campo: keyof MensagemFornecedor, valor: string) => {
     const novasMensagens = [...mensagens];
     novasMensagens[index][campo] = valor;
     setMensagens(novasMensagens);
   };
 
-  const removerMensagem = (index) => {
+  const removerMensagem = (index: number) => {
     const novasMensagens = mensagens.filter((_, i) => i !== index);
     setMensagens(novasMensagens);
   };
 
   const processarMensagens = () => {
-    let todosProdutos = [];
-    let nomesFornecedores = [];
+    let todosProdutos: ProdutoExtraido[] = [];
+    let nomesFornecedores: string[] = [];
 
     mensagens.forEach(({ fornecedor, mensagem }) => {
       if (fornecedor && mensagem) {
@@ -209,8 +231,8 @@ const Cotacao = () => {
     }
   };
 
-  const criarTabelaComparativa = (produtos, fornecedores) => {
-    const produtosAgrupados = {};
+  const criarTabelaComparativa = (produtos: ProdutoExtraido[], fornecedores: string[]) => {
+    const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
     produtos.forEach(produto => {
       const chave = `${produto.produto}_${produto.tipo}`;
@@ -239,13 +261,13 @@ const Cotacao = () => {
     setTabelaComparativa(tabela);
   };
 
-  const atualizarQuantidade = (produtoIndex, fornecedor, quantidade) => {
+  const atualizarQuantidade = (produtoIndex: number, fornecedor: string, quantidade: string) => {
     const novaTabela = [...tabelaComparativa];
     novaTabela[produtoIndex].quantidades[fornecedor] = parseInt(quantidade) || 0;
     setTabelaComparativa(novaTabela);
   };
 
-  const calcularTotalFornecedor = (fornecedor) => {
+  const calcularTotalFornecedor = (fornecedor: string) => {
     return tabelaComparativa.reduce((total, item) => {
       const preco = item.fornecedores[fornecedor];
       const quantidade = item.quantidades[fornecedor] || 0;
@@ -372,7 +394,7 @@ const Cotacao = () => {
                               {item.fornecedores[fornecedor] !== null ? (
                                 <div className="space-y-2">
                                   <div className="font-semibold text-green-600">
-                                    R$ {item.fornecedores[fornecedor].toFixed(2)}
+                                    R$ {item.fornecedores[fornecedor]!.toFixed(2)}
                                   </div>
                                   <Input
                                     type="number"
