@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,8 @@ import {
   Plus,
   Eye,
   RefreshCw,
-  Settings
+  Settings,
+  History
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,7 +34,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-orange-600">12</div>
                 <p className="text-xs text-muted-foreground">+3 desde ontem</p>
-                <Button size="sm" className="mt-3 bg-orange-600 hover:bg-orange-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-orange-600 hover:bg-orange-700"
+                  onClick={() => navigate('/requisicoes')}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   Ver Todas
                 </Button>
@@ -66,7 +72,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">8</div>
                 <p className="text-xs text-muted-foreground">Esta semana</p>
-                <Button size="sm" className="mt-3 bg-green-600 hover:bg-green-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate('/resumo-pedido')}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   Histórico
                 </Button>
@@ -78,21 +88,6 @@ const Dashboard = () => {
       case 'requisitante':
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Minhas Requisições</CardTitle>
-                <ClipboardList className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">5</div>
-                <p className="text-xs text-muted-foreground">3 pendentes, 2 atendidas</p>
-                <Button size="sm" className="mt-3 bg-blue-600 hover:bg-blue-700">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Ver Histórico
-                </Button>
-              </CardContent>
-            </Card>
-
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Nova Requisição</CardTitle>
@@ -114,13 +109,36 @@ const Dashboard = () => {
 
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Minhas Requisições</CardTitle>
+                <ClipboardList className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">5</div>
+                <p className="text-xs text-muted-foreground">3 pendentes, 2 atendidas</p>
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => navigate('/requisicoes')}
+                >
+                  <History className="w-4 h-4 mr-2" />
+                  Ver Histórico
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Status da Loja</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-yellow-600">OK</div>
                 <p className="text-xs text-muted-foreground">Estoque: {user?.loja}</p>
-                <Button size="sm" className="mt-3 bg-yellow-600 hover:bg-yellow-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-yellow-600 hover:bg-yellow-700"
+                  onClick={() => window.location.reload()}
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Atualizar
                 </Button>
@@ -140,7 +158,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">7</div>
                 <p className="text-xs text-muted-foreground">Produtos com estoque baixo</p>
-                <Button size="sm" className="mt-3 bg-red-600 hover:bg-red-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-red-600 hover:bg-red-700"
+                  onClick={() => navigate('/estoque')}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   Ver Alertas
                 </Button>
@@ -155,7 +177,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">Ação</div>
                 <p className="text-xs text-muted-foreground">Registrar entrada/saída</p>
-                <Button size="sm" className="mt-3 bg-blue-600 hover:bg-blue-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => navigate('/estoque')}
+                >
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Atualizar
                 </Button>
@@ -170,7 +196,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-sm font-bold text-orange-600">Alface</div>
                 <p className="text-xs text-muted-foreground">Precisa reposição urgente</p>
-                <Button size="sm" className="mt-3 bg-orange-600 hover:bg-orange-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-orange-600 hover:bg-orange-700"
+                  onClick={() => navigate('/estoque')}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   Ver Todos
                 </Button>
@@ -184,15 +214,19 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
-                <Users className="h-4 w-4 text-blue-600" />
+                <CardTitle className="text-sm font-medium">Nova Cotação</CardTitle>
+                <BarChart3 className="h-4 w-4 text-purple-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">24</div>
-                <p className="text-xs text-muted-foreground">+2 este mês</p>
-                <Button size="sm" className="mt-3 bg-blue-600 hover:bg-blue-700">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Gerenciar
+                <div className="text-2xl font-bold text-purple-600">Criar</div>
+                <p className="text-xs text-muted-foreground">Comparar preços dos fornecedores</p>
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-purple-600 hover:bg-purple-700"
+                  onClick={() => navigate('/cotacao')}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Cotação
                 </Button>
               </CardContent>
             </Card>
@@ -205,7 +239,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">18</div>
                 <p className="text-xs text-muted-foreground">12 pendentes</p>
-                <Button size="sm" className="mt-3 bg-green-600 hover:bg-green-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate('/requisicoes')}
+                >
                   <Eye className="w-4 h-4 mr-2" />
                   Ver Todas
                 </Button>
@@ -214,15 +252,19 @@ const Dashboard = () => {
 
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cotações Ativas</CardTitle>
-                <BarChart3 className="h-4 w-4 text-purple-600" />
+                <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
+                <Users className="h-4 w-4 text-blue-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-purple-600">6</div>
-                <p className="text-xs text-muted-foreground">3 finalizadas hoje</p>
-                <Button size="sm" className="mt-3 bg-purple-600 hover:bg-purple-700">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Monitorar
+                <div className="text-2xl font-bold text-blue-600">24</div>
+                <p className="text-xs text-muted-foreground">+2 este mês</p>
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => navigate('/configuracoes')}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Gerenciar
                 </Button>
               </CardContent>
             </Card>
