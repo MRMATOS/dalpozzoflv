@@ -598,6 +598,24 @@ const Cotacao = () => {
     }, 0);
   };
 
+  const irParaResumo = () => {
+    // Verificar se há produtos com quantidades definidas
+    const temProdutosComQuantidade = tabelaComparativa.some(item => 
+      Object.values(item.quantidades).some(quantidade => quantidade > 0)
+    );
+
+    if (!temProdutosComQuantidade) {
+      toast.error('Defina as quantidades dos produtos antes de gerar o resumo');
+      return;
+    }
+
+    navigate('/resumo-pedido', { 
+      state: { 
+        tabelaComparativa 
+      } 
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -711,7 +729,11 @@ const Cotacao = () => {
                     </div>
                     
                     {/* Botão Ver Resumo */}
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button 
+                      onClick={irParaResumo}
+                      variant="outline" 
+                      className="flex items-center gap-2"
+                    >
                       <FileText className="w-4 h-4" />
                       Ver Resumo
                     </Button>

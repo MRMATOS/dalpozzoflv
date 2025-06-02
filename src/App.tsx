@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Configuracoes from "./pages/Configuracoes";
 import Requisicoes from "./pages/Requisicoes";
 import Cotacao from "./pages/Cotacao";
+import ResumoPedido from "./pages/ResumoPedido";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -43,6 +44,11 @@ const App = () => (
             <Route path="/cotacao" element={
               <ProtectedRoute>
                 <Cotacao />
+              </ProtectedRoute>
+            } />
+            <Route path="/resumo-pedido" element={
+              <ProtectedRoute>
+                <ResumoPedido />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Index />} />

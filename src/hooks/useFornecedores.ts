@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 interface Fornecedor {
   id: string;
   nome: string;
+  telefone?: string;
 }
 
 export const useFornecedores = () => {
@@ -15,7 +16,7 @@ export const useFornecedores = () => {
       try {
         const { data, error } = await supabase
           .from('fornecedores')
-          .select('id, nome')
+          .select('id, nome, telefone')
           .order('nome');
 
         if (error) {
