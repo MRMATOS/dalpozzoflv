@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Plus, Trash2, ArrowLeft, Calculator, Search } from 'lucide-react';
+import { Upload, Plus, Trash2, ArrowLeft, Calculator, Search, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 // Interfaces para tipagem
@@ -660,119 +660,141 @@ const Cotacao = () => {
             {/* Tabela Comparativa */}
             {tabelaComparativa.length > 0 && (
               <div className="mb-8">
-                {/* Header fixo com busca */}
-                <div className="sticky top-0 bg-white z-10 pb-4 border-b mb-4">
-                  <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
-                  
-                  {/* Input de busca */}
-                  <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <Input
-                      placeholder="Buscar produto..."
-                      value={buscaProduto}
-                      onChange={(e) => setBuscaProduto(e.target.value)}
-                      className="pl-10"
-                    />
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
+                
+                {/* Área fixa com busca e botão resumo */}
+                <div className="sticky top-0 bg-white z-20 pb-4 border-b mb-4">
+                  <div className="flex justify-between items-center gap-4">
+                    {/* Input de busca */}
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <Input
+                        placeholder="Buscar produto..."
+                        value={buscaProduto}
+                        onChange={(e) => setBuscaProduto(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    
+                    {/* Botão Ver Resumo */}
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Ver Resumo
+                    </Button>
                   </div>
                 </div>
 
-                {/* Container da tabela com scroll */}
-                <div className="overflow-x-auto max-h-[600px] overflow-y-auto border rounded-lg">
-                  <Table>
-                    {/* Header fixo da tabela */}
-                    <TableHeader className="sticky top-0 bg-white z-10 shadow-sm">
-                      <TableRow>
-                        <TableHead className="bg-white">Produto</TableHead>
-                        <TableHead className="bg-white">Tipo</TableHead>
-                        {fornecedores.map(fornecedor => (
-                          <TableHead key={fornecedor} className="text-center min-w-[150px] bg-white">
-                            {fornecedor}
-                          </TableHead>
-                        ))}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {produtosFiltrados.map((item, index) => {
-                        // Calcular menor preço para este produto
-                        const precos = fornecedores
-                          .map(f => item.fornecedores[f])
-                          .filter(p => p !== null) as number[];
-                        const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+                {/* Container da tabela com header fixo */}
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Header fixo da tabela */}
+                  <div className="sticky top-[120px] bg-white z-10 border-b shadow-sm">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="bg-white border-r">Produto</TableHead>
+                          <TableHead className="bg-white border-r">Tipo</TableHead>
+                          {fornecedores.map(fornecedor => (
+                            <TableHead key={fornecedor} className="text-center min-w-[150px] bg-white border-r last:border-r-0">
+                              {fornecedor}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      </TableHeader>
+                    </Table>
+                  </div>
+                  
+                  {/* Conteúdo da tabela com scroll */}
+                  <div className="max-h-[500px] overflow-y-auto">
+                    <Table>
+                      <TableBody>
+                        {produtosFiltrados.map((item, index) => {
+                          // Calcular menor preço para este produto
+                          const precos = fornecedores
+                            .map(f => item.fornecedores[f])
+                            .filter(p => p !== null) as number[];
+                          const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
 
-                        return (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{item.produto}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{item.tipo}</Badge>
-                            </TableCell>
-                            {fornecedores.map(fornecedor => {
-                              const preco = item.fornecedores[fornecedor];
-                              const isMelhorPreco = preco === menorPreco && preco !== null;
-                              
-                              return (
-                                <TableCell key={fornecedor} className="text-center">
-                                  {preco !== null ? (
-                                    <div className="space-y-2 flex flex-col items-center">
-                                      <div className={`font-semibold ${
-                                        isMelhorPreco 
-                                          ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
-                                          : 'text-gray-700'
-                                      }`}>
-                                        R$ {preco.toFixed(2)}
-                                        {isMelhorPreco && ' 🏆'}
+                          return (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium border-r">{item.produto}</TableCell>
+                              <TableCell className="border-r">
+                                <Badge variant="secondary">{item.tipo}</Badge>
+                              </TableCell>
+                              {fornecedores.map(fornecedor => {
+                                const preco = item.fornecedores[fornecedor];
+                                const isMelhorPreco = preco === menorPreco && preco !== null;
+                                
+                                return (
+                                  <TableCell key={fornecedor} className="text-center border-r last:border-r-0">
+                                    {preco !== null ? (
+                                      <div className="space-y-2 flex flex-col items-center">
+                                        <div className={`font-semibold ${
+                                          isMelhorPreco 
+                                            ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
+                                            : 'text-gray-700'
+                                        }`}>
+                                          R$ {preco.toFixed(2)}
+                                          {isMelhorPreco && ' 🏆'}
+                                        </div>
+                                        <Input
+                                          type="number"
+                                          placeholder="Qtd"
+                                          min="0"
+                                          value={item.quantidades[fornecedor] || ''}
+                                          onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
+                                          className="w-16 text-center"
+                                        />
                                       </div>
-                                      <Input
-                                        type="number"
-                                        placeholder="Qtd"
-                                        min="0"
-                                        value={item.quantidades[fornecedor] || ''}
-                                        onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                        className="w-16 text-center"
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="text-gray-400">-</div>
-                                  )}
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        );
-                      })}
-                      
-                      {/* Linha de Totais */}
-                      {(() => {
-                        // Calcular totais e encontrar o menor
-                        const totais = fornecedores
-                          .map(f => calcularTotalFornecedor(f))
-                          .filter(t => t > 0);
-                        const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
+                                    ) : (
+                                      <div className="text-gray-400">-</div>
+                                    )}
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {/* Linha de Totais fixa no bottom */}
+                  <div className="sticky bottom-0 bg-gray-50 border-t-2">
+                    <Table>
+                      <TableBody>
+                        {(() => {
+                          // Calcular totais e encontrar o menor
+                          const totais = fornecedores
+                            .map(f => calcularTotalFornecedor(f))
+                            .filter(t => t > 0);
+                          const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
 
-                        return (
-                          <TableRow className="border-t-2 bg-gray-50 font-semibold sticky bottom-0">
-                            <TableCell colSpan={2} className="bg-gray-50">TOTAL GERAL</TableCell>
-                            {fornecedores.map(fornecedor => {
-                              const total = calcularTotalFornecedor(fornecedor);
-                              const isMelhorTotal = total === menorTotal && total > 0;
-                              
-                              return (
-                                <TableCell key={fornecedor} className="text-center bg-gray-50">
-                                  <div className={`text-lg font-bold ${
-                                    isMelhorTotal 
-                                      ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
-                                      : 'text-blue-600'
-                                  }`}>
-                                    R$ {total.toFixed(2)}
-                                    {isMelhorTotal && ' 🏆'}
-                                  </div>
-                                </TableCell>
-                              );
-                            })}
-                          </TableRow>
-                        );
-                      })()}
-                    </TableBody>
-                  </Table>
+                          return (
+                            <TableRow className="font-semibold">
+                              <TableCell colSpan={2} className="bg-gray-50 border-r">TOTAL GERAL</TableCell>
+                              {fornecedores.map(fornecedor => {
+                                const total = calcularTotalFornecedor(fornecedor);
+                                const isMelhorTotal = total === menorTotal && total > 0;
+                                
+                                return (
+                                  <TableCell key={fornecedor} className="text-center bg-gray-50 border-r last:border-r-0">
+                                    <div className={`text-lg font-bold ${
+                                      isMelhorTotal 
+                                        ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
+                                        : 'text-blue-600'
+                                    }`}>
+                                      R$ {total.toFixed(2)}
+                                      {isMelhorTotal && ' 🏆'}
+                                    </div>
+                                  </TableCell>
+                                );
+                              })}
+                            </TableRow>
+                          );
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </div>
             )}
@@ -813,6 +835,7 @@ const Cotacao = () => {
                   <li>4. Use a busca para encontrar produtos rapidamente</li>
                   <li>5. Na tabela, insira as quantidades desejadas para cada produto</li>
                   <li>6. Compare os totais por fornecedor na última linha</li>
+                  <li>7. Clique em "Ver Resumo" para gerar os pedidos</li>
                 </ol>
               </CardContent>
             </Card>
