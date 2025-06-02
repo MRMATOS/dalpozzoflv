@@ -16,8 +16,6 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   session: Session | null;
-  signUp: (email: string, password: string, userData: any) => Promise<{ success: boolean; error?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   loading: boolean;
   hasRole: (role: string) => boolean;
@@ -123,61 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, userData: any): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            nome: userData.nome,
-            loja: userData.loja,
-            codigo_acesso: userData.codigo_acesso,
-            tipo: userData.tipo
-          },
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        }
-      });
-
-      if (error) {
-        console.error('Signup error:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Signup error:', error);
-      return { success: false, error: 'Erro interno. Tente novamente.' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password
-      });
-
-      if (error) {
-        console.error('Signin error:', error);
-        return { success: false, error: 'Email ou senha incorretos' };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error('Signin error:', error);
-      return { success: false, error: 'Erro interno. Tente novamente.' };
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const signOut = async () => {
     try {
       setLoading(true);
@@ -201,8 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user,
       profile,
       session,
-      signUp,
-      signIn,
       signOut,
       loading,
       hasRole
