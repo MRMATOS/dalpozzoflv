@@ -28,26 +28,12 @@ const ProdutosTab = () => {
     queryFn: async () => {
       console.log('Fazendo query para produtos...');
       
-      // Primeiro, vamos buscar apenas os produtos para verificar se a tabela tem dados
-      const { data: produtosSimples, error: errorSimples } = await supabase
-        .from('produtos')
-        .select('*')
-        .order('produto');
-      
-      console.log('Produtos simples:', produtosSimples);
-      console.log('Erro simples:', errorSimples);
-      
-      if (errorSimples) {
-        console.error('Erro ao buscar produtos:', errorSimples);
-        throw errorSimples;
-      }
-
-      // Agora vamos fazer a query com join
+      // Especificar qual relacionamento usar para resolver a ambiguidade
       const { data, error } = await supabase
         .from('produtos')
         .select(`
           *,
-          escala_abastecimento (
+          escala_abastecimento!escala_abastecimento_produto_id_fkey (
             escala1,
             escala2,
             escala3
@@ -55,11 +41,11 @@ const ProdutosTab = () => {
         `)
         .order('produto');
       
-      console.log('Produtos com escala:', data);
-      console.log('Erro com escala:', error);
+      console.log('Produtos carregados:', data);
+      console.log('Erro na query:', error);
       
       if (error) {
-        console.error('Erro na query com join:', error);
+        console.error('Erro ao buscar produtos:', error);
         throw error;
       }
       
