@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Upload, Plus, Trash2, ArrowLeft, Calculator, Search, FileText } from 'lucide-react';
+import { Upload, ArrowLeft, Calculator, Search, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useFornecedores } from '@/hooks/useFornecedores';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -34,6 +34,7 @@ interface MensagemFornecedor {
 const Cotacao = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { fornecedores } = useFornecedores();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
   const dicionarioProdutos = {
@@ -379,8 +380,9 @@ const Cotacao = () => {
     }
   };
 
-  const [mensagens, setMensagens] = useState<MensagemFornecedor[]>([]);
-  const [fornecedores, setFornecedores] = useState<string[]>([]);
+  const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
+  const [fornecedoresProcessados, setFornecedoresProcessados] = useState<Set<string>>(new Set());
+  const [mensagemAtual, setMensagemAtual] = useState('');
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
   const [buscaProduto, setBuscaProduto] = useState('');
@@ -390,6 +392,9 @@ const Cotacao = () => {
     item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
     item.tipo.toLowerCase().includes(buscaProduto.toLowerCase())
   );
+
+  // Lista de fornecedores únicos dos produtos extraídos
+  const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
 
   // Função para extrair produtos de uma mensagem usando o dicionário hierárquico - MANTENDO LÓGICA ORIGINAL
   const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
@@ -481,47 +486,73 @@ const Cotacao = () => {
     return produtos;
   };
 
-  const adicionarMensagem = () => {
-    setMensagens([...mensagens, { fornecedor: '', mensagem: '' }]);
-  };
+  const selecionarFornecedor = (fornecedorId: string) => {
+    const fornecedor = fornecedores.find(f => f.id === fornecedorId);
+    if (!fornecedor) return;
 
-  const atualizarMensagem = (index: number, campo: keyof MensagemFornecedor, valor: string) => {
-    const novasMensagens = [...mensagens];
-    novasMensagens[index][campo] = valor;
-    setMensagens(novasMensagens);
-  };
-
-  const removerMensagem = (index: number) => {
-    const novasMensagens = mensagens.filter((_, i) => i !== index);
-    setMensagens(novasMensagens);
-  };
-
-  const processarMensagens = () => {
-    let todosProdutos: ProdutoExtraido[] = [];
-    let nomesFornecedores: string[] = [];
-
-    mensagens.forEach(({ fornecedor, mensagem }) => {
-      if (fornecedor && mensagem) {
-        const produtos = extrairProdutos(mensagem, fornecedor);
-        todosProdutos = [...todosProdutos, ...produtos];
-        if (!nomesFornecedores.includes(fornecedor)) {
-          nomesFornecedores.push(fornecedor);
-        }
+    // Se o fornecedor já foi processado, pergunta se deseja apagar
+    if (fornecedoresProcessados.has(fornecedor.nome)) {
+      if (window.confirm(`Deseja apagar os produtos do ${fornecedor.nome}?`)) {
+        removerProdutosFornecedor(fornecedor.nome);
       }
-    });
+      return;
+    }
 
-    setProdutosExtraidos(todosProdutos);
-    setFornecedores(nomesFornecedores);
-    criarTabelaComparativa(todosProdutos, nomesFornecedores);
+    // Seleciona o fornecedor
+    setFornecedorSelecionado(fornecedorId);
+    setMensagemAtual('');
+  };
+
+  const processarMensagem = () => {
+    if (!fornecedorSelecionado || !mensagemAtual.trim()) {
+      toast.error('Selecione um fornecedor e cole a mensagem');
+      return;
+    }
+
+    const fornecedor = fornecedores.find(f => f.id === fornecedorSelecionado);
+    if (!fornecedor) return;
+
+    const produtos = extrairProdutos(mensagemAtual, fornecedor.nome);
     
-    if (todosProdutos.length > 0) {
-      toast.success(`${todosProdutos.length} produtos extraídos com sucesso!`);
+    if (produtos.length > 0) {
+      // Adiciona produtos do fornecedor
+      const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
+      setProdutosExtraidos(novosExtraidos);
+      
+      // Marca fornecedor como processado
+      setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
+      
+      // Atualiza tabela comparativa
+      criarTabelaComparativa(novosExtraidos, [...fornecedoresComProdutos.filter(f => f !== fornecedor.nome), fornecedor.nome]);
+      
+      // Limpa seleção
+      setFornecedorSelecionado(null);
+      setMensagemAtual('');
+      
+      toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
     } else {
-      toast.error('Nenhum produto foi encontrado nas mensagens');
+      toast.error('Nenhum produto foi encontrado na mensagem');
     }
   };
 
-  const criarTabelaComparativa = (produtos: ProdutoExtraido[], fornecedores: string[]) => {
+  const removerProdutosFornecedor = (nomeFornecedor: string) => {
+    // Remove produtos do fornecedor
+    const novosExtraidos = produtosExtraidos.filter(p => p.fornecedor !== nomeFornecedor);
+    setProdutosExtraidos(novosExtraidos);
+    
+    // Remove da lista de processados
+    const novosProcessados = new Set(fornecedoresProcessados);
+    novosProcessados.delete(nomeFornecedor);
+    setFornecedoresProcessados(novosProcessados);
+    
+    // Atualiza tabela
+    const novosFornecedores = [...new Set(novosExtraidos.map(p => p.fornecedor))];
+    criarTabelaComparativa(novosExtraidos, novosFornecedores);
+    
+    toast.success(`Produtos de ${nomeFornecedor} removidos`);
+  };
+
+  const criarTabelaComparativa = (produtos: ProdutoExtraido[], fornecedoresList: string[]) => {
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
     produtos.forEach(produto => {
@@ -534,7 +565,7 @@ const Cotacao = () => {
           quantidades: {}
         };
         // Inicializar todos os fornecedores com valores vazios
-        fornecedores.forEach(f => {
+        fornecedoresList.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
           produtosAgrupados[chave].quantidades[f] = 0;
         });
@@ -611,49 +642,52 @@ const Cotacao = () => {
             </p>
           </CardHeader>
           <CardContent>
-            {/* Seção de Mensagens */}
+            {/* Seção de Fornecedores */}
             <div className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-700">Mensagens dos Fornecedores</h2>
-                <Button onClick={adicionarMensagem}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Adicionar Fornecedor
-                </Button>
+              {/* Botões dos Fornecedores */}
+              <div className="flex flex-wrap gap-3 mb-4">
+                {fornecedores.map((fornecedor) => {
+                  const isProcessado = fornecedoresProcessados.has(fornecedor.nome);
+                  const isSelecionado = fornecedorSelecionado === fornecedor.id;
+                  
+                  return (
+                    <Button
+                      key={fornecedor.id}
+                      onClick={() => selecionarFornecedor(fornecedor.id)}
+                      variant={isProcessado ? "default" : isSelecionado ? "default" : "outline"}
+                      className={`${
+                        isProcessado 
+                          ? 'bg-green-600 hover:bg-green-700 text-white' 
+                          : isSelecionado 
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            : ''
+                      }`}
+                    >
+                      {fornecedor.nome}
+                      {isProcessado && <Trash2 className="w-4 h-4 ml-2" />}
+                    </Button>
+                  );
+                })}
               </div>
 
-              {mensagens.map((item, index) => (
-                <Card key={index} className="mb-4">
+              {/* Área de Mensagem */}
+              {fornecedorSelecionado && (
+                <Card className="mb-4">
                   <CardContent className="p-4">
-                    <div className="flex gap-4 mb-3">
-                      <Input
-                        placeholder="Nome do Fornecedor"
-                        value={item.fornecedor}
-                        onChange={(e) => atualizarMensagem(index, 'fornecedor', e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={() => removerMensagem(index)}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
                     <textarea
                       placeholder="Cole aqui a mensagem do WhatsApp com os produtos..."
-                      value={item.mensagem}
-                      onChange={(e) => atualizarMensagem(index, 'mensagem', e.target.value)}
+                      value={mensagemAtual}
+                      onChange={(e) => setMensagemAtual(e.target.value)}
                       className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
                     />
+                    <div className="mt-3">
+                      <Button onClick={processarMensagem} className="bg-blue-600 hover:bg-blue-700">
+                        <Upload className="w-4 h-4 mr-2" />
+                        Processar Mensagem
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              ))}
-
-              {mensagens.length > 0 && (
-                <Button onClick={processarMensagens} className="bg-blue-600 hover:bg-blue-700">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Processar Mensagens
-                </Button>
               )}
             </div>
 
@@ -682,17 +716,19 @@ const Cotacao = () => {
                       Ver Resumo
                     </Button>
                   </div>
-                  {/* Header fixo da tabela - FORA da box */}
+                </div>
+
+                {/* Header fixo da tabela */}
                 <div className="sticky top-[120px] bg-white z-20 border rounded-t-lg shadow-sm">
                   <div className="grid grid-cols-[200px_200px_1fr] border-b bg-gray-50">
                     <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
                     <div className="p-4 font-medium text-muted-foreground border-r">Tipo</div>
-                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
-                      {fornecedores.map((fornecedor, index) => (
+                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
+                      {fornecedoresComProdutos.map((fornecedor, index) => (
                         <div 
                           key={fornecedor} 
                           className={`p-4 font-medium text-muted-foreground text-center ${
-                            index < fornecedores.length - 1 ? 'border-r' : ''
+                            index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''
                           }`}
                         >
                           {fornecedor}
@@ -701,13 +737,12 @@ const Cotacao = () => {
                     </div>
                   </div>
                 </div>
-                </div>
                 
                 {/* Conteúdo da tabela com scroll */}
                 <div className="border-l border-r border-b rounded-b-lg max-h-[500px] overflow-y-auto">
                   {produtosFiltrados.map((item, index) => {
                     // Calcular menor preço para este produto
-                    const precos = fornecedores
+                    const precos = fornecedoresComProdutos
                       .map(f => item.fornecedores[f])
                       .filter(p => p !== null) as number[];
                     const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
@@ -718,8 +753,8 @@ const Cotacao = () => {
                         <div className="p-4 border-r flex items-center">
                           <Badge variant="secondary">{item.tipo}</Badge>
                         </div>
-                        <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
-                          {fornecedores.map((fornecedor, fornIndex) => {
+                        <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
+                          {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
                             const preco = item.fornecedores[fornecedor];
                             const isMelhorPreco = preco === menorPreco && preco !== null;
                             
@@ -727,7 +762,7 @@ const Cotacao = () => {
                               <div 
                                 key={fornecedor} 
                                 className={`p-4 flex flex-col items-center space-y-2 ${
-                                  fornIndex < fornecedores.length - 1 ? 'border-r' : ''
+                                  fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''
                                 }`}
                               >
                                 {preco !== null ? (
@@ -766,15 +801,15 @@ const Cotacao = () => {
                   <div className="grid grid-cols-[200px_200px_1fr] font-semibold">
                     <div className="p-4 bg-gray-50 border-r flex items-center">TOTAL GERAL</div>
                     <div className="p-4 bg-gray-50 border-r"></div>
-                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
+                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                       {(() => {
                         // Calcular totais e encontrar o menor
-                        const totais = fornecedores
+                        const totais = fornecedoresComProdutos
                           .map(f => calcularTotalFornecedor(f))
                           .filter(t => t > 0);
                         const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
 
-                        return fornecedores.map((fornecedor, fornIndex) => {
+                        return fornecedoresComProdutos.map((fornecedor, fornIndex) => {
                           const total = calcularTotalFornecedor(fornecedor);
                           const isMelhorTotal = total === menorTotal && total > 0;
                           
@@ -782,7 +817,7 @@ const Cotacao = () => {
                             <div 
                               key={fornecedor} 
                               className={`p-4 flex justify-center items-center bg-gray-50 ${
-                                fornIndex < fornecedores.length - 1 ? 'border-r' : ''
+                                fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''
                               }`}
                             >
                               <div className={`text-lg font-bold ${
@@ -833,13 +868,14 @@ const Cotacao = () => {
               <CardContent className="p-4">
                 <h3 className="font-semibold text-blue-800 mb-2">Como usar:</h3>
                 <ol className="text-blue-700 text-sm space-y-1">
-                  <li>1. Clique em "Adicionar Fornecedor" para cada fornecedor</li>
-                  <li>2. Digite o nome do fornecedor e cole a mensagem do WhatsApp</li>
-                  <li>3. Clique em "Processar Mensagens" para extrair os produtos</li>
-                  <li>4. Use a busca para encontrar produtos rapidamente</li>
-                  <li>5. Na tabela, insira as quantidades desejadas para cada produto</li>
-                  <li>6. Compare os totais por fornecedor na última linha</li>
-                  <li>7. Clique em "Ver Resumo" para gerar os pedidos</li>
+                  <li>1. Clique em um fornecedor para selecioná-lo (botão fica azul)</li>
+                  <li>2. Cole a mensagem do WhatsApp na área de texto</li>
+                  <li>3. Clique em "Processar Mensagem" (botão do fornecedor fica verde)</li>
+                  <li>4. Repita para outros fornecedores</li>
+                  <li>5. Use a busca para encontrar produtos rapidamente</li>
+                  <li>6. Insira as quantidades desejadas para cada produto</li>
+                  <li>7. Compare os totais por fornecedor na última linha</li>
+                  <li>8. Clique em "Ver Resumo" para gerar os pedidos</li>
                 </ol>
               </CardContent>
             </Card>
