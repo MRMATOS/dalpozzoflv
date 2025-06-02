@@ -1,7 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { User, Session } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
@@ -14,12 +13,13 @@ interface UserProfile {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   profile: UserProfile | null;
-  session: Session | null;
+  session: any;
   signOut: () => Promise<void>;
   loading: boolean;
   hasRole: (role: string) => boolean;
+  signIn: (codigoAcesso: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,86 +33,79 @@ export const useAuth = () => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile from usuarios table
-  const fetchUserProfile = async (userId: string) => {
+  // Check for existing session on load
+  useEffect(() => {
+    const storedUser = localStorage.getItem('flv_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setProfile(userData);
+      } catch (error) {
+        console.error('Error parsing stored user:', error);
+        localStorage.removeItem('flv_user');
+      }
+    }
+    setLoading(false);
+  }, []);
+
+  const signIn = async (codigoAcesso: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('Fetching user profile for:', userId);
+      console.log('Tentando login com código:', codigoAcesso.trim());
       
-      // Get profile data from usuarios table
-      const { data: profileData, error: profileError } = await supabase
+      // Buscar usuário pelo código de acesso na tabela usuarios
+      const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
         .select('*')
-        .eq('id', userId)
+        .eq('codigo_acesso', codigoAcesso.trim())
+        .eq('ativo', true)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        return;
+      if (usuarioError || !usuario) {
+        console.error('Erro ao buscar usuário:', usuarioError);
+        return { success: false, error: "Código de acesso inválido ou usuário inativo" };
       }
 
-      console.log('User profile loaded:', profileData);
-      setProfile(profileData);
+      console.log('Usuário encontrado:', usuario);
 
-      // Update last login
+      // Atualizar último login
       await supabase
         .from('usuarios')
         .update({ ultimo_login: new Date().toISOString() })
-        .eq('id', userId);
+        .eq('id', usuario.id);
 
-    } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      // Armazenar usuário no localStorage e state
+      const userData = {
+        id: usuario.id,
+        nome: usuario.nome,
+        loja: usuario.loja,
+        codigo_acesso: usuario.codigo_acesso,
+        tipo: usuario.tipo,
+        ativo: usuario.ativo,
+        ultimo_login: new Date().toISOString()
+      };
+
+      localStorage.setItem('flv_user', JSON.stringify(userData));
+      setUser(userData);
+      setProfile(userData);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      return { success: false, error: "Erro interno. Tente novamente." };
     }
   };
-
-  useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Defer profile fetch to avoid blocking auth state change
-          setTimeout(() => {
-            fetchUserProfile(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-        }
-        
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      }
-      
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   const signOut = async () => {
     try {
       setLoading(true);
-      await supabase.auth.signOut();
+      localStorage.removeItem('flv_user');
       setUser(null);
       setProfile(null);
-      setSession(null);
     } catch (error) {
       console.error('Signout error:', error);
     } finally {
@@ -128,10 +121,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider value={{
       user,
       profile,
-      session,
+      session: user ? { user } : null,
       signOut,
       loading,
-      hasRole
+      hasRole,
+      signIn
     }}>
       {children}
     </AuthContext.Provider>

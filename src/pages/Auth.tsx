@@ -7,14 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [codigoAcesso, setCodigoAcesso] = useState('');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -35,50 +34,13 @@ const Auth = () => {
     }
 
     try {
-      console.log('Tentando login com código:', codigoAcesso.trim());
+      const result = await signIn(codigoAcesso.trim());
       
-      // Buscar usuário pelo código de acesso na tabela usuarios
-      const { data: usuario, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('codigo_acesso', codigoAcesso.trim())
-        .eq('ativo', true)
-        .single();
-
-      if (usuarioError || !usuario) {
-        console.error('Erro ao buscar usuário:', usuarioError);
-        setError("Código de acesso inválido ou usuário inativo");
-        setLoading(false);
-        return;
+      if (result.success) {
+        navigate("/dashboard");
+      } else {
+        setError(result.error || "Erro ao fazer login");
       }
-
-      console.log('Usuário encontrado:', usuario);
-
-      // Fazer login anônimo e depois associar o perfil
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
-
-      if (authError) {
-        console.error('Erro no auth:', authError);
-        setError("Erro ao fazer login. Tente novamente.");
-        setLoading(false);
-        return;
-      }
-
-      if (authData.user) {
-        console.log('Auth user criado:', authData.user.id);
-        
-        // Atualizar o registro do usuário com o novo ID
-        const { error: updateError } = await supabase
-          .from('usuarios')
-          .update({ id: authData.user.id })
-          .eq('codigo_acesso', codigoAcesso.trim());
-
-        if (updateError) {
-          console.error('Erro ao atualizar usuário:', updateError);
-        }
-      }
-
-      navigate("/dashboard");
     } catch (error: any) {
       console.error('Erro no login:', error);
       setError("Erro interno. Tente novamente.");
