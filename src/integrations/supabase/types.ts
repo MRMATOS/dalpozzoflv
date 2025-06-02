@@ -67,7 +67,7 @@ export type Database = {
             foreignKeyName: "cotacoes_requisicao_id_fkey"
             columns: ["requisicao_id"]
             isOneToOne: false
-            referencedRelation: "requisoes"
+            referencedRelation: "requisicoes"
             referencedColumns: ["id"]
           },
         ]
@@ -298,7 +298,7 @@ export type Database = {
             foreignKeyName: "itens_requisicao_requisicao_id_fkey"
             columns: ["requisicao_id"]
             isOneToOne: false
-            referencedRelation: "requisoes"
+            referencedRelation: "requisicoes"
             referencedColumns: ["id"]
           },
         ]
@@ -393,7 +393,7 @@ export type Database = {
         }
         Relationships: []
       }
-      requisoes: {
+      requisicoes: {
         Row: {
           data_requisicao: string | null
           id: string

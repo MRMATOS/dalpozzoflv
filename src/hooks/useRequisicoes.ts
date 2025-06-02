@@ -37,8 +37,8 @@ export const useRequisicoes = () => {
         const requisicoesFormatadas = data?.map(item => ({
           produto_id: item.produto_id,
           quantidade_calculada: item.quantidade_calculada || 0,
-          loja: item.requisicoes?.loja || '',
-          unidade: item.produtos?.unidade || ''
+          loja: (item.requisicoes as any)?.loja || '',
+          unidade: (item.produtos as any)?.unidade || ''
         })) || [];
 
         console.log('Requisições formatadas:', requisicoesFormatadas);
