@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,11 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Loader2, Plus, Save } from 'lucide-react';
+import { useLojas } from '@/hooks/useLojas';
 
 const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'];
 
 const UsuariosTab = () => {
   const queryClient = useQueryClient();
+  const { lojas } = useLojas();
   const [newUser, setNewUser] = useState({
     nome: '',
     codigo_acesso: '',
@@ -112,11 +113,18 @@ const UsuariosTab = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                placeholder="Loja"
-                value={newUser.loja}
-                onChange={(e) => setNewUser({ ...newUser, loja: e.target.value })}
-              />
+              <Select value={newUser.loja} onValueChange={(value) => setNewUser({ ...newUser, loja: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma loja" />
+                </SelectTrigger>
+                <SelectContent>
+                  {lojas.map((loja) => (
+                    <SelectItem key={loja.id} value={loja.nome}>
+                      {loja.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex space-x-2">
                 <Button
                   onClick={() => createUserMutation.mutate(newUser)}
