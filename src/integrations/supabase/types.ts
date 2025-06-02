@@ -112,44 +112,10 @@ export type Database = {
             referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      escalas_abastecimento: {
-        Row: {
-          atualizado_em: string | null
-          criado_em: string | null
-          escala_1: number
-          escala_2: number
-          escala_3: number
-          id: string
-          produto_id: string | null
-          unidade: string
-        }
-        Insert: {
-          atualizado_em?: string | null
-          criado_em?: string | null
-          escala_1: number
-          escala_2: number
-          escala_3: number
-          id?: string
-          produto_id?: string | null
-          unidade: string
-        }
-        Update: {
-          atualizado_em?: string | null
-          criado_em?: string | null
-          escala_1?: number
-          escala_2?: number
-          escala_3?: number
-          id?: string
-          produto_id?: string | null
-          unidade?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "escalas_abastecimento_produto_id_fkey"
+            foreignKeyName: "fk_escala_produto"
             columns: ["produto_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "produtos"
             referencedColumns: ["id"]
           },
@@ -336,6 +302,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lojas: {
+        Row: {
+          ativo: boolean | null
+          criado_em: string | null
+          id: string
+          nome: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          id?: string
+          nome: string
+        }
+        Update: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          id?: string
+          nome?: string
+        }
+        Relationships: []
       }
       pedidos_compra: {
         Row: {

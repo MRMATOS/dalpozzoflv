@@ -14,9 +14,11 @@ import {
   RefreshCw,
   Settings
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const getDashboardContent = () => {
     switch (user?.tipo) {
@@ -226,7 +228,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-gray-600">Config</div>
                 <p className="text-xs text-muted-foreground">Produtos, usuários, fornecedores</p>
-                <Button size="sm" className="mt-3 bg-gray-600 hover:bg-gray-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-gray-600 hover:bg-gray-700"
+                  onClick={() => navigate('/configuracoes')}
+                >
                   <Settings className="w-4 h-4 mr-2" />
                   Configurar
                 </Button>
