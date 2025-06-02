@@ -663,7 +663,7 @@ const Cotacao = () => {
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
                 
                 {/* Área fixa com busca e botão resumo */}
-                <div className="sticky top-0 bg-white z-20 pb-4 border-b mb-4">
+                <div className="sticky top-0 bg-white z-30 pb-4 border-b mb-4">
                   <div className="flex justify-between items-center gap-4">
                     {/* Input de busca */}
                     <div className="relative flex-1 max-w-md">
@@ -684,116 +684,121 @@ const Cotacao = () => {
                   </div>
                 </div>
 
-                {/* Container da tabela com header fixo */}
-                <div className="border rounded-lg overflow-hidden">
-                  {/* Header fixo da tabela */}
-                  <div className="sticky top-[120px] bg-white z-10 border-b shadow-sm">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="bg-white border-r">Produto</TableHead>
-                          <TableHead className="bg-white border-r">Tipo</TableHead>
-                          {fornecedores.map(fornecedor => (
-                            <TableHead key={fornecedor} className="text-center min-w-[150px] bg-white border-r last:border-r-0">
-                              {fornecedor}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      </TableHeader>
-                    </Table>
+                {/* Header fixo da tabela - FORA da box */}
+                <div className="sticky top-[120px] bg-white z-20 border rounded-t-lg shadow-sm">
+                  <div className="grid grid-cols-[200px_200px_1fr] border-b bg-gray-50">
+                    <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
+                    <div className="p-4 font-medium text-muted-foreground border-r">Tipo</div>
+                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
+                      {fornecedores.map((fornecedor, index) => (
+                        <div 
+                          key={fornecedor} 
+                          className={`p-4 font-medium text-muted-foreground text-center ${
+                            index < fornecedores.length - 1 ? 'border-r' : ''
+                          }`}
+                        >
+                          {fornecedor}
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  
-                  {/* Conteúdo da tabela com scroll */}
-                  <div className="max-h-[500px] overflow-y-auto">
-                    <Table>
-                      <TableBody>
-                        {produtosFiltrados.map((item, index) => {
-                          // Calcular menor preço para este produto
-                          const precos = fornecedores
-                            .map(f => item.fornecedores[f])
-                            .filter(p => p !== null) as number[];
-                          const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+                </div>
+                
+                {/* Conteúdo da tabela com scroll */}
+                <div className="border-l border-r border-b rounded-b-lg max-h-[500px] overflow-y-auto">
+                  {produtosFiltrados.map((item, index) => {
+                    // Calcular menor preço para este produto
+                    const precos = fornecedores
+                      .map(f => item.fornecedores[f])
+                      .filter(p => p !== null) as number[];
+                    const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
 
-                          return (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium border-r">{item.produto}</TableCell>
-                              <TableCell className="border-r">
-                                <Badge variant="secondary">{item.tipo}</Badge>
-                              </TableCell>
-                              {fornecedores.map(fornecedor => {
-                                const preco = item.fornecedores[fornecedor];
-                                const isMelhorPreco = preco === menorPreco && preco !== null;
-                                
-                                return (
-                                  <TableCell key={fornecedor} className="text-center border-r last:border-r-0">
-                                    {preco !== null ? (
-                                      <div className="space-y-2 flex flex-col items-center">
-                                        <div className={`font-semibold ${
-                                          isMelhorPreco 
-                                            ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
-                                            : 'text-gray-700'
-                                        }`}>
-                                          R$ {preco.toFixed(2)}
-                                          {isMelhorPreco && ' 🏆'}
-                                        </div>
-                                        <Input
-                                          type="number"
-                                          placeholder="Qtd"
-                                          min="0"
-                                          value={item.quantidades[fornecedor] || ''}
-                                          onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                          className="w-16 text-center"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="text-gray-400">-</div>
-                                    )}
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  {/* Linha de Totais fixa no bottom */}
-                  <div className="sticky bottom-0 bg-gray-50 border-t-2">
-                    <Table>
-                      <TableBody>
-                        {(() => {
-                          // Calcular totais e encontrar o menor
-                          const totais = fornecedores
-                            .map(f => calcularTotalFornecedor(f))
-                            .filter(t => t > 0);
-                          const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
-
-                          return (
-                            <TableRow className="font-semibold">
-                              <TableCell colSpan={2} className="bg-gray-50 border-r">TOTAL GERAL</TableCell>
-                              {fornecedores.map(fornecedor => {
-                                const total = calcularTotalFornecedor(fornecedor);
-                                const isMelhorTotal = total === menorTotal && total > 0;
-                                
-                                return (
-                                  <TableCell key={fornecedor} className="text-center bg-gray-50 border-r last:border-r-0">
-                                    <div className={`text-lg font-bold ${
-                                      isMelhorTotal 
-                                        ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
-                                        : 'text-blue-600'
+                    return (
+                      <div key={index} className="grid grid-cols-[200px_200px_1fr] border-b last:border-b-0 hover:bg-gray-50">
+                        <div className="p-4 font-medium border-r flex items-center">{item.produto}</div>
+                        <div className="p-4 border-r flex items-center">
+                          <Badge variant="secondary">{item.tipo}</Badge>
+                        </div>
+                        <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
+                          {fornecedores.map((fornecedor, fornIndex) => {
+                            const preco = item.fornecedores[fornecedor];
+                            const isMelhorPreco = preco === menorPreco && preco !== null;
+                            
+                            return (
+                              <div 
+                                key={fornecedor} 
+                                className={`p-4 flex flex-col items-center space-y-2 ${
+                                  fornIndex < fornecedores.length - 1 ? 'border-r' : ''
+                                }`}
+                              >
+                                {preco !== null ? (
+                                  <>
+                                    <div className={`font-semibold ${
+                                      isMelhorPreco 
+                                        ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
+                                        : 'text-gray-700'
                                     }`}>
-                                      R$ {total.toFixed(2)}
-                                      {isMelhorTotal && ' 🏆'}
+                                      R$ {preco.toFixed(2)}
+                                      {isMelhorPreco && ' 🏆'}
                                     </div>
-                                  </TableCell>
-                                );
-                              })}
-                            </TableRow>
+                                    <Input
+                                      type="number"
+                                      placeholder="Qtd"
+                                      min="0"
+                                      value={item.quantidades[fornecedor] || ''}
+                                      onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
+                                      className="w-16 text-center"
+                                    />
+                                  </>
+                                ) : (
+                                  <div className="text-gray-400">-</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Linha de Totais fixa no bottom */}
+                <div className="sticky bottom-0 bg-gray-50 border border-t-2 rounded-b-lg">
+                  <div className="grid grid-cols-[200px_200px_1fr] font-semibold">
+                    <div className="p-4 bg-gray-50 border-r flex items-center">TOTAL GERAL</div>
+                    <div className="p-4 bg-gray-50 border-r"></div>
+                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedores.length}, 1fr)` }}>
+                      {(() => {
+                        // Calcular totais e encontrar o menor
+                        const totais = fornecedores
+                          .map(f => calcularTotalFornecedor(f))
+                          .filter(t => t > 0);
+                        const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
+
+                        return fornecedores.map((fornecedor, fornIndex) => {
+                          const total = calcularTotalFornecedor(fornecedor);
+                          const isMelhorTotal = total === menorTotal && total > 0;
+                          
+                          return (
+                            <div 
+                              key={fornecedor} 
+                              className={`p-4 flex justify-center items-center bg-gray-50 ${
+                                fornIndex < fornecedores.length - 1 ? 'border-r' : ''
+                              }`}
+                            >
+                              <div className={`text-lg font-bold ${
+                                isMelhorTotal 
+                                  ? 'text-green-600 bg-green-100 px-2 py-1 rounded'
+                                  : 'text-blue-600'
+                              }`}>
+                                R$ {total.toFixed(2)}
+                                {isMelhorTotal && ' 🏆'}
+                              </div>
+                            </div>
                           );
-                        })()}
-                      </TableBody>
-                    </Table>
+                        });
+                      })()}
+                    </div>
                   </div>
                 </div>
               </div>
