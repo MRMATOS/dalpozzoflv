@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +30,7 @@ interface RequisitionItem {
 }
 
 const Requisicoes = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,7 +59,7 @@ const Requisicoes = () => {
 
   const createRequisitionMutation = useMutation({
     mutationFn: async (items: RequisitionItem[]) => {
-      console.log('Criando requisição para a loja:', user?.loja);
+      console.log('Criando requisição para a loja:', profile?.loja);
       console.log('Items da requisição:', items);
 
       // Primeiro, criar a requisição
@@ -66,7 +67,8 @@ const Requisicoes = () => {
         .from('requisicoes')
         .insert([{
           usuario_id: user?.id,
-          loja: user?.loja,
+          user_id: user?.id,
+          loja: profile?.loja,
           status: 'pendente'
         }])
         .select()
@@ -142,13 +144,14 @@ const Requisicoes = () => {
       return;
     }
 
-    if (!user?.loja) {
+    if (!profile?.loja) {
       toast.error('Loja não identificada. Faça login novamente.');
       return;
     }
 
     console.log('Enviando requisição com os itens:', items);
     console.log('Usuário:', user);
+    console.log('Profile:', profile);
     createRequisitionMutation.mutate(items);
   };
 
@@ -193,7 +196,7 @@ const Requisicoes = () => {
               </Button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Nova Requisição</h1>
-                <p className="text-sm text-gray-500">{user?.loja}</p>
+                <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
             
@@ -207,7 +210,7 @@ const Requisicoes = () => {
                 Ver Histórico
               </Button>
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.nome}</p>
+                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
                 <p className="text-xs text-gray-500">Requisitante</p>
               </div>
             </div>
