@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,14 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save } from 'lucide-react';
+import { Loader2, Plus, Save, Trash2, Edit } from 'lucide-react';
 import { useLojas } from '@/hooks/useLojas';
+import { useAuth } from '@/contexts/AuthContext';
 
 const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'];
 
 const UsuariosTab = () => {
   const queryClient = useQueryClient();
   const { lojas } = useLojas();
+  const { user } = useAuth();
   const [newUser, setNewUser] = useState({
     nome: '',
     codigo_acesso: '',
@@ -23,29 +26,44 @@ const UsuariosTab = () => {
     loja: ''
   });
   const [showNewUser, setShowNewUser] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+
+  // Verificar se o usuário atual é master
+  const isMaster = user?.tipo === 'master';
 
   const { data: usuarios, isLoading } = useQuery({
     queryKey: ['usuarios'],
     queryFn: async () => {
+      console.log('Buscando usuários...');
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
         .order('nome');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar usuários:', error);
+        throw error;
+      }
+      console.log('Usuários encontrados:', data);
       return data;
     },
+    enabled: isMaster, // Só buscar se for master
   });
 
   const createUserMutation = useMutation({
     mutationFn: async (user: any) => {
+      console.log('Criando usuário:', user);
       const { data, error } = await supabase
         .from('usuarios')
         .insert([user])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao criar usuário:', error);
+        throw error;
+      }
+      console.log('Usuário criado:', data);
       return data;
     },
     onSuccess: () => {
@@ -54,15 +72,95 @@ const UsuariosTab = () => {
       setNewUser({ nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
       setShowNewUser(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('Erro na mutation:', error);
       toast.error('Erro ao criar usuário: ' + error.message);
+    },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async (user: any) => {
+      console.log('Atualizando usuário:', user);
+      const { data, error } = await supabase
+        .from('usuarios')
+        .update(user)
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Erro ao atualizar usuário:', error);
+        throw error;
+      }
+      console.log('Usuário atualizado:', data);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      toast.success('Usuário atualizado com sucesso!');
+      setEditingUser(null);
+    },
+    onError: (error: any) => {
+      console.error('Erro na mutation de update:', error);
+      toast.error('Erro ao atualizar usuário: ' + error.message);
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      console.log('Deletando usuário:', userId);
+      const { error } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', userId);
+      
+      if (error) {
+        console.error('Erro ao deletar usuário:', error);
+        throw error;
+      }
+      console.log('Usuário deletado');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      toast.success('Usuário removido com sucesso!');
+    },
+    onError: (error: any) => {
+      console.error('Erro na mutation de delete:', error);
+      toast.error('Erro ao remover usuário: ' + error.message);
     },
   });
 
   const generateAccessCode = () => {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setNewUser({ ...newUser, codigo_acesso: code });
+    if (editingUser) {
+      setEditingUser({ ...editingUser, codigo_acesso: code });
+    } else {
+      setNewUser({ ...newUser, codigo_acesso: code });
+    }
   };
+
+  const handleEdit = (usuario: any) => {
+    setEditingUser({ ...usuario });
+  };
+
+  const handleDelete = (userId: string) => {
+    if (window.confirm('Tem certeza que deseja remover este usuário?')) {
+      deleteUserMutation.mutate(userId);
+    }
+  };
+
+  if (!isMaster) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Acesso Negado</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>Apenas usuários master podem gerenciar usuários.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -150,19 +248,75 @@ const UsuariosTab = () => {
               <TableHead>Loja</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Último Login</TableHead>
+              <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {usuarios?.map((usuario) => (
               <TableRow key={usuario.id}>
-                <TableCell className="font-medium">{usuario.nome}</TableCell>
-                <TableCell className="font-mono text-sm">{usuario.codigo_acesso}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">
-                    {usuario.tipo.charAt(0).toUpperCase() + usuario.tipo.slice(1)}
-                  </Badge>
+                <TableCell className="font-medium">
+                  {editingUser?.id === usuario.id ? (
+                    <Input
+                      value={editingUser.nome}
+                      onChange={(e) => setEditingUser({ ...editingUser, nome: e.target.value })}
+                    />
+                  ) : (
+                    usuario.nome
+                  )}
                 </TableCell>
-                <TableCell>{usuario.loja}</TableCell>
+                <TableCell className="font-mono text-sm">
+                  {editingUser?.id === usuario.id ? (
+                    <div className="flex space-x-2">
+                      <Input
+                        value={editingUser.codigo_acesso}
+                        onChange={(e) => setEditingUser({ ...editingUser, codigo_acesso: e.target.value })}
+                      />
+                      <Button variant="outline" size="sm" onClick={generateAccessCode}>
+                        Gerar
+                      </Button>
+                    </div>
+                  ) : (
+                    usuario.codigo_acesso
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingUser?.id === usuario.id ? (
+                    <Select value={editingUser.tipo} onValueChange={(value) => setEditingUser({ ...editingUser, tipo: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposUsuario.map((tipo) => (
+                          <SelectItem key={tipo} value={tipo}>
+                            {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="outline">
+                      {usuario.tipo.charAt(0).toUpperCase() + usuario.tipo.slice(1)}
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {editingUser?.id === usuario.id ? (
+                    <Select value={editingUser.loja} onValueChange={(value) => setEditingUser({ ...editingUser, loja: value })}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lojas.map((loja) => (
+                          <SelectItem key={loja.id} value={loja.nome}>
+                            {loja.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    usuario.loja
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant={usuario.ativo ? "default" : "secondary"}>
                     {usuario.ativo ? 'Ativo' : 'Inativo'}
@@ -173,6 +327,46 @@ const UsuariosTab = () => {
                     ? new Date(usuario.ultimo_login).toLocaleDateString('pt-BR') 
                     : 'Nunca'
                   }
+                </TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    {editingUser?.id === usuario.id ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => updateUserMutation.mutate(editingUser)}
+                          disabled={updateUserMutation.isPending}
+                        >
+                          {updateUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditingUser(null)}
+                        >
+                          Cancelar
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEdit(usuario)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDelete(usuario.id)}
+                          disabled={deleteUserMutation.isPending}
+                        >
+                          {deleteUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
