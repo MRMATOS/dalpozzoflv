@@ -38,18 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedUser) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
-      // Configurar o contexto JWT para o Supabase
-      supabase.auth.admin.generateLink({
-        type: 'signup',
-        email: `${userData.codigo_acesso}@temp.local`,
-        options: {
-          data: {
-            codigo_acesso: userData.codigo_acesso,
-            tipo: userData.tipo,
-            nome: userData.nome
-          }
-        }
-      });
     }
     setLoading(false);
   }, []);
@@ -90,10 +78,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(userData);
       localStorage.setItem('flv_user', JSON.stringify(userData));
 
-      // Configurar header personalizado para autenticação
-      supabase.rest.headers['x-user-codigo'] = userData.codigo_acesso;
-      supabase.rest.headers['x-user-tipo'] = userData.tipo;
-
       // Atualizar último login
       await supabase
         .from('usuarios')
@@ -112,18 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     setUser(null);
     localStorage.removeItem('flv_user');
-    // Limpar headers personalizados
-    delete supabase.rest.headers['x-user-codigo'];
-    delete supabase.rest.headers['x-user-tipo'];
   };
-
-  // Configurar headers quando o usuário está logado
-  useEffect(() => {
-    if (user) {
-      supabase.rest.headers['x-user-codigo'] = user.codigo_acesso;
-      supabase.rest.headers['x-user-tipo'] = user.tipo;
-    }
-  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
