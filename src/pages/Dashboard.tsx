@@ -47,7 +47,11 @@ const Dashboard = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">Criar</div>
                 <p className="text-xs text-muted-foreground">Comparar preços dos fornecedores</p>
-                <Button size="sm" className="mt-3 bg-blue-600 hover:bg-blue-700">
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => navigate('/cotacao')}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Nova Cotação
                 </Button>
