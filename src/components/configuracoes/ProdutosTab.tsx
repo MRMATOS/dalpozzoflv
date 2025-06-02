@@ -23,9 +23,26 @@ const ProdutosTab = () => {
   });
   const [showNewProduct, setShowNewProduct] = useState(false);
 
-  const { data: produtos, isLoading } = useQuery({
+  const { data: produtos, isLoading, error } = useQuery({
     queryKey: ['produtos'],
     queryFn: async () => {
+      console.log('Fazendo query para produtos...');
+      
+      // Primeiro, vamos buscar apenas os produtos para verificar se a tabela tem dados
+      const { data: produtosSimples, error: errorSimples } = await supabase
+        .from('produtos')
+        .select('*')
+        .order('produto');
+      
+      console.log('Produtos simples:', produtosSimples);
+      console.log('Erro simples:', errorSimples);
+      
+      if (errorSimples) {
+        console.error('Erro ao buscar produtos:', errorSimples);
+        throw errorSimples;
+      }
+
+      // Agora vamos fazer a query com join
       const { data, error } = await supabase
         .from('produtos')
         .select(`
@@ -38,13 +55,29 @@ const ProdutosTab = () => {
         `)
         .order('produto');
       
-      if (error) throw error;
+      console.log('Produtos com escala:', data);
+      console.log('Erro com escala:', error);
+      
+      if (error) {
+        console.error('Erro na query com join:', error);
+        throw error;
+      }
+      
       return data;
     },
   });
 
+  // Log para debug
+  useEffect(() => {
+    console.log('Estado da query:');
+    console.log('isLoading:', isLoading);
+    console.log('error:', error);
+    console.log('produtos:', produtos);
+  }, [isLoading, error, produtos]);
+
   const updateProductMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      console.log('Atualizando produto:', id, updates);
       const { error } = await supabase
         .from('produtos')
         .update(updates)
@@ -58,12 +91,14 @@ const ProdutosTab = () => {
       setEditingProduct(null);
     },
     onError: (error) => {
+      console.error('Erro ao atualizar produto:', error);
       toast.error('Erro ao atualizar produto: ' + error.message);
     },
   });
 
   const createProductMutation = useMutation({
     mutationFn: async (produto: any) => {
+      console.log('Criando produto:', produto);
       const { data, error } = await supabase
         .from('produtos')
         .insert([produto])
@@ -80,12 +115,15 @@ const ProdutosTab = () => {
       setShowNewProduct(false);
     },
     onError: (error) => {
+      console.error('Erro ao criar produto:', error);
       toast.error('Erro ao criar produto: ' + error.message);
     },
   });
 
   const updateEscalaMutation = useMutation({
     mutationFn: async ({ produtoId, escala }: { produtoId: string; escala: any }) => {
+      console.log('Atualizando escala:', produtoId, escala);
+      
       const { data: existing } = await supabase
         .from('escala_abastecimento')
         .select('id')
@@ -110,6 +148,7 @@ const ProdutosTab = () => {
       toast.success('Escala atualizada com sucesso!');
     },
     onError: (error) => {
+      console.error('Erro ao atualizar escala:', error);
       toast.error('Erro ao atualizar escala: ' + error.message);
     },
   });
@@ -118,14 +157,102 @@ const ProdutosTab = () => {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando produtos...</span>
       </div>
+    );
+  }
+
+  if (error) {
+    console.error('Erro na query de produtos:', error);
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-center">
+          <p className="text-red-600 mb-2">Erro ao carregar produtos:</p>
+          <p className="text-sm text-gray-600">{error.message}</p>
+          <Button 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['produtos'] })}
+            className="mt-4"
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!produtos || produtos.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Produtos</CardTitle>
+          <Button onClick={() => setShowNewProduct(true)} disabled={showNewProduct}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Produto
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-gray-500 mb-4">Nenhum produto cadastrado</p>
+            {!showNewProduct && (
+              <Button onClick={() => setShowNewProduct(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Cadastrar primeiro produto
+              </Button>
+            )}
+          </div>
+          
+          {showNewProduct && (
+            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+              <h3 className="font-semibold mb-4">Novo Produto</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Input
+                  placeholder="Nome do produto"
+                  value={newProduct.produto}
+                  onChange={(e) => setNewProduct({ ...newProduct, produto: e.target.value })}
+                />
+                <Select value={newProduct.unidade} onValueChange={(value) => setNewProduct({ ...newProduct, unidade: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidades.map((unidade) => (
+                      <SelectItem key={unidade} value={unidade}>
+                        {unidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newProduct.ativo}
+                    onCheckedChange={(checked) => setNewProduct({ ...newProduct, ativo: checked })}
+                  />
+                  <span className="text-sm">Ativo</span>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => createProductMutation.mutate(newProduct)}
+                    disabled={!newProduct.produto.trim() || createProductMutation.isPending}
+                  >
+                    {createProductMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Salvar
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowNewProduct(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Produtos</CardTitle>
+        <CardTitle>Produtos ({produtos.length})</CardTitle>
         <Button onClick={() => setShowNewProduct(true)} disabled={showNewProduct}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Produto
