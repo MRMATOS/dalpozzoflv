@@ -102,7 +102,7 @@ const Requisicoes = () => {
   });
 
   const filteredProducts = produtos?.filter(product =>
-    product.produto.toLowerCase().includes(searchTerm.toLowerCase())
+    product.produto && product.produto.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const handleQuantityChange = (productId: string, quantity: number, scale: number, multiplier: number) => {
