@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,8 +16,6 @@ import { z } from 'zod';
 const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'];
 
 const userSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   nome: z.string().min(1, "Nome é obrigatório"),
   loja: z.string().min(1, "Loja é obrigatória"),
   codigo_acesso: z.string().min(3, "Código de acesso deve ter pelo menos 3 caracteres"),
@@ -28,10 +25,8 @@ const userSchema = z.object({
 const UsuariosTab = () => {
   const queryClient = useQueryClient();
   const { lojas } = useLojas();
-  const { hasRole, signUp } = useAuth();
+  const { hasRole } = useAuth();
   const [newUser, setNewUser] = useState({
-    email: '',
-    password: '',
     nome: '',
     codigo_acesso: '',
     tipo: 'requisitante',
@@ -92,24 +87,50 @@ const UsuariosTab = () => {
       
       setValidationErrors({});
       
-      // Create user with Supabase Auth
-      const signupResult = await signUp(userData.email, userData.password, {
-        nome: userData.nome,
-        loja: userData.loja,
-        codigo_acesso: userData.codigo_acesso,
-        tipo: userData.tipo
-      });
-      
-      if (!signupResult.success) {
-        throw new Error(signupResult.error || 'Erro ao criar usuário');
+      // Create user using anonymous auth and then update profile
+      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+
+      if (authError) {
+        throw new Error('Erro ao criar usuário: ' + authError.message);
       }
-      
-      return signupResult;
+
+      if (!authData.user) {
+        throw new Error('Erro ao criar usuário');
+      }
+
+      // Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          nome: userData.nome,
+          loja: userData.loja,
+          codigo_acesso: userData.codigo_acesso,
+          ativo: true
+        });
+
+      if (profileError) {
+        throw new Error('Erro ao criar perfil: ' + profileError.message);
+      }
+
+      // Create user role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: userData.tipo
+        });
+
+      if (roleError) {
+        throw new Error('Erro ao criar role: ' + roleError.message);
+      }
+
+      return { success: true };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
       toast.success('Usuário criado com sucesso!');
-      setNewUser({ email: '', password: '', nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
+      setNewUser({ nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
       setShowNewUser(false);
     },
     onError: (error: any) => {
@@ -243,27 +264,6 @@ const UsuariosTab = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Input
-                  placeholder="Email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                />
-                {validationErrors.email && (
-                  <p className="text-sm text-red-600 mt-1">{validationErrors.email}</p>
-                )}
-              </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Senha (min. 6 caracteres)"
-                  value={newUser.password}
-                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                />
-                {validationErrors.password && (
-                  <p className="text-sm text-red-600 mt-1">{validationErrors.password}</p>
-                )}
-              </div>
-              <div>
-                <Input
                   placeholder="Nome completo"
                   value={newUser.nome}
                   onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
@@ -332,7 +332,6 @@ const UsuariosTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Nome</TableHead>
-              <TableHead>Email</TableHead>
               <TableHead>Código de Acesso</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Loja</TableHead>
@@ -353,9 +352,6 @@ const UsuariosTab = () => {
                   ) : (
                     usuario.nome
                   )}
-                </TableCell>
-                <TableCell className="text-sm text-gray-600">
-                  Email não disponível
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   {editingUser?.id === usuario.id ? (
