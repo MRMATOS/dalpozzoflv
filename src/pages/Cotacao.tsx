@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,7 @@ interface MensagemFornecedor {
 }
 
 const Cotacao = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const { requisicoes, lojasComRequisicoes } = useRequisicoes();
@@ -736,7 +737,7 @@ const Cotacao = () => {
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.nome}</p>
+                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
                 <p className="text-xs text-gray-500">Comprador</p>
               </div>
             </div>
