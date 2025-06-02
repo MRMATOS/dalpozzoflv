@@ -36,16 +36,18 @@ const Cotacao = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Dicionário estruturado hierarquicamente
+  // Dicionário estruturado hierarquicamente (mantendo exato como o original)
   const dicionarioProdutos = {
     'abacaxi': {
       'havaí': ['havaí', 'havai', 'hawai'],
       'pérola': ['pérola', 'perola']
     },
+
     'abacate': {
       'breda': ['breda'],
       'bola': ['bola']
     },
+
     'abóbora': {
       'cabotiá': ['cabotiá', 'cabotia', 'cabotia graúdo'],
       'seca': ['seca', 'abóbora seca'],
@@ -53,6 +55,7 @@ const Cotacao = () => {
       'moranga': ['moranga', 'abóbora moranga'],
       'menina': ['menina', 'abóbora menina']
     },
+
     'abobrinha': {
       'padrão': ['abobrinha', 'abobrinha padrão'],
       'verde': ['abobrinha verde'],
@@ -60,24 +63,40 @@ const Cotacao = () => {
       'klaina': ['abobrinha klaina'],
       'colombense': ['abobrinha colombense']
     },
+
     'acelga': {
       'padrão': ['acelga', 'acelga padrão']
     },
+
     'agrião': {
       'padrão': ['agrião']
     },
+
     'alho-poró': {
       'padrão': ['alho poró']
     },
+
     'alho': {
       'descascado': ['alho descascado']
     },
+
     'alface': {
       'crespa': ['alface crespa'],
       'crespa kael': ['alface crespa kael'],
       'americana': ['alface americana'],
       'americana kael': ['alface americana kael']
     },
+
+    'ameixa': {
+      'nacional': ['ameixa nacional'],
+      'importada calibre 60': ['ameixa importada calibre 60'],
+      'importada calibre 65': ['ameixa importada calibre 65']
+    },
+
+    'atemoia': {
+      'padrão': ['atemoia']
+    },
+
     'banana': {
       'plástica': ['banana plástica'],
       'katurra': ['banana katurra'],
@@ -86,6 +105,7 @@ const Cotacao = () => {
       'terra': ['banana terra'],
       'prata': ['banana prata']
     },
+
     'batata': {
       'asterix': ['batata asterix'],
       'doce': ['batata doce'],
@@ -99,6 +119,235 @@ const Cotacao = () => {
       'salsa kg': ['batata salsa kg', 'salsa kg'],
       'salsa baroa': ['batata salsa baroa', 'batata baroa', 'mandioquinha']
     },
+
+    'berinjela': {
+      'padrão': ['berinjela', 'beringela'],
+      '10kg': ['berinjela 10']
+    },
+
+    'beterraba': {
+      'padrão': ['beterraba'],
+      'selecionada': ['beterraba selecionada'],
+      'm': ['beterraba m'],
+      'produtor': ['beterraba produtor'],
+      'box': ['beterraba box']
+    },
+
+    'brócolis': {
+      'padrão': ['brócolis', 'brocolis']
+    },
+
+    'caqui': {
+      'fuiu': ['caqui fuiu'],
+      'chocolate': ['caqui chocolate']
+    },
+
+    'coco': {
+      'seco': ['coco seco'],
+      'verde': ['coco verde']
+    },
+
+    'couve': {
+      'maço': ['couve maço']
+    },
+
+    'couve-flor': {
+      'média': ['couve-flor média'],
+      'graúda': ['couve-flor graúda']
+    },
+
+    'escarola': {
+      'padrão': ['escarola']
+    },
+
+    'espinafre': {
+      'padrão': ['espinafre']
+    },
+
+    'gengibre': {
+      'padrão': ['gengibre'],
+      'novo': ['gengibre novo']
+    },
+
+    'giló': {
+      'padrão': ['giló', 'gilo']
+    },
+
+    'goiaba': {
+      'graúda': ['goiaba graúda'],
+      'padrão': ['goiaba']
+    },
+
+    'hortelã': {
+      'padrão': ['hortelã']
+    },
+
+    'kiwi': {
+      'nacional': ['kiwi nacional'],
+      'importado 9kg': ['kiwi importado 9'],
+      'importado calibre 20/25': ['kiwi importado calibre 20/25'],
+      'bandeja': ['kiwi bandeja']
+    },
+
+    'laranja': {
+      'fabi': ['laranja fabi'],
+      'pera rio': ['laranja pera rio'],
+      'pera roça': ['laranja pera roça'],
+      'lima': ['laranja lima'],
+      'bahia nacional': ['laranja bahia nacional'],
+      'bahia importada 72': ['laranja bahia importada 72'],
+      'bahia importada': ['laranja bahia importada'],
+      'valência importada': ['laranja valência importada'],
+      'comum': ['laranja']
+    },
+
+    'limão': {
+      'graúdo': ['limão graúdo'],
+      'siciliano': ['limão siciliano']
+    },
+
+    'mamão': {
+      'formosa': ['mamão formosa'],
+      'papaya t20': ['mamão papaya 20'],
+      'papaya t24': ['mamão papaya 24'],
+      'papaya top': ['mamão papaya top'],
+      'roça': ['mamão roça']
+    },
+
+    'manga': {
+      'espada': ['manga espada'],
+      'tomy': ['manga tomy'],
+      'tomy rio sul': ['manga tomy rio sul'],
+      'tomy vale bonito': ['manga tomy vale bonito'],
+      'palmer': ['manga palmer'],
+      'palmer baía': ['manga palmer baía']
+    },
+
+    'maracujá': {
+      'padrão': ['maracujá'],
+      'graúdo': ['maracujá graúdo'],
+      'papelão': ['maracujá papelão'],
+      'plástica top': ['maracujá plástica top']
+    },
+
+    'maçã': {
+      'importada vermelha': ['maçã importada vermelha'],
+      'pinki': ['maçã pinki'],
+      'fuji cat3 embalada': ['maçã fuji cat3 embalada'],
+      'fuji cat1 importada': ['maçã fuji importada cat1'],
+      'gala': ['maçã gala'],
+      'monica': ['maçã monica'],
+      'red elegido cat2': ['maçã red elegido cat2'],
+      'red elegido 36/40': ['maçã red elegido 36/40'],
+      'verde cat1': ['maçã verde cat1']
+    },
+
+    'melancia': {
+      'baby': ['melancia baby']
+    },
+
+    'melão': {
+      'amarelo': ['melão amarelo'],
+      'amarelo graúdo': ['melão amarelo graúdo'],
+      'melícia': ['melão melícia'],
+      'cepi': ['melão cepi'],
+      'rei': ['melão rei'],
+      'gaia': ['melão gaia'],
+      'sapo': ['melão sapo'],
+      'solto': ['melão solto']
+    },
+
+    'milho verde': {
+      'padrão': ['milho verde'],
+      'bandeja': ['milho verde bandeja'],
+      'c4': ['milho verde c4'],
+      'klaina': ['milho verde klaina'],
+      'klaina 4 espigas': ['klaina 4 espigas']
+    },
+
+    'mirtilo': {
+      'padrão': ['mirtilo']
+    },
+
+    'nectarina': {
+      'importada': ['nectarina importada']
+    },
+
+    'pepino': {
+      'salada': ['pepino salada'],
+      'salada top': ['pepino salada top'],
+      'japonês': ['pepino japonês'],
+      'japonês klaina': ['pepino japonês klaina'],
+      'conserva': ['pepino conserva']
+    },
+
+    'pera': {
+      'nacional': ['pera nacional'],
+      'importada': ['pera importada'],
+      'willian': ['pera willian 80/90/100']
+    },
+
+    'pêssego': {
+      'importado': ['pêssego importado'],
+      'nacional': ['pêssego nacional']
+    },
+
+    'physalis': {
+      'padrão': ['physalis']
+    },
+
+    'pimenta': {
+      'dedo-de-moça': ['pimenta dedo-de-moça'],
+      'cambuci': ['pimenta cambuci', 'cambuci'],
+      'vermelha': ['pimenta vermelha']
+    },
+
+    'pimentão': {
+      'verde': ['pimentão verde'],
+      'verde klaina': ['pimentão verde klaina'],
+      'verde região': ['pimentão verde região'],
+      'verde graúdo': ['pimentão verde graúdo', 'pimentão verde médio'],
+      'vermelho': ['pimentão vermelho'],
+      'vermelho graúdo': ['pimentão vermelho graúdo'],
+      'amarelo': ['pimentão amarelo'],
+      'amarelo graúdo': ['pimentão amarelo graúdo', 'pimentão amarelo médio']
+    },
+
+    'pitaya': {
+      'padrão': ['pitaya']
+    },
+
+    'ponkan': {
+      'cerro': ['ponkan cerro'],
+      'fabi': ['ponkan fabi'],
+      'padrão': ['ponkan']
+    },
+
+    'quiabo': {
+      'padrão': ['quiabo']
+    },
+
+    'rabanete': {
+      'padrão': ['rabanete'],
+      'maço': ['rabanete maço']
+    },
+
+    'repolho': {
+      'verde': ['repolho verde'],
+      'roxo': ['repolho roxo']
+    },
+
+    'tâmara': {
+      'padrão': ['tâmara']
+    },
+
+    'tangerina': {
+      'olé': ['tangerina olé', 'olé'],
+      'murcote': ['murcote', 'morgote', 'murgote'],
+      'ponkan': ['ponkan'],
+      'mixixrica': ['mixixrica']
+    },
+
     'tomate': {
       'longa vida': ['tomate longa vida'],
       'longa vida graúdo': ['tomate longa vida graúdo'],
@@ -107,6 +356,27 @@ const Cotacao = () => {
       'cereja bdj': ['tomate cereja bandeja'],
       'cereja cx': ['tomate cereja caixa'],
       'cereja klaina': ['tomate cereja klaina']
+    },
+
+    'uva': {
+      'rosa': ['uva rosa'],
+      'rubi': ['uva rubi'],
+      'brasil': ['uva brasil'],
+      'itália': ['uva itália', 'uva italia'],
+      'thompson vale': ['uva thompson vale'],
+      'thompson campo': ['uva thompson campo'],
+      'thompson verde': ['uva thompson verde'],
+      'vitória campo': ['uva vitória campo'],
+      'vitória rei': ['uva vitória rei'],
+      'vitória': ['uva vitória']
+    },
+
+    'vagem': {
+      'branca': ['vagem branca', 'vagem']
+    },
+
+    'verona': {
+      'top': ['verona top']
     }
   };
 
@@ -115,24 +385,29 @@ const Cotacao = () => {
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
 
-  // Função para extrair produtos de uma mensagem usando o dicionário hierárquico
+  // Função para extrair produtos de uma mensagem usando o dicionário hierárquico - MANTENDO LÓGICA ORIGINAL
   const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
     const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
     const produtos: ProdutoExtraido[] = [];
 
     linhas.forEach(linha => {
+      // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
       const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
       const precos = linha.match(regexPreco);
 
       if (precos && precos.length > 0) {
-        const preco = precos[precos.length - 1].replace(',', '.');
+        const preco = precos[precos.length - 1].replace(',', '.'); // Último preço encontrado
+
+        // Encontrar o produto base e tipo correspondente usando o dicionário hierárquico
         const linhaNormalizada = linha.toLowerCase();
         let melhorMatch = { length: 0, produto: null as string | null, tipo: null as string | null, alias: '' };
 
+        // Procurar em todos os produtos do dicionário
         for (const [nomeProduto, tipos] of Object.entries(dicionarioProdutos)) {
           for (const [nomeTipo, aliases] of Object.entries(tipos)) {
             for (const alias of aliases) {
               if (linhaNormalizada.includes(alias.toLowerCase())) {
+                // Prioriza matches mais longos (mais específicos)
                 if (alias.length > melhorMatch.length) {
                   melhorMatch = {
                     length: alias.length,
@@ -147,11 +422,15 @@ const Cotacao = () => {
         }
 
         if (melhorMatch.produto && melhorMatch.tipo) {
+          // Extrair informações adicionais da linha (peso, qualidade, etc.)
           let infoAdicional = linha;
+
+          // Remove o preço da linha
           precos.forEach(p => {
             infoAdicional = infoAdicional.replace(p, '');
           });
 
+          // Remove o alias encontrado
           const indexAlias = infoAdicional.toLowerCase().indexOf(melhorMatch.alias.toLowerCase());
           if (indexAlias !== -1) {
             const antesAlias = infoAdicional.substring(0, indexAlias).trim();
@@ -159,18 +438,23 @@ const Cotacao = () => {
             infoAdicional = (antesAlias + ' ' + depoisAlias).trim();
           }
 
+          // Remove caracteres extras
           infoAdicional = infoAdicional.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
 
+          // Monta o tipo final
           let tipoFinal = melhorMatch.tipo;
           if (infoAdicional && infoAdicional.length > 1) {
             tipoFinal += (melhorMatch.tipo === 'padrão' ? '' : ' ') + infoAdicional;
           }
 
+          // Remove o nome do produto do tipo se estiver presente
           const nomeProdutoLowerCase = melhorMatch.produto.toLowerCase();
           const tipoFinalLowerCase = tipoFinal.toLowerCase();
           if (tipoFinalLowerCase.includes(nomeProdutoLowerCase)) {
             tipoFinal = tipoFinal.replace(new RegExp(melhorMatch.produto, 'gi'), '').trim();
+            // Remove espaços duplos e limpa o início/fim
             tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
+            // Se ficou vazio, volta para 'padrão'
             if (!tipoFinal || tipoFinal.length === 0) {
               tipoFinal = 'padrão';
             }
@@ -243,6 +527,7 @@ const Cotacao = () => {
           fornecedores: {},
           quantidades: {}
         };
+        // Inicializar todos os fornecedores com valores vazios
         fornecedores.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
           produtosAgrupados[chave].quantidades[f] = 0;
@@ -251,6 +536,7 @@ const Cotacao = () => {
       produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
     });
 
+    // Converter para array e ordenar alfabeticamente por produto
     const tabela = Object.values(produtosAgrupados).sort((a, b) => {
       if (a.produto === b.produto) {
         return a.tipo.localeCompare(b.tipo);
