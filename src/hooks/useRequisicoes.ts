@@ -22,27 +22,31 @@ export const useRequisicoes = () => {
             produto_id,
             quantidade_calculada,
             requisicao_id,
-            requisoes!inner(loja),
+            requisicoes!inner(loja),
             produtos!inner(unidade)
           `)
-          .eq('requisoes.status', 'pendente');
+          .eq('requisicoes.status', 'pendente');
 
         if (error) {
           console.error('Erro ao buscar requisições:', error);
           return;
         }
 
+        console.log('Dados brutos das requisições:', data);
+
         const requisicoesFormatadas = data?.map(item => ({
           produto_id: item.produto_id,
           quantidade_calculada: item.quantidade_calculada || 0,
-          loja: item.requisoes.loja,
-          unidade: item.produtos.unidade || ''
+          loja: item.requisicoes?.loja || '',
+          unidade: item.produtos?.unidade || ''
         })) || [];
+
+        console.log('Requisições formatadas:', requisicoesFormatadas);
 
         setRequisicoes(requisicoesFormatadas);
 
         // Extrair lojas únicas que têm requisições
-        const lojas = [...new Set(requisicoesFormatadas.map(item => item.loja))];
+        const lojas = [...new Set(requisicoesFormatadas.map(item => item.loja).filter(loja => loja))];
         setLojasComRequisicoes(lojas);
 
       } catch (error) {

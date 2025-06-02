@@ -428,12 +428,24 @@ const Cotacao = () => {
 
   // Função para obter quantidade requisitada para um produto
   const obterQuantidadeRequisitada = (produto: string, tipo: string) => {
+    console.log('Buscando requisição para:', produto, tipo);
+    console.log('Requisições disponíveis:', requisicoes);
+    
     // Buscar nas requisições um produto que corresponda
     const requisicaoEncontrada = requisicoes.find(req => {
-      // Lógica simplificada de match - pode ser refinada conforme necessário
-      return produto.toLowerCase().includes(req.produto_id.toLowerCase()) ||
-             req.produto_id.toLowerCase().includes(produto.toLowerCase());
+      // Normalizar strings para comparação
+      const produtoNorm = produto.toLowerCase().trim();
+      const produtoReqNorm = req.produto_id.toLowerCase().trim();
+      
+      console.log('Comparando:', produtoNorm, 'com', produtoReqNorm);
+      
+      // Verificar se há correspondência direta ou parcial
+      return produtoNorm.includes(produtoReqNorm) || 
+             produtoReqNorm.includes(produtoNorm) ||
+             req.produto_id === produto;
     });
+
+    console.log('Requisição encontrada:', requisicaoEncontrada);
 
     if (requisicaoEncontrada) {
       return `${requisicaoEncontrada.quantidade_calculada} ${requisicaoEncontrada.unidade}`;
@@ -864,7 +876,7 @@ const Cotacao = () => {
                               >
                                 {preco !== null ? (
                                   <>
-                                    <div className={`font-semibold ${
+                                    <div className={`font-semibold text-center ${
                                       isMelhorPreco 
                                         ? 'text-green-600 bg-green-100 px-2 py-1 rounded' 
                                         : 'text-gray-700'
@@ -878,7 +890,7 @@ const Cotacao = () => {
                                       min="0"
                                       value={item.quantidades[fornecedor] || ''}
                                       onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                      className="w-20 text-center"
+                                      className="w-24 text-center"
                                     />
                                   </>
                                 ) : (
