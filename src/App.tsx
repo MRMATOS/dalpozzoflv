@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Configuracoes from "./pages/Configuracoes";
+import Requisicoes from "./pages/Requisicoes";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -31,6 +32,11 @@ const App = () => (
             <Route path="/configuracoes" element={
               <ProtectedRoute>
                 <Configuracoes />
+              </ProtectedRoute>
+            } />
+            <Route path="/requisicoes" element={
+              <ProtectedRoute>
+                <Requisicoes />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Index />} />

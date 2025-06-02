@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -84,23 +83,27 @@ const Dashboard = () => {
                 <div className="text-2xl font-bold text-blue-600">5</div>
                 <p className="text-xs text-muted-foreground">3 pendentes, 2 atendidas</p>
                 <Button size="sm" className="mt-3 bg-blue-600 hover:bg-blue-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Requisição
+                  <Eye className="w-4 h-4 mr-2" />
+                  Ver Histórico
                 </Button>
               </CardContent>
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Mais Solicitados</CardTitle>
-                <Package className="h-4 w-4 text-green-600" />
+                <CardTitle className="text-sm font-medium">Nova Requisição</CardTitle>
+                <Plus className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
-                <div className="text-sm font-bold text-green-600">Tomate</div>
-                <p className="text-xs text-muted-foreground">15 requisições este mês</p>
-                <Button size="sm" className="mt-3 bg-green-600 hover:bg-green-700">
-                  <Eye className="w-4 h-4 mr-2" />
-                  Ver Lista
+                <div className="text-2xl font-bold text-green-600">Criar</div>
+                <p className="text-xs text-muted-foreground">Fazer nova requisição de produtos</p>
+                <Button 
+                  size="sm" 
+                  className="mt-3 bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate('/requisicoes')}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Requisição
                 </Button>
               </CardContent>
             </Card>
