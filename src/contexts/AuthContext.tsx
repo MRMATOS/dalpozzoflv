@@ -8,8 +8,9 @@ interface UserProfile {
   nome: string;
   loja: string;
   codigo_acesso: string;
+  tipo: string;
   ativo: boolean;
-  roles: string[];
+  ultimo_login?: string;
 }
 
 interface AuthContextType {
@@ -37,14 +38,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user profile and roles
+  // Fetch user profile from usuarios table
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log('Fetching user profile for:', userId);
       
-      // Get profile data
+      // Get profile data from usuarios table
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
+        .from('usuarios')
         .select('*')
         .eq('id', userId)
         .single();
@@ -54,28 +55,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Get user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId);
-
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-        return;
-      }
-
-      const userProfile: UserProfile = {
-        ...profileData,
-        roles: rolesData?.map(r => r.role) || []
-      };
-
-      setProfile(userProfile);
-      console.log('User profile loaded:', userProfile);
+      console.log('User profile loaded:', profileData);
+      setProfile(profileData);
 
       // Update last login
       await supabase
-        .from('profiles')
+        .from('usuarios')
         .update({ ultimo_login: new Date().toISOString() })
         .eq('id', userId);
 
@@ -136,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (role: string): boolean => {
-    return profile?.roles?.includes(role) || false;
+    return profile?.tipo === role;
   };
 
   return (

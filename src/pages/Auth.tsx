@@ -35,39 +35,46 @@ const Auth = () => {
     }
 
     try {
-      // Buscar usuário pelo código de acesso
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
+      console.log('Tentando login com código:', codigoAcesso.trim());
+      
+      // Buscar usuário pelo código de acesso na tabela usuarios
+      const { data: usuario, error: usuarioError } = await supabase
+        .from('usuarios')
         .select('*')
         .eq('codigo_acesso', codigoAcesso.trim())
         .eq('ativo', true)
         .single();
 
-      if (profileError || !profile) {
+      if (usuarioError || !usuario) {
+        console.error('Erro ao buscar usuário:', usuarioError);
         setError("Código de acesso inválido ou usuário inativo");
         setLoading(false);
         return;
       }
 
-      // Simular login direto usando o ID do usuário
-      // Para implementação temporária, vamos usar signInAnonymously e depois associar o perfil
+      console.log('Usuário encontrado:', usuario);
+
+      // Fazer login anônimo e depois associar o perfil
       const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
 
       if (authError) {
+        console.error('Erro no auth:', authError);
         setError("Erro ao fazer login. Tente novamente.");
         setLoading(false);
         return;
       }
 
-      // Atualizar o perfil para associar ao usuário anônimo
       if (authData.user) {
+        console.log('Auth user criado:', authData.user.id);
+        
+        // Atualizar o registro do usuário com o novo ID
         const { error: updateError } = await supabase
-          .from('profiles')
+          .from('usuarios')
           .update({ id: authData.user.id })
           .eq('codigo_acesso', codigoAcesso.trim());
 
         if (updateError) {
-          console.error('Erro ao atualizar perfil:', updateError);
+          console.error('Erro ao atualizar usuário:', updateError);
         }
       }
 
@@ -127,6 +134,10 @@ const Auth = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            <div className="mt-4 text-xs text-gray-500">
+              <p>Use o código de acesso cadastrado na tabela 'usuarios'</p>
+            </div>
           </CardContent>
         </Card>
       </div>

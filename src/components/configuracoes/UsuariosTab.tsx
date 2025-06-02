@@ -40,30 +40,21 @@ const UsuariosTab = () => {
   const isMaster = hasRole('master');
 
   const { data: usuarios, isLoading } = useQuery({
-    queryKey: ['profiles-with-roles'],
+    queryKey: ['usuarios'],
     queryFn: async () => {
-      console.log('Buscando perfis de usuários...');
+      console.log('Buscando usuários...');
       const { data, error } = await supabase
-        .from('profiles')
-        .select(`
-          *,
-          user_roles!inner(role)
-        `)
+        .from('usuarios')
+        .select('*')
         .order('nome');
       
       if (error) {
-        console.error('Erro ao buscar perfis:', error);
+        console.error('Erro ao buscar usuários:', error);
         throw error;
       }
       
-      // Format the data to include roles
-      const formattedData = data?.map(profile => ({
-        ...profile,
-        tipo: (profile.user_roles as any)?.[0]?.role || 'requisitante'
-      })) || [];
-      
-      console.log('Perfis encontrados:', formattedData);
-      return formattedData;
+      console.log('Usuários encontrados:', data);
+      return data || [];
     },
     enabled: isMaster,
   });
@@ -87,48 +78,36 @@ const UsuariosTab = () => {
       
       setValidationErrors({});
       
-      // Create user using anonymous auth and then update profile
-      const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+      // Verificar se o código de acesso já existe
+      const { data: existingUser } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('codigo_acesso', userData.codigo_acesso)
+        .single();
 
-      if (authError) {
-        throw new Error('Erro ao criar usuário: ' + authError.message);
+      if (existingUser) {
+        throw new Error('Código de acesso já existe');
       }
 
-      if (!authData.user) {
-        throw new Error('Erro ao criar usuário');
-      }
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
+      // Criar usuário na tabela usuarios
+      const { error: insertError } = await supabase
+        .from('usuarios')
         .insert({
-          id: authData.user.id,
           nome: userData.nome,
           loja: userData.loja,
           codigo_acesso: userData.codigo_acesso,
+          tipo: userData.tipo,
           ativo: true
         });
 
-      if (profileError) {
-        throw new Error('Erro ao criar perfil: ' + profileError.message);
-      }
-
-      // Create user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: userData.tipo
-        });
-
-      if (roleError) {
-        throw new Error('Erro ao criar role: ' + roleError.message);
+      if (insertError) {
+        throw new Error('Erro ao criar usuário: ' + insertError.message);
       }
 
       return { success: true };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast.success('Usuário criado com sucesso!');
       setNewUser({ nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
       setShowNewUser(false);
@@ -143,39 +122,28 @@ const UsuariosTab = () => {
 
   const updateUserMutation = useMutation({
     mutationFn: async (user: any) => {
-      console.log('Atualizando perfil:', user);
+      console.log('Atualizando usuário:', user);
       
-      // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
+      const { error } = await supabase
+        .from('usuarios')
         .update({
           nome: user.nome,
           loja: user.loja,
           codigo_acesso: user.codigo_acesso,
+          tipo: user.tipo,
           ativo: user.ativo
         })
         .eq('id', user.id);
       
-      if (profileError) {
-        console.error('Erro ao atualizar perfil:', profileError);
-        throw profileError;
+      if (error) {
+        console.error('Erro ao atualizar usuário:', error);
+        throw error;
       }
       
-      // Update role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .update({ role: user.tipo })
-        .eq('user_id', user.id);
-      
-      if (roleError) {
-        console.error('Erro ao atualizar role:', roleError);
-        throw roleError;
-      }
-      
-      console.log('Perfil atualizado');
+      console.log('Usuário atualizado');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast.success('Usuário atualizado com sucesso!');
       setEditingUser(null);
     },
@@ -189,8 +157,10 @@ const UsuariosTab = () => {
     mutationFn: async (userId: string) => {
       console.log('Deletando usuário:', userId);
       
-      // Delete from auth.users (this will cascade to profiles and user_roles)
-      const { error } = await supabase.auth.admin.deleteUser(userId);
+      const { error } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id', userId);
       
       if (error) {
         console.error('Erro ao deletar usuário:', error);
@@ -199,7 +169,7 @@ const UsuariosTab = () => {
       console.log('Usuário deletado');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profiles-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       toast.success('Usuário removido com sucesso!');
     },
     onError: (error: any) => {
