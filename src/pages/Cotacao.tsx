@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -413,23 +412,15 @@ const Cotacao = () => {
 
       // Encontrar o produto na tabela comparativa
       const produtoTabela = tabelaComparativa.find(item => {
-        // Buscar correspondência usando o dicionário de produtos
-        const produtoNorm = item.produto.toLowerCase();
-        const tipoNorm = item.tipo.toLowerCase();
+        // Comparar usando nome do produto diretamente
+        const produtoRequisitado = requisicao.produto_nome.toLowerCase().trim();
+        const produtoTabela = item.produto.toLowerCase().trim();
+        const tipoTabela = item.tipo.toLowerCase().trim();
         
-        // Verificar se o produto da requisição corresponde a algum produto na tabela
-        for (const [nomeProduto, tipos] of Object.entries(dicionarioProdutos)) {
-          if (produtoNorm.includes(nomeProduto)) {
-            for (const [nomeTipo, aliases] of Object.entries(tipos)) {
-              // Verificar se algum alias do produto da tabela corresponde ao produto requisitado
-              const produtoRequisitado = requisicao.produto_id.toLowerCase();
-              if (aliases.some(alias => produtoRequisitado.includes(alias.toLowerCase()) || alias.toLowerCase().includes(produtoRequisitado))) {
-                return true;
-              }
-            }
-          }
-        }
-        return false;
+        return produtoRequisitado.includes(produtoTabela) || 
+               produtoTabela.includes(produtoRequisitado) ||
+               produtoRequisitado.includes(tipoTabela) ||
+               tipoTabela.includes(produtoRequisitado);
       });
 
       if (produtoTabela) {
@@ -451,53 +442,47 @@ const Cotacao = () => {
     const produtoNorm = produto.toLowerCase().trim();
     const tipoNorm = tipo.toLowerCase().trim();
     
-    // Buscar usando o dicionário de produtos
     let totalQuantidade = 0;
     let unidadeEncontrada = '';
     
-    // Verificar se o produto existe no dicionário
-    const produtoEncontrado = Object.entries(dicionarioProdutos).find(([nomeProduto, tipos]) => {
-      if (produtoNorm.includes(nomeProduto)) {
-        // Verificar se o tipo corresponde a algum alias
-        return Object.entries(tipos).some(([nomeTipo, aliases]) => {
-          if (tipoNorm.includes(nomeTipo) || nomeTipo === 'padrão') {
-            // Para cada alias, verificar se há requisições
-            return aliases.some(alias => {
-              const requisicaoEncontrada = requisicoes.find(req => {
-                const produtoReqNorm = req.produto_id.toLowerCase().trim();
-                return produtoReqNorm.includes(alias.toLowerCase()) || 
-                       alias.toLowerCase().includes(produtoReqNorm);
-              });
-              
-              if (requisicaoEncontrada) {
-                totalQuantidade += requisicaoEncontrada.quantidade_calculada;
-                unidadeEncontrada = requisicaoEncontrada.unidade;
-                return true;
-              }
-              return false;
-            });
-          }
-          return false;
-        });
+    // Buscar por correspondências diretas no nome do produto
+    const requisicoesCorrespondentes = requisicoes.filter(req => {
+      const produtoReqNorm = req.produto_nome.toLowerCase().trim();
+      
+      // Verificar correspondência direta
+      if (produtoReqNorm.includes(produtoNorm) || produtoNorm.includes(produtoReqNorm)) {
+        return true;
       }
+      
+      // Verificar se o tipo corresponde ao produto requisitado
+      if (produtoReqNorm.includes(tipoNorm) || tipoNorm.includes(produtoReqNorm)) {
+        return true;
+      }
+      
+      // Buscar usando o dicionário de produtos para correspondências mais complexas
+      for (const [nomeProdutoDict, tipos] of Object.entries(dicionarioProdutos)) {
+        if (produtoNorm.includes(nomeProdutoDict) || nomeProdutoDict.includes(produtoNorm)) {
+          for (const [nomeTipo, aliases] of Object.entries(tipos)) {
+            if (aliases.some(alias => 
+              produtoReqNorm.includes(alias.toLowerCase()) || 
+              alias.toLowerCase().includes(produtoReqNorm)
+            )) {
+              return true;
+            }
+          }
+        }
+      }
+      
       return false;
     });
 
-    // Se não encontrou através do dicionário, tentar busca direta
-    if (totalQuantidade === 0) {
-      const requisicaoEncontrada = requisicoes.find(req => {
-        const produtoReqNorm = req.produto_id.toLowerCase().trim();
-        return produtoNorm.includes(produtoReqNorm) || 
-               produtoReqNorm.includes(produtoNorm) ||
-               tipoNorm.includes(produtoReqNorm) ||
-               produtoReqNorm.includes(tipoNorm);
-      });
-
-      if (requisicaoEncontrada) {
-        totalQuantidade = requisicaoEncontrada.quantidade_calculada;
-        unidadeEncontrada = requisicaoEncontrada.unidade;
+    // Somar as quantidades encontradas
+    requisicoesCorrespondentes.forEach(req => {
+      totalQuantidade += req.quantidade_calculada;
+      if (!unidadeEncontrada) {
+        unidadeEncontrada = req.unidade;
       }
-    }
+    });
 
     console.log('Quantidade encontrada:', totalQuantidade, unidadeEncontrada);
 

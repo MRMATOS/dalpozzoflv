@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +58,9 @@ const Requisicoes = () => {
 
   const createRequisitionMutation = useMutation({
     mutationFn: async (items: RequisitionItem[]) => {
+      console.log('Criando requisição para a loja:', user?.loja);
+      console.log('Items da requisição:', items);
+
       // Primeiro, criar a requisição
       const { data: requisicao, error: requisicaoError } = await supabase
         .from('requisicoes')
@@ -70,7 +72,12 @@ const Requisicoes = () => {
         .select()
         .single();
 
-      if (requisicaoError) throw requisicaoError;
+      if (requisicaoError) {
+        console.error('Erro ao criar requisição:', requisicaoError);
+        throw requisicaoError;
+      }
+
+      console.log('Requisição criada:', requisicao);
 
       // Depois, criar os itens da requisição
       const itensRequisicao = items.map(item => ({
@@ -82,17 +89,24 @@ const Requisicoes = () => {
         quantidade_calculada: item.quantity
       }));
 
+      console.log('Inserindo itens da requisição:', itensRequisicao);
+
       const { error: itensError } = await supabase
         .from('itens_requisicao')
         .insert(itensRequisicao);
 
-      if (itensError) throw itensError;
+      if (itensError) {
+        console.error('Erro ao inserir itens da requisição:', itensError);
+        throw itensError;
+      }
 
       return requisicao;
     },
     onSuccess: () => {
       toast.success('Requisição enviada com sucesso!');
       setRequisitionItems({});
+      queryClient.invalidateQueries({ queryKey: ['produtos-requisicao'] });
+      queryClient.invalidateQueries({ queryKey: ['requisicoes'] });
       navigate('/dashboard');
     },
     onError: (error) => {
@@ -128,6 +142,13 @@ const Requisicoes = () => {
       return;
     }
 
+    if (!user?.loja) {
+      toast.error('Loja não identificada. Faça login novamente.');
+      return;
+    }
+
+    console.log('Enviando requisição com os itens:', items);
+    console.log('Usuário:', user);
     createRequisitionMutation.mutate(items);
   };
 
