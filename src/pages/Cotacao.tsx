@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Upload, ArrowLeft, Calculator, Search, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
+import { useEstoque } from '@/hooks/useEstoque';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -26,6 +27,7 @@ interface ItemTabelaComparativa {
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
+  unidadePedido: { [fornecedor: string]: string };
 }
 
 interface MensagemFornecedor {
@@ -38,6 +40,7 @@ const Cotacao = () => {
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const { requisicoes, lojasComRequisicoes } = useRequisicoes();
+  const { estoqueProdutos, isLoading: isLoadingEstoque, obterEstoqueProduto } = useEstoque();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
   const dicionarioProdutos = {
@@ -660,12 +663,14 @@ const Cotacao = () => {
           produto: produto.produto,
           tipo: produto.tipo,
           fornecedores: {},
-          quantidades: {}
+          quantidades: {},
+          unidadePedido: {}
         };
         // Inicializar todos os fornecedores com valores vazios
         fornecedoresList.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
           produtosAgrupados[chave].quantidades[f] = 0;
+          produtosAgrupados[chave].unidadePedido[f] = 'Caixa';
         });
       }
       produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
@@ -688,6 +693,57 @@ const Cotacao = () => {
     setTabelaComparativa(novaTabela);
   };
 
+  const atualizarUnidadePedido = (produtoIndex: number, fornecedor: string, unidade: string) => {
+    const novaTabela = [...tabelaComparativa];
+    novaTabela[produtoIndex].unidadePedido[fornecedor] = unidade;
+    setTabelaComparativa(novaTabela);
+  };
+
+  // Função para obter estoque de um produto
+  const obterEstoquesDisplay = (produto: string, tipo: string) => {
+    const estoque = obterEstoqueProduto(produto, tipo);
+    
+    if (!estoque || Object.keys(estoque.estoques_por_loja).length === 0) {
+      return <div className="text-gray-400 text-sm">Sem estoque informado</div>;
+    }
+
+    const lojas = Object.entries(estoque.estoques_por_loja);
+    const unidadeEstoque = estoque.unidade;
+    const isCaixa = unidadeEstoque.toLowerCase() === 'caixa';
+
+    return (
+      <div className="text-sm space-y-1">
+        {lojas.map(([loja, quantidade]) => (
+          <div key={loja} className="text-gray-600">
+            {loja}: <span className="font-medium">{quantidade}</span> {unidadeEstoque.toLowerCase()}
+          </div>
+        ))}
+        <div className="font-semibold text-gray-800 border-t pt-1">
+          Total: {estoque.total_estoque} {unidadeEstoque.toLowerCase()}
+          {isCaixa && estoque.total_kg > 0 && (
+            <div className="text-green-600">({estoque.total_kg.toFixed(1)}kg)</div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Função para obter opções de unidade para um produto
+  const obterOpcoesUnidade = (produto: string, tipo: string) => {
+    const estoque = obterEstoqueProduto(produto, tipo);
+    const unidadeEstoque = estoque?.unidade || 'Caixa';
+    
+    const opcoes = ['Kg'];
+    if (unidadeEstoque.toLowerCase() === 'caixa') {
+      opcoes.unshift('Caixa');
+    } else {
+      opcoes.push(unidadeEstoque);
+    }
+    
+    return opcoes;
+  };
+
+  // Função para calcular total de um fornecedor
   const calcularTotalFornecedor = (fornecedor: string) => {
     return tabelaComparativa.reduce((total, item) => {
       const preco = item.fornecedores[fornecedor];
@@ -865,10 +921,10 @@ const Cotacao = () => {
 
                 {/* Header fixo da tabela */}
                 <div className="sticky top-[140px] bg-white z-20 border rounded-t-lg shadow-sm">
-                  <div className="grid grid-cols-[200px_200px_150px_1fr] border-b bg-gray-50">
+                  <div className="grid grid-cols-[200px_200px_200px_1fr] border-b bg-gray-50">
                     <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
                     <div className="p-4 font-medium text-muted-foreground border-r">Tipo</div>
-                    <div className="p-4 font-medium text-muted-foreground border-r">Requisição</div>
+                    <div className="p-4 font-medium text-muted-foreground border-r">Estoques</div>
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                       {fornecedoresComProdutos.map((fornecedor, index) => (
                         <div 
@@ -894,18 +950,19 @@ const Cotacao = () => {
                     const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
 
                     return (
-                      <div key={index} className="grid grid-cols-[200px_200px_150px_1fr] border-b last:border-b-0 hover:bg-gray-50">
+                      <div key={index} className="grid grid-cols-[200px_200px_200px_1fr] border-b last:border-b-0 hover:bg-gray-50">
                         <div className="p-4 font-medium border-r flex items-center">{item.produto}</div>
                         <div className="p-4 border-r flex items-center">
                           <Badge variant="secondary">{item.tipo}</Badge>
                         </div>
-                        <div className="p-4 border-r flex items-center text-sm text-gray-600">
-                          {obterQuantidadeRequisitada(item.produto, item.tipo)}
+                        <div className="p-4 border-r flex items-center">
+                          {obterEstoquesDisplay(item.produto, item.tipo)}
                         </div>
                         <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
                           {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
                             const preco = item.fornecedores[fornecedor];
                             const isMelhorPreco = preco === menorPreco && preco !== null;
+                            const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
                             
                             return (
                               <div 
@@ -924,13 +981,31 @@ const Cotacao = () => {
                                       R$ {preco.toFixed(2)}
                                       {isMelhorPreco && ' 🏆'}
                                     </div>
+                                    
+                                    {/* Dropdown "Pedir em" */}
+                                    <Select 
+                                      value={item.unidadePedido[fornecedor] || 'Caixa'} 
+                                      onValueChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
+                                    >
+                                      <SelectTrigger className="w-20 text-xs">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {opcoesUnidade.map((unidade) => (
+                                          <SelectItem key={unidade} value={unidade}>
+                                            {unidade}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    
                                     <Input
                                       type="number"
-                                      placeholder="Qtd"
+                                      placeholder={`Qtd em ${item.unidadePedido[fornecedor] || 'Caixa'}`}
                                       min="0"
                                       value={item.quantidades[fornecedor] || ''}
                                       onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                      className="w-24 text-center"
+                                      className="w-24 text-center text-xs"
                                     />
                                   </>
                                 ) : (
@@ -947,7 +1022,7 @@ const Cotacao = () => {
                 
                 {/* Linha de Totais fixa no bottom */}
                 <div className="sticky bottom-0 bg-gray-50 border border-t-2 rounded-b-lg">
-                  <div className="grid grid-cols-[200px_200px_150px_1fr] font-semibold">
+                  <div className="grid grid-cols-[200px_200px_200px_1fr] font-semibold">
                     <div className="p-4 bg-gray-50 border-r flex items-center">TOTAL GERAL</div>
                     <div className="p-4 bg-gray-50 border-r"></div>
                     <div className="p-4 bg-gray-50 border-r"></div>

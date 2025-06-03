@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +17,7 @@ const ProdutosTab = () => {
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [newProduct, setNewProduct] = useState({
     produto: '',
-    unidade: 'Kg',
+    unidade: 'Caixa',
     media_por_caixa: 20,
     ativo: true
   });
@@ -99,6 +98,10 @@ const ProdutosTab = () => {
     },
   });
 
+  const mostrarMediaPorCaixa = (unidade: string) => {
+    return unidade.toLowerCase() === 'caixa';
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -156,7 +159,13 @@ const ProdutosTab = () => {
                   value={newProduct.produto}
                   onChange={(e) => setNewProduct({ ...newProduct, produto: e.target.value })}
                 />
-                <Select value={newProduct.unidade} onValueChange={(value) => setNewProduct({ ...newProduct, unidade: value })}>
+                <Select value={newProduct.unidade} onValueChange={(value) => {
+                  setNewProduct({ 
+                    ...newProduct, 
+                    unidade: value,
+                    media_por_caixa: value.toLowerCase() === 'caixa' ? 20 : 1
+                  });
+                }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -168,12 +177,14 @@ const ProdutosTab = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
-                  type="number"
-                  placeholder="Média por caixa (kg)"
-                  value={newProduct.media_por_caixa}
-                  onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
-                />
+                {mostrarMediaPorCaixa(newProduct.unidade) && (
+                  <Input
+                    type="number"
+                    placeholder="Média por caixa (kg)"
+                    value={newProduct.media_por_caixa}
+                    onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
+                  />
+                )}
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={newProduct.ativo}
@@ -204,7 +215,7 @@ const ProdutosTab = () => {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Produtos ({produtos.length})</CardTitle>
+        <CardTitle>Produtos ({produtos?.length || 0})</CardTitle>
         <Button onClick={() => setShowNewProduct(true)} disabled={showNewProduct}>
           <Plus className="w-4 h-4 mr-2" />
           Novo Produto
@@ -220,7 +231,13 @@ const ProdutosTab = () => {
                 value={newProduct.produto}
                 onChange={(e) => setNewProduct({ ...newProduct, produto: e.target.value })}
               />
-              <Select value={newProduct.unidade} onValueChange={(value) => setNewProduct({ ...newProduct, unidade: value })}>
+              <Select value={newProduct.unidade} onValueChange={(value) => {
+                setNewProduct({ 
+                  ...newProduct, 
+                  unidade: value,
+                  media_por_caixa: value.toLowerCase() === 'caixa' ? 20 : 1
+                });
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -232,12 +249,14 @@ const ProdutosTab = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Input
-                type="number"
-                placeholder="Média por caixa (kg)"
-                value={newProduct.media_por_caixa}
-                onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
-              />
+              {mostrarMediaPorCaixa(newProduct.unidade) && (
+                <Input
+                  type="number"
+                  placeholder="Média por caixa (kg)"
+                  value={newProduct.media_por_caixa}
+                  onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
+                />
+              )}
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={newProduct.ativo}
@@ -265,7 +284,7 @@ const ProdutosTab = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Produto</TableHead>
-              <TableHead>Unidade</TableHead>
+              <TableHead>Unidade Estoque</TableHead>
               <TableHead>Média por Caixa (kg)</TableHead>
               <TableHead>Ativo</TableHead>
               <TableHead>Ações</TableHead>
@@ -298,7 +317,10 @@ const ProdutosTab = () => {
                       onValueChange={(value) => {
                         updateProductMutation.mutate({
                           id: produto.id,
-                          updates: { unidade: value }
+                          updates: { 
+                            unidade: value,
+                            media_por_caixa: value.toLowerCase() === 'caixa' ? (produto.media_por_caixa || 20) : null
+                          }
                         });
                       }}
                     >
@@ -318,21 +340,25 @@ const ProdutosTab = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  {editingProduct === produto.id ? (
-                    <Input
-                      type="number"
-                      defaultValue={produto.media_por_caixa || 20}
-                      className="w-24"
-                      onBlur={(e) => {
-                        const value = parseFloat(e.target.value) || null;
-                        updateProductMutation.mutate({
-                          id: produto.id,
-                          updates: { media_por_caixa: value }
-                        });
-                      }}
-                    />
+                  {mostrarMediaPorCaixa(produto.unidade || '') ? (
+                    editingProduct === produto.id ? (
+                      <Input
+                        type="number"
+                        defaultValue={produto.media_por_caixa || 20}
+                        className="w-24"
+                        onBlur={(e) => {
+                          const value = parseFloat(e.target.value) || null;
+                          updateProductMutation.mutate({
+                            id: produto.id,
+                            updates: { media_por_caixa: value }
+                          });
+                        }}
+                      />
+                    ) : (
+                      `${produto.media_por_caixa || 20} kg`
+                    )
                   ) : (
-                    `${produto.media_por_caixa || 20} kg`
+                    <span className="text-gray-400">-</span>
                   )}
                 </TableCell>
                 <TableCell>
