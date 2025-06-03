@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 interface EstoqueProduto {
   produto_id: string;
   produto_nome: string;
+  nome_variacao?: string;
+  produto_pai_id?: string;
   unidade: string;
   media_por_caixa: number;
   estoques_por_loja: { [loja: string]: number };
@@ -28,7 +30,7 @@ export const useEstoque = () => {
             produto_id,
             loja,
             quantidade,
-            produtos!inner(produto, unidade, media_por_caixa)
+            produtos!inner(produto, nome_variacao, produto_pai_id, unidade, media_por_caixa)
           `);
 
         if (error) {
@@ -46,9 +48,14 @@ export const useEstoque = () => {
           const produto = item.produtos as any;
           
           if (!estoquesAgrupados[produtoId]) {
+            // Para variações, usar nome_variacao, para principais usar produto
+            const nomeDisplay = produto?.nome_variacao || produto?.produto || '';
+            
             estoquesAgrupados[produtoId] = {
               produto_id: produtoId,
-              produto_nome: produto?.produto || '',
+              produto_nome: nomeDisplay,
+              nome_variacao: produto?.nome_variacao,
+              produto_pai_id: produto?.produto_pai_id,
               unidade: produto?.unidade || '',
               media_por_caixa: produto?.media_por_caixa || 20,
               estoques_por_loja: {},
@@ -111,6 +118,12 @@ export const useEstoque = () => {
       const produtoNorm = produtoNome.toLowerCase().trim();
       const tipoNorm = tipo.toLowerCase().trim();
       
+      // Buscar por nome exato primeiro
+      if (nomeNorm === produtoNorm || nomeNorm === tipoNorm) {
+        return true;
+      }
+      
+      // Buscar por similaridade (contém)
       return nomeNorm.includes(produtoNorm) || 
              produtoNorm.includes(nomeNorm) ||
              nomeNorm.includes(tipoNorm) ||

@@ -376,8 +376,11 @@ export type Database = {
           id: string
           media_por_caixa: number | null
           nome_base: string | null
+          nome_variacao: string | null
           observacoes: string | null
+          ordem_exibicao: number | null
           produto: string | null
+          produto_pai_id: string | null
           unidade: string | null
         }
         Insert: {
@@ -386,8 +389,11 @@ export type Database = {
           id?: string
           media_por_caixa?: number | null
           nome_base?: string | null
+          nome_variacao?: string | null
           observacoes?: string | null
+          ordem_exibicao?: number | null
           produto?: string | null
+          produto_pai_id?: string | null
           unidade?: string | null
         }
         Update: {
@@ -396,11 +402,22 @@ export type Database = {
           id?: string
           media_por_caixa?: number | null
           nome_base?: string | null
+          nome_variacao?: string | null
           observacoes?: string | null
+          ordem_exibicao?: number | null
           produto?: string | null
+          produto_pai_id?: string | null
           unidade?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "produtos_produto_pai_id_fkey"
+            columns: ["produto_pai_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
