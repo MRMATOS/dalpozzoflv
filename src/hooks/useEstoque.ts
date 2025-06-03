@@ -111,27 +111,53 @@ export const useEstoque = () => {
     };
   }, []);
 
-  const obterEstoqueProduto = (produtoNome: string, tipo: string) => {
+  const obterEstoqueProduto = (produtoNome: string, tipo?: string) => {
+    console.log('Buscando estoque para:', { produtoNome, tipo });
+    
     // Buscar produto por nome exato ou similaridade
     const estoque = estoqueProdutos.find(item => {
       const nomeNorm = item.produto_nome.toLowerCase().trim();
       const produtoNorm = produtoNome.toLowerCase().trim();
-      const tipoNorm = tipo.toLowerCase().trim();
+      const tipoNorm = tipo?.toLowerCase().trim() || '';
+      
+      console.log('Comparando:', { nomeNorm, produtoNorm, tipoNorm });
       
       // Buscar por nome exato primeiro
-      if (nomeNorm === produtoNorm || nomeNorm === tipoNorm) {
+      if (nomeNorm === produtoNorm || (tipoNorm && nomeNorm === tipoNorm)) {
         return true;
       }
       
       // Buscar por similaridade (contém)
-      return nomeNorm.includes(produtoNorm) || 
-             produtoNorm.includes(nomeNorm) ||
-             nomeNorm.includes(tipoNorm) ||
-             tipoNorm.includes(nomeNorm);
+      const contemProduto = nomeNorm.includes(produtoNorm) || produtoNorm.includes(nomeNorm);
+      const contemTipo = tipoNorm && (nomeNorm.includes(tipoNorm) || tipoNorm.includes(nomeNorm));
+      
+      return contemProduto || contemTipo;
     });
 
+    console.log('Estoque encontrado:', estoque);
     return estoque || null;
   };
 
-  return { estoqueProdutos, isLoading, obterEstoqueProduto };
+  const obterEstoquesDisplay = (produtoNome: string, tipo?: string) => {
+    const estoque = obterEstoqueProduto(produtoNome, tipo);
+    
+    if (!estoque || Object.keys(estoque.estoques_por_loja).length === 0) {
+      return 'Sem estoque informado';
+    }
+
+    // Formatar estoques por loja
+    const estoquesFormatados = Object.entries(estoque.estoques_por_loja)
+      .filter(([_, quantidade]) => quantidade > 0)
+      .map(([loja, quantidade]) => `${loja}: ${quantidade} ${estoque.unidade}`)
+      .join(', ');
+
+    return estoquesFormatados || 'Estoque zerado';
+  };
+
+  return { 
+    estoqueProdutos, 
+    isLoading, 
+    obterEstoqueProduto, 
+    obterEstoquesDisplay 
+  };
 };
