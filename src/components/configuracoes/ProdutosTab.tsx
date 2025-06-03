@@ -622,7 +622,7 @@ const ProdutosTab = () => {
                       <TableCell></TableCell>
                       <TableCell className="pl-8">
                         <Input
-                          placeholder="Nome da variação"
+                          placeholder="Variação"
                           value={newVariation.nome_variacao}
                           onChange={(e) => setNewVariation({ ...newVariation, nome_variacao: e.target.value })}
                         />
