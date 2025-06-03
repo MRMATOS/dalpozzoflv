@@ -12,7 +12,6 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useEstoque } from '@/hooks/useEstoque';
-import { useEstoqueCotacao } from '@/hooks/useEstoqueCotacao';
 
 interface ProdutoExtrato {
   nome: string;
@@ -37,7 +36,6 @@ const Cotacao = () => {
   const { toast } = useToast();
   const { fornecedores } = useFornecedores();
   const { estoqueProdutos } = useEstoque();
-  const { obterEstoqueProduto } = useEstoqueCotacao();
   
   const [mensagemFornecedor, setMensagemFornecedor] = useState('');
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState('');
@@ -125,16 +123,23 @@ const Cotacao = () => {
         );
 
         if (!produtoExistente) {
-          // Buscar informações de estoque
-          const estoquesLojas: { [loja: string]: { quantidade: number; unidade: string } } = {};
-          const estoquesDisponiveis = obterEstoqueProduto(produtoExtraido.nome);
-          
-          estoquesDisponiveis.forEach(estoque => {
-            estoquesLojas[estoque.loja] = {
-              quantidade: estoque.quantidade,
-              unidade: estoque.unidade
-            };
+          // Buscar informações de estoque na lista de produtos
+          const estoqueInfo = estoqueProdutos.find(estoque => {
+            const nomeNorm = estoque.produto_nome.toLowerCase().trim();
+            const produtoNorm = produtoExtraido.nome.toLowerCase().trim();
+            return nomeNorm.includes(produtoNorm) || produtoNorm.includes(nomeNorm);
           });
+
+          const estoqueLojas: { [loja: string]: { quantidade: number; unidade: string } } = {};
+          
+          if (estoqueInfo) {
+            Object.entries(estoqueInfo.estoques_por_loja).forEach(([loja, quantidade]) => {
+              estoqueLojas[loja] = {
+                quantidade: quantidade,
+                unidade: estoqueInfo.unidade
+              };
+            });
+          }
 
           // Criar novo produto
           produtoExistente = {
@@ -144,7 +149,7 @@ const Cotacao = () => {
             precos: {},
             quantidades: {},
             unidades: {},
-            estoqueLojas: estoquesLojas
+            estoqueLojas: estoqueLojas
           };
           novaCotacao.push(produtoExistente);
         }

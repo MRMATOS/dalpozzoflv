@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, Package, ShoppingCart, BarChart3, FileText, Database } from 'lucide-react';
+import { Users, Package, ShoppingCart, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -41,14 +41,6 @@ const Dashboard = () => {
         icon: Package,
         path: '/estoque',
         color: 'from-green-600 to-emerald-600',
-        roles: ['estoque']
-      },
-      {
-        title: 'Estoque para Cotação',
-        description: 'Informar disponibilidade para cotações',
-        icon: Database,
-        path: '/estoque-cotacao',
-        color: 'from-cyan-600 to-blue-600',
         roles: ['estoque']
       }
     ] : [])

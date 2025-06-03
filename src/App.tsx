@@ -13,7 +13,6 @@ import Configuracoes from "./pages/Configuracoes";
 import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
 import Estoque from "./pages/Estoque";
-import EstoqueCotacao from "./pages/EstoqueCotacao";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -52,11 +51,6 @@ const App = () => (
             <Route path="/estoque" element={
               <ProtectedRoute>
                 <Estoque />
-              </ProtectedRoute>
-            } />
-            <Route path="/estoque-cotacao" element={
-              <ProtectedRoute requiredRole="estoque">
-                <EstoqueCotacao />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Index />} />
