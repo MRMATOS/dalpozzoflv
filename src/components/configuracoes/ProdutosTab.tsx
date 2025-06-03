@@ -601,7 +601,7 @@ const ProdutosTab = () => {
                             onClick={() => setAddingVariationTo(addingVariationTo === produto.id ? null : produto.id)}
                           >
                             <Plus className="w-4 h-4 mr-1" />
-                            Adicionar Variação
+                            Variação
                           </Button>
                         )}
                         <Button
