@@ -13,13 +13,15 @@ import { useLojas } from '@/hooks/useLojas';
 import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
 
-const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'];
+const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'] as const;
 
 const userSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   loja: z.string().min(1, "Loja é obrigatória"),
   codigo_acesso: z.string().min(3, "Código de acesso deve ter pelo menos 3 caracteres"),
-  tipo: z.enum(['master', 'comprador', 'requisitante', 'estoque'])
+  tipo: z.enum(['master', 'comprador', 'requisitante', 'estoque'], {
+    errorMap: () => ({ message: "Tipo de usuário inválido" })
+  })
 });
 
 const UsuariosTab = () => {
@@ -29,7 +31,7 @@ const UsuariosTab = () => {
   const [newUser, setNewUser] = useState({
     nome: '',
     codigo_acesso: '',
-    tipo: 'requisitante',
+    tipo: 'requisitante' as const,
     loja: ''
   });
   const [showNewUser, setShowNewUser] = useState(false);
@@ -101,6 +103,7 @@ const UsuariosTab = () => {
         });
 
       if (insertError) {
+        console.error('Erro ao criar usuário:', insertError);
         throw new Error('Erro ao criar usuário: ' + insertError.message);
       }
 
@@ -111,6 +114,7 @@ const UsuariosTab = () => {
       toast.success('Usuário criado com sucesso!');
       setNewUser({ nome: '', codigo_acesso: '', tipo: 'requisitante', loja: '' });
       setShowNewUser(false);
+      setValidationErrors({});
     },
     onError: (error: any) => {
       console.error('Erro na mutation:', error);
@@ -255,7 +259,7 @@ const UsuariosTab = () => {
               {validationErrors.codigo_acesso && (
                 <p className="text-sm text-red-600 mt-1">{validationErrors.codigo_acesso}</p>
               )}
-              <Select value={newUser.tipo} onValueChange={(value) => setNewUser({ ...newUser, tipo: value })}>
+              <Select value={newUser.tipo} onValueChange={(value) => setNewUser({ ...newUser, tipo: value as any })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -267,6 +271,9 @@ const UsuariosTab = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {validationErrors.tipo && (
+                <p className="text-sm text-red-600 mt-1">{validationErrors.tipo}</p>
+              )}
               <Select value={newUser.loja} onValueChange={(value) => setNewUser({ ...newUser, loja: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione uma loja" />
@@ -290,7 +297,10 @@ const UsuariosTab = () => {
                   {createUserMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Salvar
                 </Button>
-                <Button variant="outline" onClick={() => setShowNewUser(false)}>
+                <Button variant="outline" onClick={() => {
+                  setShowNewUser(false);
+                  setValidationErrors({});
+                }}>
                   Cancelar
                 </Button>
               </div>
