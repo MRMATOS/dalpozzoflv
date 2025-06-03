@@ -1,6 +1,27 @@
-
 import React, { useState, useEffect } from 'react';
 import { Upload, Plus, Trash2, Download, Calculator, TestTube } from 'lucide-react';
+
+// Type definitions
+interface ProdutoExtraido {
+  produto: string;
+  tipo: string;
+  preco: number;
+  fornecedor: string;
+  linhaOriginal: string;
+  aliasUsado: string;
+}
+
+interface ItemTabelaComparativa {
+  produto: string;
+  tipo: string;
+  fornecedores: { [fornecedor: string]: number | null };
+  quantidades: { [fornecedor: string]: number };
+}
+
+interface MensagemFornecedor {
+  fornecedor: string;
+  mensagem: string;
+}
 
 const CotacaoProdutos = () => {
 // Termos genéricos que podem ser removidos do texto antes de buscar no dicionário
@@ -190,7 +211,7 @@ const dicionarioProdutos = {
 };
 
 // Dados de exemplo para teste
-const exemploMensagens = [
+const exemploMensagens: MensagemFornecedor[] = [
   {
     fornecedor: 'Frutas Silva',
     mensagem: `Bom dia! Segue nossa cotação:
@@ -230,10 +251,10 @@ UVA ITÁLIA - 8.90`
   }
 ];
 
-const [mensagens, setMensagens] = useState([]);
-const [fornecedores, setFornecedores] = useState([]);
-const [produtosExtraidos, setProdutosExtraidos] = useState([]);
-const [tabelaComparativa, setTabelaComparativa] = useState([]);
+const [mensagens, setMensagens] = useState<MensagemFornecedor[]>([]);
+const [fornecedores, setFornecedores] = useState<string[]>([]);
+const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
+const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
 const [modoTeste, setModoTeste] = useState(false);
 
 // Função para carregar dados de exemplo
@@ -246,9 +267,9 @@ const carregarDadosExemplo = () => {
 };
 
 // Função para extrair produtos de uma mensagem usando o novo dicionário hierárquico
-const extrairProdutos = (mensagem, nomeFornecedor) => {
+const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
 const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
-const produtos = [];
+const produtos: ProdutoExtraido[] = [];
 
 linhas.forEach(linha => {
 // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
@@ -348,14 +369,14 @@ setMensagens([...mensagens, { fornecedor: '', mensagem: '' }]);
 };
 
 // Atualizar mensagem
-const atualizarMensagem = (index, campo, valor) => {
+const atualizarMensagem = (index: number, campo: keyof MensagemFornecedor, valor: string) => {
 const novasMensagens = [...mensagens];
 novasMensagens[index][campo] = valor;
 setMensagens(novasMensagens);
 };
 
 // Remover mensagem
-const removerMensagem = (index) => {
+const removerMensagem = (index: number) => {
 const novasMensagens = mensagens.filter((_, i) => i !== index);
 setMensagens(novasMensagens);
 };
@@ -371,8 +392,8 @@ setModoTeste(false);
 
 // Processar mensagens de exemplo
 const processarMensagensExemplo = () => {
-let todosProdutos = [];
-let nomesFornecedores = [];
+let todosProdutos: ProdutoExtraido[] = [];
+let nomesFornecedores: string[] = [];
 
 exemploMensagens.forEach(({ fornecedor, mensagem }) => {
 if (fornecedor && mensagem) {
@@ -393,8 +414,8 @@ criarTabelaComparativa(todosProdutos, nomesFornecedores);
 
 // Processar todas as mensagens
 const processarMensagens = () => {
-let todosProdutos = [];
-let nomesFornecedores = [];
+let todosProdutos: ProdutoExtraido[] = [];
+let nomesFornecedores: string[] = [];
 
 mensagens.forEach(({ fornecedor, mensagem }) => {
 if (fornecedor && mensagem) {
@@ -414,8 +435,8 @@ criarTabelaComparativa(todosProdutos, nomesFornecedores);
 };
 
 // Criar tabela comparativa
-const criarTabelaComparativa = (produtos, fornecedores) => {
-const produtosAgrupados = {};
+const criarTabelaComparativa = (produtos: ProdutoExtraido[], fornecedores: string[]) => {
+const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
 produtos.forEach(produto => {
 const chave = `${produto.produto}_${produto.tipo}`;
@@ -436,7 +457,7 @@ produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
 });
 
 // Converter para array e ordenar alfabeticamente por produto
-const tabela = Object.values(produtosAgrupados).sort((a, b) => {
+const tabela = Object.values(produtosAgrupados).sort((a: ItemTabelaComparativa, b: ItemTabelaComparativa) => {
 if (a.produto === b.produto) {
 return a.tipo.localeCompare(b.tipo);
 }
@@ -447,14 +468,14 @@ setTabelaComparativa(tabela);
 };
 
 // Atualizar quantidade
-const atualizarQuantidade = (produtoIndex, fornecedor, quantidade) => {
+const atualizarQuantidade = (produtoIndex: number, fornecedor: string, quantidade: string) => {
 const novaTabela = [...tabelaComparativa];
 novaTabela[produtoIndex].quantidades[fornecedor] = parseInt(quantidade) || 0;
 setTabelaComparativa(novaTabela);
 };
 
 // Calcular total por fornecedor
-const calcularTotalFornecedor = (fornecedor) => {
+const calcularTotalFornecedor = (fornecedor: string): number => {
 return tabelaComparativa.reduce((total, item) => {
 const preco = item.fornecedores[fornecedor];
 const quantidade = item.quantidades[fornecedor] || 0;
@@ -616,7 +637,7 @@ className="w-16 p-1 text-center border border-gray-300 rounded focus:ring-2 focu
 })}
 {/* Linha de Totais */}
 <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
-<td className="px-4 py-3" colSpan="2">TOTAL GERAL</td>
+<td className="px-4 py-3" colSpan={2}>TOTAL GERAL</td>
 {fornecedores.map(fornecedor => {
 const total = calcularTotalFornecedor(fornecedor);
 const totais = fornecedores.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
