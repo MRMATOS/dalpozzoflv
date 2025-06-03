@@ -3,11 +3,12 @@ import { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, MessageSquare, Trash2, ShoppingCart, Package } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Trash2, ShoppingCart, Info, Trophy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useFornecedores } from '@/hooks/useFornecedores';
@@ -18,6 +19,7 @@ interface ProdutoExtrato {
   tipo: string;
   preco: number;
   fornecedor: string;
+  unidade?: string;
 }
 
 interface ProdutoCotacao {
@@ -37,63 +39,102 @@ const Cotacao = () => {
   const { fornecedores } = useFornecedores();
   const { estoqueProdutos } = useEstoque();
   
-  const [mensagemFornecedor, setMensagemFornecedor] = useState('');
-  const [fornecedorSelecionado, setFornecedorSelecionado] = useState('');
+  const [mensagensFornecedores, setMensagensFornecedores] = useState<{ [key: string]: string }>({
+    'fornecedor1': '',
+    'fornecedor2': '',
+    'fornecedor3': '',
+    'fornecedor4': ''
+  });
   const [produtosCotacao, setProdutosCotacao] = useState<ProdutoCotacao[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [tabAtiva, setTabAtiva] = useState('fornecedor1');
 
-  const extrairProdutos = () => {
-    if (!mensagemFornecedor.trim() || !fornecedorSelecionado) {
+  // Mapear fornecedores cadastrados para as abas
+  const fornecedorPorAba = {
+    'fornecedor1': fornecedores[0]?.nome || 'Fornecedor 1',
+    'fornecedor2': fornecedores[1]?.nome || 'Fornecedor 2', 
+    'fornecedor3': fornecedores[2]?.nome || 'Fornecedor 3',
+    'fornecedor4': fornecedores[3]?.nome || 'Fornecedor 4'
+  };
+
+  const extrairProdutosDaMensagem = (mensagem: string, fornecedor: string) => {
+    if (!mensagem.trim()) return [];
+
+    const linhas = mensagem.trim().split('\n');
+    const produtosExtraidos: ProdutoExtrato[] = [];
+
+    linhas.forEach(linha => {
+      linha = linha.trim();
+      if (!linha) return;
+
+      // Regex mais robusta para capturar diferentes formatos de preço
+      const regexFormatos = [
+        // Formato: "produto R$ 10,50" ou "produto 10,50"
+        /^(.+?)(?:\s+(?:R\$?\s*)?(\d+)[,.](\d{2})).*$/,
+        // Formato: "R$ 10,50 produto" ou "10,50 produto"  
+        /^(?:R\$?\s*)?(\d+)[,.](\d{2})\s+(.+)$/,
+        // Formato: "produto: R$ 10,50" ou "produto - 10,50"
+        /^(.+?)(?:\s*[:|-]\s*(?:R\$?\s*)?(\d+)[,.](\d{2})).*$/
+      ];
+
+      for (const regex of regexFormatos) {
+        const match = linha.match(regex);
+        if (match) {
+          let nome, preco;
+          
+          if (regex === regexFormatos[1]) {
+            // Formato com preço no início
+            preco = parseFloat(`${match[1]}.${match[2]}`);
+            nome = match[3];
+          } else {
+            // Formatos com preço no final
+            nome = match[1];
+            preco = parseFloat(`${match[2]}.${match[3]}`);
+          }
+
+          nome = nome.trim().replace(/^[^\w\s]+|[^\w\s]+$/g, '');
+          
+          if (nome && preco > 0) {
+            produtosExtraidos.push({
+              nome: nome,
+              tipo: nome,
+              preco: preco,
+              fornecedor: fornecedor,
+              unidade: 'Kg'
+            });
+            break; // Sair do loop quando encontrar um match
+          }
+        }
+      }
+    });
+
+    return produtosExtraidos;
+  };
+
+  const processarMensagem = () => {
+    const mensagem = mensagensFornecedores[tabAtiva];
+    const fornecedor = fornecedorPorAba[tabAtiva];
+
+    if (!mensagem.trim()) {
       toast({
-        title: "Dados incompletos",
-        description: "Selecione um fornecedor e cole a mensagem.",
+        title: "Mensagem vazia",
+        description: "Cole a mensagem do fornecedor para extrair os produtos.",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      const linhas = mensagemFornecedor.trim().split('\n');
-      const produtosExtraidos: ProdutoExtrato[] = [];
-
-      linhas.forEach(linha => {
-        linha = linha.trim();
-        if (!linha) return;
-
-        // Tentar extrair preço da linha (formatos: R$ 10,50 ou 10,50 ou 10.50)
-        const precoRegex = /(?:R\$\s*)?(\d+)[,.](\d{2})/;
-        const precoMatch = linha.match(precoRegex);
-        
-        if (precoMatch) {
-          const preco = parseFloat(`${precoMatch[1]}.${precoMatch[2]}`);
-          
-          // Remover o preço da linha para extrair o nome do produto
-          const nomeProduto = linha
-            .replace(precoRegex, '')
-            .replace(/^\W+|\W+$/g, '') // Remove caracteres especiais do início e fim
-            .trim();
-
-          if (nomeProduto) {
-            produtosExtraidos.push({
-              nome: nomeProduto,
-              tipo: nomeProduto, // Por enquanto, tipo = nome
-              preco: preco,
-              fornecedor: fornecedorSelecionado
-            });
-          }
-        }
-      });
+      const produtosExtraidos = extrairProdutosDaMensagem(mensagem, fornecedor);
 
       if (produtosExtraidos.length === 0) {
         toast({
           title: "Nenhum produto encontrado",
-          description: "Não foi possível extrair produtos da mensagem.",
+          description: "Não foi possível extrair produtos da mensagem. Verifique o formato.",
           variant: "destructive"
         });
         return;
       }
 
-      // Integrar produtos extraídos na cotação
       integrarProdutos(produtosExtraidos);
 
       toast({
@@ -116,14 +157,12 @@ const Cotacao = () => {
       const novaCotacao = [...prev];
 
       produtosExtraidos.forEach(produtoExtraido => {
-        // Buscar se já existe um produto similar
         let produtoExistente = novaCotacao.find(p => 
           p.nome.toLowerCase().includes(produtoExtraido.nome.toLowerCase()) ||
           produtoExtraido.nome.toLowerCase().includes(p.nome.toLowerCase())
         );
 
         if (!produtoExistente) {
-          // Buscar informações de estoque na lista de produtos
           const estoqueInfo = estoqueProdutos.find(estoque => {
             const nomeNorm = estoque.produto_nome.toLowerCase().trim();
             const produtoNorm = produtoExtraido.nome.toLowerCase().trim();
@@ -141,7 +180,6 @@ const Cotacao = () => {
             });
           }
 
-          // Criar novo produto
           produtoExistente = {
             id: `produto-${Date.now()}-${Math.random()}`,
             nome: produtoExtraido.nome,
@@ -154,10 +192,9 @@ const Cotacao = () => {
           novaCotacao.push(produtoExistente);
         }
 
-        // Adicionar preço do fornecedor
         produtoExistente.precos[produtoExtraido.fornecedor] = produtoExtraido.preco;
         produtoExistente.quantidades[produtoExtraido.fornecedor] = 0;
-        produtoExistente.unidades[produtoExtraido.fornecedor] = 'Kg';
+        produtoExistente.unidades[produtoExtraido.fornecedor] = produtoExtraido.unidade || 'Kg';
       });
 
       return novaCotacao;
@@ -191,7 +228,6 @@ const Cotacao = () => {
       return;
     }
 
-    // Navegar para página de resumo (implementar state management se necessário)
     navigate('/resumo-pedido', { 
       state: { 
         produtos: produtosSelecionados,
@@ -200,9 +236,18 @@ const Cotacao = () => {
     });
   };
 
-  const fornecedoresAtivos = fornecedores.filter(f => f.nome);
-  const fornecedoresComPrecos = fornecedoresAtivos.filter(fornecedor =>
-    produtosCotacao.some(produto => produto.precos[fornecedor.nome])
+  const limparCotacao = () => {
+    setProdutosCotacao([]);
+    setMensagensFornecedores({
+      'fornecedor1': '',
+      'fornecedor2': '',
+      'fornecedor3': '',
+      'fornecedor4': ''
+    });
+  };
+
+  const fornecedoresComPrecos = Object.keys(fornecedorPorAba).filter(key =>
+    produtosCotacao.some(produto => produto.precos[fornecedorPorAba[key]])
   );
 
   return (
@@ -225,7 +270,7 @@ const Cotacao = () => {
                 <ShoppingCart className="text-white text-sm" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Cotação de Preços</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Sistema de Cotação de Produtos</h1>
                 <p className="text-sm text-gray-500">Comparar preços e criar pedidos</p>
               </div>
             </div>
@@ -245,63 +290,82 @@ const Cotacao = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Seção de Extração */}
+        {/* Instruções */}
+        <Card className="mb-8 bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2 text-blue-800">
+              <Info className="w-5 h-5" />
+              <span>Como usar o Sistema de Cotação</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-blue-700">
+              <div className="space-y-2">
+                <p><strong>1.</strong> Selecione a aba do fornecedor desejado</p>
+                <p><strong>2.</strong> Cole a mensagem do WhatsApp na caixa de texto</p>
+                <p><strong>3.</strong> Clique em "Processar Mensagem" para extrair produtos</p>
+                <p><strong>4.</strong> Repita para outros fornecedores</p>
+              </div>
+              <div className="space-y-2">
+                <p><strong>5.</strong> Compare os preços na tabela abaixo</p>
+                <p><strong>6.</strong> Defina as quantidades desejadas</p>
+                <p><strong>7.</strong> Verifique os totais por fornecedor</p>
+                <p><strong>8.</strong> Clique em "Gerar Pedido" para finalizar</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Seção de Extração por Fornecedor */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <MessageSquare className="w-5 h-5" />
-              <span>Extrair Produtos de Mensagem</span>
+              <span>Mensagens dos Fornecedores</span>
             </CardTitle>
             <CardDescription>
-              Cole a mensagem do fornecedor para extrair produtos e preços automaticamente
+              Cole as mensagens do WhatsApp de cada fornecedor nas abas correspondentes
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fornecedor
-                </label>
-                <Select value={fornecedorSelecionado} onValueChange={setFornecedorSelecionado}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o fornecedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fornecedoresAtivos.map(fornecedor => (
-                      <SelectItem key={fornecedor.id} value={fornecedor.nome}>
-                        {fornecedor.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Mensagem do Fornecedor
-                </label>
-                <Textarea
-                  ref={textareaRef}
-                  value={mensagemFornecedor}
-                  onChange={(e) => setMensagemFornecedor(e.target.value)}
-                  placeholder="Cole aqui a mensagem do fornecedor com produtos e preços..."
-                  className="min-h-[120px]"
-                />
-              </div>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setMensagemFornecedor('');
-                  setFornecedorSelecionado('');
-                }}
-              >
-                Limpar
-              </Button>
-              <Button onClick={extrairProdutos}>
-                Extrair Produtos
-              </Button>
-            </div>
+          <CardContent>
+            <Tabs value={tabAtiva} onValueChange={setTabAtiva}>
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="fornecedor1">{fornecedorPorAba['fornecedor1']}</TabsTrigger>
+                <TabsTrigger value="fornecedor2">{fornecedorPorAba['fornecedor2']}</TabsTrigger>
+                <TabsTrigger value="fornecedor3">{fornecedorPorAba['fornecedor3']}</TabsTrigger>
+                <TabsTrigger value="fornecedor4">{fornecedorPorAba['fornecedor4']}</TabsTrigger>
+              </TabsList>
+              
+              {Object.keys(fornecedorPorAba).map(key => (
+                <TabsContent key={key} value={key} className="mt-4">
+                  <div className="space-y-4">
+                    <Textarea
+                      value={mensagensFornecedores[key]}
+                      onChange={(e) => setMensagensFornecedores(prev => ({
+                        ...prev,
+                        [key]: e.target.value
+                      }))}
+                      placeholder={`Cole aqui a mensagem do ${fornecedorPorAba[key]}...`}
+                      className="min-h-[120px]"
+                    />
+                    <div className="flex justify-end space-x-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setMensagensFornecedores(prev => ({
+                          ...prev,
+                          [key]: ''
+                        }))}
+                      >
+                        Limpar
+                      </Button>
+                      <Button onClick={processarMensagem}>
+                        Processar Mensagem
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -316,10 +380,7 @@ const Cotacao = () => {
                 </CardDescription>
               </div>
               <div className="flex space-x-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setProdutosCotacao([])}
-                >
+                <Button variant="outline" onClick={limparCotacao}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Limpar Tudo
                 </Button>
@@ -335,16 +396,19 @@ const Cotacao = () => {
                     <TableRow>
                       <TableHead className="w-[200px]">Produto</TableHead>
                       <TableHead className="w-[150px]">Estoques</TableHead>
-                      {fornecedoresComPrecos.map(fornecedor => (
-                        <TableHead key={fornecedor.id} className="text-right min-w-[160px]">
-                          <div className="flex flex-col">
-                            <span className="font-semibold">{fornecedor.nome}</span>
-                            <span className="text-xs text-gray-500">
-                              Total: R$ {calcularTotalFornecedor(fornecedor.nome).toFixed(2)}
-                            </span>
-                          </div>
-                        </TableHead>
-                      ))}
+                      {fornecedoresComPrecos.map(key => {
+                        const fornecedor = fornecedorPorAba[key];
+                        return (
+                          <TableHead key={key} className="text-right min-w-[160px]">
+                            <div className="flex flex-col">
+                              <span className="font-semibold">{fornecedor}</span>
+                              <span className="text-xs text-gray-500">
+                                Total: R$ {calcularTotalFornecedor(fornecedor).toFixed(2)}
+                              </span>
+                            </div>
+                          </TableHead>
+                        );
+                      })}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -373,25 +437,26 @@ const Cotacao = () => {
                               )}
                             </div>
                           </TableCell>
-                          {fornecedoresComPrecos.map(fornecedor => {
-                            const preco = produto.precos[fornecedor.nome];
+                          {fornecedoresComPrecos.map(key => {
+                            const fornecedor = fornecedorPorAba[key];
+                            const preco = produto.precos[fornecedor];
                             const isMinPrice = preco === menorPreco && menorPreco > 0;
                             
                             return (
-                              <TableCell key={fornecedor.id} className="text-right">
+                              <TableCell key={key} className="text-right">
                                 {preco ? (
                                   <div className="space-y-2">
                                     <div className={`font-semibold ${isMinPrice ? 'text-green-600' : ''}`}>
                                       R$ {preco.toFixed(2)}
-                                      {isMinPrice && <span className="text-xs ml-1">🏆</span>}
+                                      {isMinPrice && <Trophy className="inline w-4 h-4 ml-1 text-yellow-500" />}
                                     </div>
                                     <div className="flex items-center space-x-1">
                                       <Select
-                                        value={produto.unidades[fornecedor.nome] || 'Kg'}
+                                        value={produto.unidades[fornecedor] || 'Kg'}
                                         onValueChange={(unidade) => {
                                           setProdutosCotacao(prev => prev.map(p => 
                                             p.id === produto.id 
-                                              ? { ...p, unidades: { ...p.unidades, [fornecedor.nome]: unidade } }
+                                              ? { ...p, unidades: { ...p.unidades, [fornecedor]: unidade } }
                                               : p
                                           ));
                                         }}
@@ -409,12 +474,12 @@ const Cotacao = () => {
                                         type="number"
                                         min="0"
                                         step="0.1"
-                                        value={produto.quantidades[fornecedor.nome] || ''}
+                                        value={produto.quantidades[fornecedor] || ''}
                                         onChange={(e) => {
                                           const quantidade = parseFloat(e.target.value) || 0;
                                           setProdutosCotacao(prev => prev.map(p => 
                                             p.id === produto.id 
-                                              ? { ...p, quantidades: { ...p.quantidades, [fornecedor.nome]: quantidade } }
+                                              ? { ...p, quantidades: { ...p.quantidades, [fornecedor]: quantidade } }
                                               : p
                                           ));
                                         }}
@@ -422,9 +487,9 @@ const Cotacao = () => {
                                         placeholder="0"
                                       />
                                     </div>
-                                    {produto.quantidades[fornecedor.nome] > 0 && (
+                                    {produto.quantidades[fornecedor] > 0 && (
                                       <div className="text-xs text-gray-600">
-                                        Subtotal: R$ {(preco * produto.quantidades[fornecedor.nome]).toFixed(2)}
+                                        Subtotal: R$ {(preco * produto.quantidades[fornecedor]).toFixed(2)}
                                       </div>
                                     )}
                                   </div>
@@ -442,18 +507,6 @@ const Cotacao = () => {
               </div>
             </CardContent>
           </Card>
-        )}
-
-        {produtosCotacao.length === 0 && (
-          <div className="text-center py-12">
-            <Package className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Nenhuma cotação iniciada
-            </h3>
-            <p className="text-gray-500">
-              Cole uma mensagem de fornecedor acima para começar a comparar preços.
-            </p>
-          </div>
         )}
       </main>
     </div>
