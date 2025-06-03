@@ -587,21 +587,31 @@ const ProdutosTab = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingProduct(editingProduct === produto.id ? null : produto.id)}
-                        >
-                          {editingProduct === produto.id ? 'Finalizar' : 'Editar'}
-                        </Button>
-                        {editingProduct === produto.id && (
+                        {editingProduct === produto.id ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setAddingVariationTo(addingVariationTo === produto.id ? null : produto.id)}
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Variação
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingProduct(null)}
+                            >
+                              Finalizar
+                            </Button>
+                          </>
+                        ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setAddingVariationTo(addingVariationTo === produto.id ? null : produto.id)}
+                            onClick={() => setEditingProduct(produto.id)}
                           >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Variação
+                            Editar
                           </Button>
                         )}
                         <Button
