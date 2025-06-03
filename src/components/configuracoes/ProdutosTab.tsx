@@ -19,6 +19,7 @@ const ProdutosTab = () => {
   const [newProduct, setNewProduct] = useState({
     produto: '',
     unidade: 'Kg',
+    media_por_caixa: 20,
     ativo: true
   });
   const [showNewProduct, setShowNewProduct] = useState(false);
@@ -28,17 +29,9 @@ const ProdutosTab = () => {
     queryFn: async () => {
       console.log('Fazendo query para produtos...');
       
-      // Especificar qual relacionamento usar para resolver a ambiguidade
       const { data, error } = await supabase
         .from('produtos')
-        .select(`
-          *,
-          escala_abastecimento!escala_abastecimento_produto_id_fkey (
-            escala1,
-            escala2,
-            escala3
-          )
-        `)
+        .select('*')
         .order('produto');
       
       console.log('Produtos carregados:', data);
@@ -97,45 +90,12 @@ const ProdutosTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos'] });
       toast.success('Produto criado com sucesso!');
-      setNewProduct({ produto: '', unidade: 'Kg', ativo: true });
+      setNewProduct({ produto: '', unidade: 'Kg', media_por_caixa: 20, ativo: true });
       setShowNewProduct(false);
     },
     onError: (error) => {
       console.error('Erro ao criar produto:', error);
       toast.error('Erro ao criar produto: ' + error.message);
-    },
-  });
-
-  const updateEscalaMutation = useMutation({
-    mutationFn: async ({ produtoId, escala }: { produtoId: string; escala: any }) => {
-      console.log('Atualizando escala:', produtoId, escala);
-      
-      const { data: existing } = await supabase
-        .from('escala_abastecimento')
-        .select('id')
-        .eq('produto_id', produtoId)
-        .single();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('escala_abastecimento')
-          .update(escala)
-          .eq('produto_id', produtoId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('escala_abastecimento')
-          .insert([{ produto_id: produtoId, ...escala }]);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['produtos'] });
-      toast.success('Escala atualizada com sucesso!');
-    },
-    onError: (error) => {
-      console.error('Erro ao atualizar escala:', error);
-      toast.error('Erro ao atualizar escala: ' + error.message);
     },
   });
 
@@ -190,7 +150,7 @@ const ProdutosTab = () => {
           {showNewProduct && (
             <div className="mb-6 p-4 border rounded-lg bg-gray-50">
               <h3 className="font-semibold mb-4">Novo Produto</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <Input
                   placeholder="Nome do produto"
                   value={newProduct.produto}
@@ -208,6 +168,12 @@ const ProdutosTab = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                <Input
+                  type="number"
+                  placeholder="Média por caixa (kg)"
+                  value={newProduct.media_por_caixa}
+                  onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
+                />
                 <div className="flex items-center space-x-2">
                   <Switch
                     checked={newProduct.ativo}
@@ -248,7 +214,7 @@ const ProdutosTab = () => {
         {showNewProduct && (
           <div className="mb-6 p-4 border rounded-lg bg-gray-50">
             <h3 className="font-semibold mb-4">Novo Produto</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <Input
                 placeholder="Nome do produto"
                 value={newProduct.produto}
@@ -266,6 +232,12 @@ const ProdutosTab = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Input
+                type="number"
+                placeholder="Média por caixa (kg)"
+                value={newProduct.media_por_caixa}
+                onChange={(e) => setNewProduct({ ...newProduct, media_por_caixa: parseFloat(e.target.value) || 0 })}
+              />
               <div className="flex items-center space-x-2">
                 <Switch
                   checked={newProduct.ativo}
@@ -294,10 +266,8 @@ const ProdutosTab = () => {
             <TableRow>
               <TableHead>Produto</TableHead>
               <TableHead>Unidade</TableHead>
+              <TableHead>Média por Caixa (kg)</TableHead>
               <TableHead>Ativo</TableHead>
-              <TableHead>Escala 1</TableHead>
-              <TableHead>Escala 2</TableHead>
-              <TableHead>Escala 3</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -348,69 +318,30 @@ const ProdutosTab = () => {
                   )}
                 </TableCell>
                 <TableCell>
+                  {editingProduct === produto.id ? (
+                    <Input
+                      type="number"
+                      defaultValue={produto.media_por_caixa || 20}
+                      className="w-24"
+                      onBlur={(e) => {
+                        const value = parseFloat(e.target.value) || null;
+                        updateProductMutation.mutate({
+                          id: produto.id,
+                          updates: { media_por_caixa: value }
+                        });
+                      }}
+                    />
+                  ) : (
+                    `${produto.media_por_caixa || 20} kg`
+                  )}
+                </TableCell>
+                <TableCell>
                   <Switch
                     checked={produto.ativo}
                     onCheckedChange={(checked) => {
                       updateProductMutation.mutate({
                         id: produto.id,
                         updates: { ativo: checked }
-                      });
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    className="w-20"
-                    defaultValue={produto.escala_abastecimento?.[0]?.escala1 || ''}
-                    onBlur={(e) => {
-                      const value = parseFloat(e.target.value) || null;
-                      updateEscalaMutation.mutate({
-                        produtoId: produto.id,
-                        escala: {
-                          escala1: value,
-                          escala2: produto.escala_abastecimento?.[0]?.escala2 || null,
-                          escala3: produto.escala_abastecimento?.[0]?.escala3 || null,
-                        }
-                      });
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    className="w-20"
-                    defaultValue={produto.escala_abastecimento?.[0]?.escala2 || ''}
-                    onBlur={(e) => {
-                      const value = parseFloat(e.target.value) || null;
-                      updateEscalaMutation.mutate({
-                        produtoId: produto.id,
-                        escala: {
-                          escala1: produto.escala_abastecimento?.[0]?.escala1 || null,
-                          escala2: value,
-                          escala3: produto.escala_abastecimento?.[0]?.escala3 || null,
-                        }
-                      });
-                    }}
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    className="w-20"
-                    defaultValue={produto.escala_abastecimento?.[0]?.escala3 || ''}
-                    onBlur={(e) => {
-                      const value = parseFloat(e.target.value) || null;
-                      updateEscalaMutation.mutate({
-                        produtoId: produto.id,
-                        escala: {
-                          escala1: produto.escala_abastecimento?.[0]?.escala1 || null,
-                          escala2: produto.escala_abastecimento?.[0]?.escala2 || null,
-                          escala3: value,
-                        }
                       });
                     }}
                   />

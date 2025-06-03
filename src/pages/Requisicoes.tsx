@@ -15,18 +15,13 @@ interface Product {
   id: string;
   produto: string;
   unidade: string;
-  escala_abastecimento?: Array<{
-    escala1?: number;
-    escala2?: number;
-    escala3?: number;
-  }>;
+  media_por_caixa?: number;
 }
 
 interface RequisitionItem {
   productId: string;
-  quantity: number;
-  scale: number;
-  multiplier: number;
+  caixas: number;
+  quilos: number;
 }
 
 const Requisicoes = () => {
@@ -41,14 +36,7 @@ const Requisicoes = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('produtos')
-        .select(`
-          *,
-          escala_abastecimento!escala_abastecimento_produto_id_fkey (
-            escala1,
-            escala2,
-            escala3
-          )
-        `)
+        .select('id, produto, unidade, media_por_caixa')
         .eq('ativo', true)
         .order('produto');
       
@@ -85,10 +73,10 @@ const Requisicoes = () => {
       const itensRequisicao = items.map(item => ({
         requisicao_id: requisicao.id,
         produto_id: item.productId,
-        quantidade: item.quantity,
-        escala: item.scale,
-        multiplicador: item.multiplier,
-        quantidade_calculada: item.quantity
+        quantidade: item.caixas,
+        quantidade_calculada: item.quilos,
+        escala: null, // Não usamos mais escalas
+        multiplicador: null // Não usamos mais multiplicadores
       }));
 
       console.log('Inserindo itens da requisição:', itensRequisicao);
@@ -121,11 +109,11 @@ const Requisicoes = () => {
     product.produto && product.produto.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleQuantityChange = (productId: string, quantity: number, scale: number, multiplier: number) => {
-    if (quantity > 0) {
+  const handleQuantityChange = (productId: string, caixas: number, quilos: number) => {
+    if (caixas > 0) {
       setRequisitionItems(prev => ({
         ...prev,
-        [productId]: { productId, quantity, scale, multiplier }
+        [productId]: { productId, caixas, quilos }
       }));
     } else {
       setRequisitionItems(prev => {
@@ -137,7 +125,7 @@ const Requisicoes = () => {
   };
 
   const handleSubmitRequisition = () => {
-    const items = Object.values(requisitionItems).filter(item => item.quantity > 0);
+    const items = Object.values(requisitionItems).filter(item => item.caixas > 0);
     
     if (items.length === 0) {
       toast.error('Adicione pelo menos um produto à requisição');
@@ -156,6 +144,8 @@ const Requisicoes = () => {
   };
 
   const totalItems = Object.keys(requisitionItems).length;
+  const totalCaixas = Object.values(requisitionItems).reduce((sum, item) => sum + item.caixas, 0);
+  const totalQuilos = Object.values(requisitionItems).reduce((sum, item) => sum + item.quilos, 0);
 
   if (isLoading) {
     return (
@@ -233,8 +223,13 @@ const Requisicoes = () => {
           </div>
           
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600">
-              {totalItems} produtos selecionados
+            <div className="text-sm text-gray-600 text-right">
+              <div>{totalItems} produtos selecionados</div>
+              {totalItems > 0 && (
+                <div className="text-xs">
+                  {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg
+                </div>
+              )}
             </div>
             <Button 
               onClick={handleSubmitRequisition}

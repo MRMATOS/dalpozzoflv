@@ -1,64 +1,47 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import ScaleIcon from './ScaleIcon';
-import MultiplierButton from './MultiplierButton';
+import { Button } from '@/components/ui/button';
+import { Minus, Plus } from 'lucide-react';
 
 interface Product {
   id: string;
   produto: string;
   unidade: string;
-  escala_abastecimento?: Array<{
-    escala1?: number;
-    escala2?: number;
-    escala3?: number;
-  }>;
+  media_por_caixa?: number;
 }
 
 interface ProductCardProps {
   product: Product;
-  onQuantityChange: (productId: string, quantity: number, scale: number, multiplier: number) => void;
+  onQuantityChange: (productId: string, caixas: number, quilos: number) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) => {
-  const [scaleLevel, setScaleLevel] = useState(0);
-  const [multiplier, setMultiplier] = useState(1);
-  const [quantity, setQuantity] = useState<number>(0);
+  const [caixas, setCaixas] = useState<number>(0);
 
-  const escala = product.escala_abastecimento?.[0];
+  const mediaPorCaixa = product.media_por_caixa || 20;
 
-  const calculateQuantity = (scale: number, mult: number) => {
-    if (scale === 0) return 0;
+  const updateQuantity = (novaQuantidadeCaixas: number) => {
+    const quantidadeFinal = Math.max(0, novaQuantidadeCaixas);
+    setCaixas(quantidadeFinal);
     
-    let baseQuantity = 0;
-    if (scale === 1) baseQuantity = escala?.escala1 || 0;
-    if (scale === 2) baseQuantity = escala?.escala2 || 0;
-    if (scale === 3) baseQuantity = escala?.escala3 || 0;
-    
-    return baseQuantity * mult;
+    // Calcular equivalência em quilos
+    const quilos = quantidadeFinal * mediaPorCaixa;
+    onQuantityChange(product.id, quantidadeFinal, quilos);
   };
 
-  useEffect(() => {
-    const newQuantity = calculateQuantity(scaleLevel, multiplier);
-    setQuantity(newQuantity);
-    onQuantityChange(product.id, newQuantity, scaleLevel, multiplier);
-  }, [scaleLevel, multiplier, product.id, escala]);
-
-  const handleScaleClick = () => {
-    const newLevel = scaleLevel >= 3 ? 0 : scaleLevel + 1;
-    setScaleLevel(newLevel);
+  const handleInputChange = (value: string) => {
+    const numericValue = parseInt(value) || 0;
+    updateQuantity(numericValue);
   };
 
-  const handleMultiplierClick = () => {
-    const newMultiplier = multiplier >= 3 ? 1 : multiplier + 1;
-    setMultiplier(newMultiplier);
+  const incrementar = () => {
+    updateQuantity(caixas + 1);
   };
 
-  const handleQuantityChange = (value: string) => {
-    const newQuantity = parseFloat(value) || 0;
-    setQuantity(newQuantity);
-    onQuantityChange(product.id, newQuantity, scaleLevel, multiplier);
+  const decrementar = () => {
+    updateQuantity(caixas - 1);
   };
 
   return (
@@ -67,25 +50,47 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) 
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h3 className="font-medium text-gray-900">{product.produto}</h3>
-            <p className="text-sm text-gray-500">{product.unidade}</p>
+            <p className="text-sm text-gray-500">
+              {product.unidade} • {mediaPorCaixa}kg por caixa
+            </p>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <ScaleIcon level={scaleLevel} onClick={handleScaleClick} />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={decrementar}
+              disabled={caixas === 0}
+              className="h-8 w-8 p-0"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
             
-            <MultiplierButton multiplier={multiplier} onClick={handleMultiplierClick} />
-            
-            <div className="flex flex-col">
+            <div className="flex flex-col items-center">
               <Input
                 type="number"
-                value={quantity}
-                onChange={(e) => handleQuantityChange(e.target.value)}
-                className="w-20 text-center"
+                value={caixas}
+                onChange={(e) => handleInputChange(e.target.value)}
+                className="w-16 text-center h-8"
                 min="0"
-                step="0.1"
               />
-              <span className="text-xs text-gray-500 text-center mt-1">{product.unidade}</span>
+              <span className="text-xs text-gray-500 mt-1">caixas</span>
             </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={incrementar}
+              className="h-8 w-8 p-0"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            
+            {caixas > 0 && (
+              <div className="ml-3 text-sm text-gray-600">
+                = {(caixas * mediaPorCaixa).toFixed(1)}kg
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

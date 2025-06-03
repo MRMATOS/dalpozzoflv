@@ -5,9 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 interface RequisicaoItem {
   produto_id: string;
   produto_nome: string;
-  quantidade_calculada: number;
+  quantidade: number; // quantidade em caixas
+  quantidade_calculada: number; // quantidade em quilos
   loja: string;
   unidade: string;
+  media_por_caixa: number;
 }
 
 export const useRequisicoes = () => {
@@ -23,10 +25,11 @@ export const useRequisicoes = () => {
           .from('itens_requisicao')
           .select(`
             produto_id,
+            quantidade,
             quantidade_calculada,
             requisicao_id,
             requisicoes!inner(loja, status),
-            produtos!inner(produto, unidade)
+            produtos!inner(produto, unidade, media_por_caixa)
           `)
           .eq('requisicoes.status', 'pendente');
 
@@ -40,9 +43,11 @@ export const useRequisicoes = () => {
         const requisicoesFormatadas = data?.map(item => ({
           produto_id: item.produto_id,
           produto_nome: (item.produtos as any)?.produto || '',
-          quantidade_calculada: item.quantidade_calculada || 0,
+          quantidade: item.quantidade || 0, // caixas
+          quantidade_calculada: item.quantidade_calculada || 0, // quilos
           loja: (item.requisicoes as any)?.loja || '',
-          unidade: (item.produtos as any)?.unidade || ''
+          unidade: (item.produtos as any)?.unidade || '',
+          media_por_caixa: (item.produtos as any)?.media_por_caixa || 20
         })) || [];
 
         console.log('Requisições formatadas:', requisicoesFormatadas);

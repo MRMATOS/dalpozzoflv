@@ -374,6 +374,7 @@ export type Database = {
           ativo: boolean | null
           created_at: string | null
           id: string
+          media_por_caixa: number | null
           nome_base: string | null
           observacoes: string | null
           produto: string | null
@@ -383,6 +384,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           id?: string
+          media_por_caixa?: number | null
           nome_base?: string | null
           observacoes?: string | null
           produto?: string | null
@@ -392,6 +394,7 @@ export type Database = {
           ativo?: boolean | null
           created_at?: string | null
           id?: string
+          media_por_caixa?: number | null
           nome_base?: string | null
           observacoes?: string | null
           produto?: string | null
