@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,18 +8,21 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-
 interface Produto {
   id: string;
   produto: string;
   unidade: string;
   quantidade_atual?: number;
 }
-
 const Estoque = () => {
-  const { profile, signOut } = useAuth();
+  const {
+    profile,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,12 +36,10 @@ const Estoque = () => {
         console.log('Carregando produtos para a loja:', profile?.loja);
 
         // Buscar produtos ativos
-        const { data: produtosData, error: produtosError } = await supabase
-          .from('produtos')
-          .select('id, produto, unidade')
-          .eq('ativo', true)
-          .order('produto');
-
+        const {
+          data: produtosData,
+          error: produtosError
+        } = await supabase.from('produtos').select('id, produto, unidade').eq('ativo', true).order('produto');
         if (produtosError) {
           console.error('Erro ao carregar produtos:', produtosError);
           setError('Erro ao carregar produtos');
@@ -47,11 +47,10 @@ const Estoque = () => {
         }
 
         // Buscar estoque atual da loja
-        const { data: estoqueData, error: estoqueError } = await supabase
-          .from('estoque_atual')
-          .select('produto_id, quantidade')
-          .eq('loja', profile?.loja);
-
+        const {
+          data: estoqueData,
+          error: estoqueError
+        } = await supabase.from('estoque_atual').select('produto_id, quantidade').eq('loja', profile?.loja);
         if (estoqueError) {
           console.error('Erro ao carregar estoque:', estoqueError);
           setError('Erro ao carregar estoque atual');
@@ -69,7 +68,6 @@ const Estoque = () => {
           ...produto,
           quantidade_atual: estoqueMap.get(produto.id) || 0
         })) || [];
-
         setProdutos(produtosComEstoque);
         console.log('Produtos carregados:', produtosComEstoque);
       } catch (error) {
@@ -79,7 +77,6 @@ const Estoque = () => {
         setLoading(false);
       }
     };
-
     if (profile?.loja) {
       carregarProdutos();
     }
@@ -87,17 +84,15 @@ const Estoque = () => {
 
   // Atualizar quantidade de um produto
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
-    setProdutos(prev => prev.map(produto => 
-      produto.id === produtoId 
-        ? { ...produto, quantidade_atual: quantidade }
-        : produto
-    ));
+    setProdutos(prev => prev.map(produto => produto.id === produtoId ? {
+      ...produto,
+      quantidade_atual: quantidade
+    } : produto));
   };
 
   // Salvar estoque
   const salvarEstoque = async () => {
     if (!profile?.loja) return;
-
     try {
       setSaving(true);
       console.log('Salvando estoque para a loja:', profile.loja);
@@ -109,16 +104,14 @@ const Estoque = () => {
         quantidade: produto.quantidade_atual || 0,
         atualizado_em: new Date().toISOString()
       }));
-
       console.log('Dados para salvar:', dadosEstoque);
 
       // Fazer upsert (insert ou update)
-      const { error } = await supabase
-        .from('estoque_atual')
-        .upsert(dadosEstoque, { 
-          onConflict: 'produto_id,loja' 
-        });
-
+      const {
+        error
+      } = await supabase.from('estoque_atual').upsert(dadosEstoque, {
+        onConflict: 'produto_id,loja'
+      });
       if (error) {
         console.error('Erro ao salvar estoque:', error);
         toast({
@@ -128,12 +121,10 @@ const Estoque = () => {
         });
         return;
       }
-
       toast({
         title: "Estoque salvo",
         description: "O estoque foi atualizado com sucesso!"
       });
-
     } catch (error) {
       console.error('Erro geral ao salvar:', error);
       toast({
@@ -145,31 +136,21 @@ const Estoque = () => {
       setSaving(false);
     }
   };
-
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Package className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p>Carregando produtos...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
+  return <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center space-x-2"
-              >
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="flex items-center space-x-2">
                 <ArrowLeft className="w-4 h-4" />
                 <span>Voltar</span>
               </Button>
@@ -206,12 +187,10 @@ const Estoque = () => {
           </p>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
+        {error && <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+          </Alert>}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -221,25 +200,17 @@ const Estoque = () => {
                 Digite a quantidade atual de cada produto em estoque
               </CardDescription>
             </div>
-            <Button 
-              onClick={salvarEstoque}
-              disabled={saving}
-              className="bg-green-600 hover:bg-green-700"
-            >
+            <Button onClick={salvarEstoque} disabled={saving} className="bg-green-600 hover:bg-green-700">
               <Save className="w-4 h-4 mr-2" />
               {saving ? 'Salvando...' : 'Salvar Estoque'}
             </Button>
           </CardHeader>
           <CardContent>
-            {produtos.length === 0 ? (
-              <div className="text-center py-8">
+            {produtos.length === 0 ? <div className="text-center py-8">
                 <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-500">Nenhum produto cadastrado</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {produtos.map((produto) => (
-                  <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
+              </div> : <div className="space-y-4">
+                {produtos.map(produto => <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{produto.produto}</h3>
                       <p className="text-sm text-gray-500">Unidade: {produto.unidade}</p>
@@ -249,26 +220,15 @@ const Estoque = () => {
                         <label className="text-sm font-medium text-gray-700">
                           Quantidade:
                         </label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.1"
-                          value={produto.quantidade_atual || 0}
-                          onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
-                          className="w-24"
-                        />
-                        <span className="text-sm text-gray-500">{produto.unidade}</span>
+                        <Input type="number" min="0" step="0.1" value={produto.quantidade_atual || 0} onChange={e => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)} className="w-24" />
+                        
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </CardContent>
         </Card>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Estoque;
