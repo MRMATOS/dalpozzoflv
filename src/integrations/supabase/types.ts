@@ -156,44 +156,6 @@ export type Database = {
           },
         ]
       }
-      estoque_cotacao: {
-        Row: {
-          atualizado_por: string | null
-          data_atualizacao: string
-          id: string
-          loja: string
-          produto_id: string | null
-          quantidade: number
-          unidade: string
-        }
-        Insert: {
-          atualizado_por?: string | null
-          data_atualizacao?: string
-          id?: string
-          loja: string
-          produto_id?: string | null
-          quantidade?: number
-          unidade?: string
-        }
-        Update: {
-          atualizado_por?: string | null
-          data_atualizacao?: string
-          id?: string
-          loja?: string
-          produto_id?: string | null
-          quantidade?: number
-          unidade?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "estoque_cotacao_produto_id_fkey"
-            columns: ["produto_id"]
-            isOneToOne: false
-            referencedRelation: "produtos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       fornecedores: {
         Row: {
           id: string
@@ -624,7 +586,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "master" | "comprador" | "estoque"
+      app_role: "master" | "comprador" | "requisitante" | "estoque"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -740,7 +702,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master", "comprador", "estoque"],
+      app_role: ["master", "comprador", "requisitante", "estoque"],
     },
   },
 } as const

@@ -10,11 +10,13 @@ import Login from "./pages/Login";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Configuracoes from "./pages/Configuracoes";
+import Requisicoes from "./pages/Requisicoes";
 import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
 import Estoque from "./pages/Estoque";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
+import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,16 @@ const App = () => (
             <Route path="/configuracoes" element={
               <ProtectedRoute requiredRole="master">
                 <Configuracoes />
+              </ProtectedRoute>
+            } />
+            <Route path="/requisicoes" element={
+              <ProtectedRoute>
+                <Requisicoes />
+              </ProtectedRoute>
+            } />
+            <Route path="/historico-requisicoes" element={
+              <ProtectedRoute>
+                <HistoricoRequisicoes />
               </ProtectedRoute>
             } />
             <Route path="/cotacao" element={
