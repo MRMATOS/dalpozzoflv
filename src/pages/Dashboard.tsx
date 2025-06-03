@@ -81,6 +81,25 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
+              <Warehouse className="h-4 w-4 text-purple-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-purple-600">Atualizar</div>
+              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-purple-600 hover:bg-purple-700"
+                onClick={() => navigate('/estoque')}
+              >
+                <Warehouse className="w-4 h-4 mr-2" />
+                Ir para Estoque
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       );
     }
@@ -141,6 +160,25 @@ const Dashboard = () => {
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Atualizar
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
+              <Warehouse className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-orange-600">Atualizar</div>
+              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-orange-600 hover:bg-orange-700"
+                onClick={() => navigate('/estoque')}
+              >
+                <Warehouse className="w-4 h-4 mr-2" />
+                Ir para Estoque
               </Button>
             </CardContent>
           </Card>
@@ -308,19 +346,60 @@ const Dashboard = () => {
               </Button>
             </CardContent>
           </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
+              <Warehouse className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-indigo-600">Geral</div>
+              <p className="text-xs text-muted-foreground">Gerenciar estoque de todas as lojas</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-indigo-600 hover:bg-indigo-700"
+                onClick={() => navigate('/estoque')}
+              >
+                <Warehouse className="w-4 h-4 mr-2" />
+                Ir para Estoque
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       );
     }
 
+    // Fallback para usuários sem tipo específico - mostra o card de estoque
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Tipo de usuário não reconhecido</CardTitle>
-          <CardDescription>
-            Entre em contato com o administrador do sistema.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
+            <Warehouse className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">Atualizar</div>
+            <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
+            <Button 
+              size="sm" 
+              className="mt-3 bg-green-600 hover:bg-green-700"
+              onClick={() => navigate('/estoque')}
+            >
+              <Warehouse className="w-4 h-4 mr-2" />
+              Ir para Estoque
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Tipo de usuário não reconhecido</CardTitle>
+            <CardDescription>
+              Entre em contato com o administrador do sistema.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
     );
   };
 
