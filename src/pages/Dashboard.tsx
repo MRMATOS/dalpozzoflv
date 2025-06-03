@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,8 @@ import {
   Eye,
   RefreshCw,
   Settings,
-  History
+  History,
+  Warehouse
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -151,6 +151,25 @@ const Dashboard = () => {
     if (hasRole('estoque')) {
       return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
+              <Warehouse className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">Atualizar</div>
+              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
+              <Button 
+                size="sm" 
+                className="mt-3 bg-green-600 hover:bg-green-700"
+                onClick={() => navigate('/estoque')}
+              >
+                <Warehouse className="w-4 h-4 mr-2" />
+                Ir para Estoque
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Alertas de Estoque</CardTitle>
@@ -307,7 +326,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -334,7 +352,6 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">

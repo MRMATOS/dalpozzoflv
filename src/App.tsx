@@ -13,6 +13,7 @@ import Configuracoes from "./pages/Configuracoes";
 import Requisicoes from "./pages/Requisicoes";
 import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
+import Estoque from "./pages/Estoque";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
@@ -57,6 +58,11 @@ const App = () => (
             <Route path="/resumo-pedido" element={
               <ProtectedRoute>
                 <ResumoPedido />
+              </ProtectedRoute>
+            } />
+            <Route path="/estoque" element={
+              <ProtectedRoute>
+                <Estoque />
               </ProtectedRoute>
             } />
             <Route path="/" element={<Index />} />
