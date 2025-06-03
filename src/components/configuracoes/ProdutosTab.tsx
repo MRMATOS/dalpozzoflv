@@ -587,6 +587,14 @@ const ProdutosTab = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">
+                                                  <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAddingVariationTo(addingVariationTo === produto.id ? null : produto.id)}
+                          >
+                            <Plus className="w-4 h-4 mr-1" />
+                            Variação
+                          </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -595,14 +603,7 @@ const ProdutosTab = () => {
                           {editingProduct === produto.id ? 'Finalizar' : 'Editar'}
                         </Button>
                         {editingProduct === produto.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setAddingVariationTo(addingVariationTo === produto.id ? null : produto.id)}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Variação
-                          </Button>
+
                         )}
                         <Button
                           variant="outline"
@@ -622,7 +623,7 @@ const ProdutosTab = () => {
                       <TableCell></TableCell>
                       <TableCell className="pl-8">
                         <Input
-                          placeholder="Variação"
+                          placeholder="Nome da variação"
                           value={newVariation.nome_variacao}
                           onChange={(e) => setNewVariation({ ...newVariation, nome_variacao: e.target.value })}
                         />
