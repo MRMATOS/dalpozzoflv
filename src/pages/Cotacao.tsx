@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -852,7 +853,7 @@ const Cotacao = () => {
                         placeholder="Cole aqui a mensagem do WhatsApp com os produtos..."
                         value={mensagemAtual}
                         onChange={(e) => setMensagemAtual(e.target.value)}
-                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none relative z-10 bg-white"
+                        className="w-full h-32 p-3 border-0 rounded-lg focus:outline-none focus:ring-0 resize-none relative z-10 bg-white"
                       />
                       <BorderBeam 
                         size={250} 
