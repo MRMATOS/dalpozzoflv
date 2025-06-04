@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
 import { useEstoque } from '@/hooks/useEstoque';
+import { BorderBeam } from '@/components/ui/border-beam';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -846,12 +847,21 @@ const Cotacao = () => {
               {fornecedorSelecionado && (
                 <Card className="mb-4">
                   <CardContent className="p-4">
-                    <textarea
-                      placeholder="Cole aqui a mensagem do WhatsApp com os produtos..."
-                      value={mensagemAtual}
-                      onChange={(e) => setMensagemAtual(e.target.value)}
-                      className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                    />
+                    <div className="relative">
+                      <textarea
+                        placeholder="Cole aqui a mensagem do WhatsApp com os produtos..."
+                        value={mensagemAtual}
+                        onChange={(e) => setMensagemAtual(e.target.value)}
+                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none relative z-10 bg-white"
+                      />
+                      <BorderBeam 
+                        size={250} 
+                        duration={8} 
+                        colorFrom="#22c55e" 
+                        colorTo="#3b82f6" 
+                        delay={0}
+                      />
+                    </div>
                     <div className="mt-3">
                       <Button onClick={processarMensagem} className="bg-blue-600 hover:bg-blue-700">
                         <Upload className="w-4 h-4 mr-2" />
