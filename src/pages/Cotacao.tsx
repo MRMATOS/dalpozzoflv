@@ -861,13 +861,13 @@ const Cotacao = () => {
                 </div>
 
                 {/* Container da tabela com scroll horizontal */}
-                <div className="border rounded-lg overflow-hidden bg-white">
-                  <div className="overflow-x-auto">
+                <div className="border rounded-lg overflow-hidden bg-white relative">
+                  <div className="overflow-auto max-h-[600px]">   {/* y + x scroll */}
                     <table className="w-full min-w-max table-fixed">
                       {/* Header fixo da tabela */}
-                      <thead className="sticky top-[100px] bg-gray-50 z-20 border-b">
+                      <thead className="sticky top-[0px] bg-gray-50 z-20 border-b">
                         <tr>
-                          <th className="w-[180px] min-w-[100px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
+                          <th className="w-[180px] min-w-[180px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
                           <th className="w-[150px] min-w-[150px] p-3 text-left font-medium text-muted-foreground border-r">Tipo</th>
                           <th className="w-[200px] min-w-[200px] p-3 text-left font-medium text-muted-foreground border-r">Estoques</th>
                           {fornecedoresComProdutos.map((fornecedor, index) => (
