@@ -814,9 +814,9 @@ const Cotacao = () => {
                 
                 {/* Área fixa com busca, cards de loja e botão resumo */}
                 <div className="sticky top-0 bg-white z-30 pb-4 border-b mb-4">
-                  <div className="flex justify-between items-center gap-4 mb-4">
-                    {/* Input de busca - tamanho reduzido */}
-                    <div className="relative flex-1 max-w-xs">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                    {/* Input de busca */}
+                    <div className="relative flex-1 max-w-xs w-full sm:w-auto">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                       <Input
                         placeholder="Buscar produto..."
@@ -826,16 +826,16 @@ const Cotacao = () => {
                       />
                     </div>
                     
-                    {/* Cards das lojas */}
-                    <div className="flex gap-3">
+                    {/* Cards das lojas - responsivo */}
+                    <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
                       {lojasComRequisicoes.map(loja => {
                         const percentual = calcularPercentualSuprimento(loja);
                         const corFundo = percentual >= 80 ? 'bg-green-100' : percentual >= 50 ? 'bg-yellow-100' : 'bg-red-100';
                         const corTexto = percentual >= 80 ? 'text-green-800' : percentual >= 50 ? 'text-yellow-800' : 'text-red-800';
                         
                         return (
-                          <div key={loja} className={`px-4 py-2 rounded-lg border ${corFundo} ${corTexto} min-w-[100px]`}>
-                            <div className="flex justify-between items-center text-sm font-medium">
+                          <div key={loja} className={`px-3 py-2 rounded-lg border ${corFundo} ${corTexto} flex-1 min-w-[80px] sm:min-w-[100px]`}>
+                            <div className="flex justify-between items-center text-xs sm:text-sm font-medium">
                               <span>{loja}</span>
                               <span>{percentual}%</span>
                             </div>
@@ -852,98 +852,108 @@ const Cotacao = () => {
                       })}
                     </div>
                     
-                    {/* Botão Ver Resumo - azul com texto branco */}
-                    <Button onClick={irParaResumo} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2">
+                    {/* Botão Ver Resumo */}
+                    <Button onClick={irParaResumo} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 w-full sm:w-auto">
                       <FileText className="w-4 h-4" />
                       Ver Resumo
                     </Button>
                   </div>
                 </div>
 
-                {/* Header fixo da tabela */}
-                <div className="sticky top-[140px] bg-white z-20 border rounded-t-lg shadow-sm">
-                  <div className="grid grid-cols-[200px_200px_200px_1fr] border-b bg-gray-50">
-                    <div className="p-4 font-medium text-muted-foreground border-r">Produto</div>
-                    <div className="p-4 font-medium text-muted-foreground border-r">Tipo</div>
-                    <div className="p-4 font-medium text-muted-foreground border-r">Estoques</div>
-                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
-                      {fornecedoresComProdutos.map((fornecedor, index) => (
-                        <div key={fornecedor} className={`p-4 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}>
-                          {fornecedor}
-                        </div>
-                      ))}
+                {/* Container da tabela com scroll horizontal */}
+                <div className="border rounded-lg overflow-hidden bg-white">
+                  <div className="overflow-x-auto">
+                    {/* Header fixo da tabela */}
+                    <div className="sticky top-[140px] bg-gray-50 z-20 border-b">
+                      <div className="flex min-w-max">
+                        <div className="min-w-[180px] w-[180px] p-3 font-medium text-muted-foreground border-r">Produto</div>
+                        <div className="min-w-[150px] w-[150px] p-3 font-medium text-muted-foreground border-r">Tipo</div>
+                        <div className="min-w-[200px] w-[200px] p-3 font-medium text-muted-foreground border-r">Estoques</div>
+                        {fornecedoresComProdutos.map((fornecedor, index) => (
+                          <div 
+                            key={fornecedor} 
+                            className={`min-w-[180px] w-[180px] p-3 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                          >
+                            {fornecedor}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Conteúdo da tabela com scroll */}
-                <div className="border-l border-r border-b rounded-b-lg max-h-[500px] overflow-y-auto">
-                  {produtosFiltrados.map((item, index) => {
-                    // Calcular menor preço para este produto
-                    const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
-                    const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
                     
-                    return (
-                      <div key={index} className="grid grid-cols-[200px_200px_200px_1fr] border-b last:border-b-0 hover:bg-gray-50">
-                        <div className="p-4 font-medium border-r flex items-center">{item.produto}</div>
-                        <div className="p-4 border-r flex items-center">
-                          <Badge variant="secondary">{item.tipo}</Badge>
-                        </div>
-                        <div className="p-4 border-r flex items-center">
-                          {obterEstoquesDisplay(item.produto, item.tipo)}
-                        </div>
-                        <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
-                          {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
-                            const preco = item.fornecedores[fornecedor];
-                            const isMelhorPreco = preco === menorPreco && preco !== null;
-                            const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
+                    {/* Conteúdo da tabela */}
+                    <div className="max-h-[500px] overflow-y-auto">
+                      {produtosFiltrados.map((item, index) => {
+                        // Calcular menor preço para este produto
+                        const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
+                        const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+                        
+                        return (
+                          <div key={index} className="flex min-w-max border-b last:border-b-0 hover:bg-gray-50">
+                            <div className="min-w-[180px] w-[180px] p-3 font-medium border-r flex items-center">
+                              <span className="truncate">{item.produto}</span>
+                            </div>
+                            <div className="min-w-[150px] w-[150px] p-3 border-r flex items-center">
+                              <Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge>
+                            </div>
+                            <div className="min-w-[200px] w-[200px] p-3 border-r">
+                              {obterEstoquesDisplay(item.produto, item.tipo)}
+                            </div>
+                            {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
+                              const preco = item.fornecedores[fornecedor];
+                              const isMelhorPreco = preco === menorPreco && preco !== null;
+                              const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
+                              
+                              return (
+                                <div 
+                                  key={fornecedor} 
+                                  className={`min-w-[180px] w-[180px] ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                                >
+                                  <FornecedorCell
+                                    preco={preco}
+                                    quantidade={item.quantidades[fornecedor] || 0}
+                                    unidadePedido={item.unidadePedido[fornecedor] || 'Caixa'}
+                                    isMelhorPreco={isMelhorPreco}
+                                    opcoesUnidade={opcoesUnidade}
+                                    onQuantidadeChange={(value) => atualizarQuantidade(index, fornecedor, value)}
+                                    onUnidadeChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Linha de Totais */}
+                    <div className="sticky bottom-0 bg-gray-100 border-t-2">
+                      <div className="flex min-w-max font-semibold">
+                        <div className="min-w-[180px] w-[180px] p-3 border-r flex items-center">TOTAL GERAL</div>
+                        <div className="min-w-[150px] w-[150px] p-3 border-r"></div>
+                        <div className="min-w-[200px] w-[200px] p-3 border-r"></div>
+                        {(() => {
+                          // Calcular totais e encontrar o menor
+                          const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
+                          const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
+                          
+                          return fornecedoresComProdutos.map((fornecedor, fornIndex) => {
+                            const total = calcularTotalFornecedor(fornecedor);
+                            const isMelhorTotal = total === menorTotal && total > 0;
                             
                             return (
-                              <div key={fornecedor} className={`${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''} h-full`}>
-                                <FornecedorCell
-                                  preco={preco}
-                                  quantidade={item.quantidades[fornecedor] || 0}
-                                  unidadePedido={item.unidadePedido[fornecedor] || 'Caixa'}
-                                  isMelhorPreco={isMelhorPreco}
-                                  opcoesUnidade={opcoesUnidade}
-                                  onQuantidadeChange={(value) => atualizarQuantidade(index, fornecedor, value)}
-                                  onUnidadeChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
-                                />
+                              <div 
+                                key={fornecedor} 
+                                className={`min-w-[180px] w-[180px] p-3 flex justify-center items-center ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                              >
+                                <div className={`text-base font-bold ${isMelhorTotal ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-blue-600'}`}>
+                                  R$ {total.toFixed(2)}
+                                  {isMelhorTotal && ' 🏆'}
+                                </div>
                               </div>
                             );
-                          })}
-                        </div>
+                          });
+                        })()}
                       </div>
-                    );
-                  })}
-                </div>
-                
-                {/* Linha de Totais fixa no bottom */}
-                <div className="sticky bottom-0 bg-gray-50 border border-t-2 rounded-b-lg">
-                  <div className="grid grid-cols-[200px_200px_200px_1fr] font-semibold">
-                    <div className="p-4 bg-gray-50 border-r flex items-center">TOTAL GERAL</div>
-                    <div className="p-4 bg-gray-50 border-r"></div>
-                    <div className="p-4 bg-gray-50 border-r"></div>
-                    <div className="grid" style={{ gridTemplateColumns: `repeat(${fornecedoresComProdutos.length}, 1fr)` }}>
-                      {(() => {
-                        // Calcular totais e encontrar o menor
-                        const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
-                        const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
-                        
-                        return fornecedoresComProdutos.map((fornecedor, fornIndex) => {
-                          const total = calcularTotalFornecedor(fornecedor);
-                          const isMelhorTotal = total === menorTotal && total > 0;
-                          
-                          return (
-                            <div key={fornecedor} className={`p-4 flex justify-center items-center bg-gray-50 ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}>
-                              <div className={`text-lg font-bold ${isMelhorTotal ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-blue-600'}`}>
-                                R$ {total.toFixed(2)}
-                                {isMelhorTotal && ' 🏆'}
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
                     </div>
                   </div>
                 </div>
