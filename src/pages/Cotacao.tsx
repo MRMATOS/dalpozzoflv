@@ -869,7 +869,7 @@ const Cotacao = () => {
                         <tr>
                           <th className="w-[100px] min-w-[100px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
                           <th className="w-[150px] min-w-[150px] p-3 text-left font-medium text-muted-foreground border-r">Tipo</th>
-                          <th className="w-[200px] min-w-[200px] p-3 text-left font-medium text-muted-foreground border-r">Estoques</th>
+                          <th className="w-[160px] min-w-[160px] p-3 text-left font-medium text-muted-foreground border-r">Estoques</th>
                           {fornecedoresComProdutos.map((fornecedor, index) => (
                             <th 
                               key={fornecedor} 
@@ -896,7 +896,7 @@ const Cotacao = () => {
                               <td className="w-[150px] min-w-[150px] p-3 border-r">
                                 <Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge>
                               </td>
-                              <td className="w-[200px] min-w-[200px] p-3 border-r">
+                              <td className="w-[160px] min-w-[160px] p-3 border-r">
                                 {obterEstoquesDisplay(item.produto, item.tipo)}
                               </td>
                               {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
@@ -927,7 +927,7 @@ const Cotacao = () => {
                         <tr className="font-semibold">
                           <td className="w-[100px] min-w-[100px] p-3 border-r">TOTAL GERAL</td>
                           <td className="w-[150px] min-w-[150px] p-3 border-r"></td>
-                          <td className="w-[200px] min-w-[200px] p-3 border-r"></td>
+                          <td className="w-[160px] min-w-[160px] p-3 border-r"></td>
                           {(() => {
                             // Calcular totais e encontrar o menor
                             const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
