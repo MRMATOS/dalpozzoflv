@@ -863,52 +863,50 @@ const Cotacao = () => {
                 {/* Container da tabela com scroll horizontal */}
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="overflow-x-auto">
-                    {/* Header fixo da tabela */}
-                    <div className="sticky top-[140px] bg-gray-50 z-20 border-b">
-                      <div className="flex min-w-max">
-                        <div className="min-w-[180px] w-[180px] p-3 font-medium text-muted-foreground border-r">Produto</div>
-                        <div className="min-w-[150px] w-[150px] p-3 font-medium text-muted-foreground border-r">Tipo</div>
-                        <div className="min-w-[200px] w-[200px] p-3 font-medium text-muted-foreground border-r">Estoques</div>
-                        {fornecedoresComProdutos.map((fornecedor, index) => (
-                          <div 
-                            key={fornecedor} 
-                            className={`min-w-[180px] w-[180px] p-3 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
-                          >
-                            {fornecedor}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Conteúdo da tabela */}
-                    <div className="max-h-[500px] overflow-y-auto">
-                      {produtosFiltrados.map((item, index) => {
-                        // Calcular menor preço para este produto
-                        const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
-                        const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
-                        
-                        return (
-                          <div key={index} className="flex min-w-max border-b last:border-b-0 hover:bg-gray-50">
-                            <div className="min-w-[180px] w-[180px] p-3 font-medium border-r flex items-center">
-                              <span className="truncate">{item.produto}</span>
-                            </div>
-                            <div className="min-w-[150px] w-[150px] p-3 border-r flex items-center">
-                              <Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge>
-                            </div>
-                            <div className="min-w-[200px] w-[200px] p-3 border-r">
-                              {obterEstoquesDisplay(item.produto, item.tipo)}
-                            </div>
-                            {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
-                              const preco = item.fornecedores[fornecedor];
-                              const isMelhorPreco = preco === menorPreco && preco !== null;
-                              const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
-                              
-                              return (
-                                <div 
-                                  key={fornecedor} 
-                                  className={`min-w-[180px] w-[180px] ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
-                                >
+                    <table className="w-full min-w-max table-fixed">
+                      {/* Header fixo da tabela */}
+                      <thead className="sticky top-[140px] bg-gray-50 z-20 border-b">
+                        <tr>
+                          <th className="w-[180px] min-w-[180px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
+                          <th className="w-[150px] min-w-[150px] p-3 text-left font-medium text-muted-foreground border-r">Tipo</th>
+                          <th className="w-[200px] min-w-[200px] p-3 text-left font-medium text-muted-foreground border-r">Estoques</th>
+                          {fornecedoresComProdutos.map((fornecedor, index) => (
+                            <th 
+                              key={fornecedor} 
+                              className={`w-[180px] min-w-[180px] p-3 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                            >
+                              {fornecedor}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      
+                      {/* Conteúdo da tabela */}
+                      <tbody className="bg-white">
+                        {produtosFiltrados.map((item, index) => {
+                          // Calcular menor preço para este produto
+                          const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
+                          const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
+                          
+                          return (
+                            <tr key={index} className="border-b last:border-b-0 hover:bg-gray-50">
+                              <td className="w-[180px] min-w-[180px] p-3 font-medium border-r">
+                                <span className="truncate block">{item.produto}</span>
+                              </td>
+                              <td className="w-[150px] min-w-[150px] p-3 border-r">
+                                <Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge>
+                              </td>
+                              <td className="w-[200px] min-w-[200px] p-3 border-r">
+                                {obterEstoquesDisplay(item.produto, item.tipo)}
+                              </td>
+                              {fornecedoresComProdutos.map((fornecedor, fornIndex) => {
+                                const preco = item.fornecedores[fornecedor];
+                                const isMelhorPreco = preco === menorPreco && preco !== null;
+                                const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
+                                
+                                return (
                                   <FornecedorCell
+                                    key={fornecedor}
                                     preco={preco}
                                     quantidade={item.quantidades[fornecedor] || 0}
                                     unidadePedido={item.unidadePedido[fornecedor] || 'Caixa'}
@@ -917,44 +915,44 @@ const Cotacao = () => {
                                     onQuantidadeChange={(value) => atualizarQuantidade(index, fornecedor, value)}
                                     onUnidadeChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
                                   />
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Linha de Totais */}
-                    <div className="sticky bottom-0 bg-gray-100 border-t-2">
-                      <div className="flex min-w-max font-semibold">
-                        <div className="min-w-[180px] w-[180px] p-3 border-r flex items-center">TOTAL GERAL</div>
-                        <div className="min-w-[150px] w-[150px] p-3 border-r"></div>
-                        <div className="min-w-[200px] w-[200px] p-3 border-r"></div>
-                        {(() => {
-                          // Calcular totais e encontrar o menor
-                          const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
-                          const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
-                          
-                          return fornecedoresComProdutos.map((fornecedor, fornIndex) => {
-                            const total = calcularTotalFornecedor(fornecedor);
-                            const isMelhorTotal = total === menorTotal && total > 0;
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                      
+                      {/* Linha de Totais */}
+                      <tfoot className="sticky bottom-0 bg-gray-100 border-t-2 z-10">
+                        <tr className="font-semibold">
+                          <td className="w-[180px] min-w-[180px] p-3 border-r">TOTAL GERAL</td>
+                          <td className="w-[150px] min-w-[150px] p-3 border-r"></td>
+                          <td className="w-[200px] min-w-[200px] p-3 border-r"></td>
+                          {(() => {
+                            // Calcular totais e encontrar o menor
+                            const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
+                            const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
                             
-                            return (
-                              <div 
-                                key={fornecedor} 
-                                className={`min-w-[180px] w-[180px] p-3 flex justify-center items-center ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
-                              >
-                                <div className={`text-base font-bold ${isMelhorTotal ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-blue-600'}`}>
-                                  R$ {total.toFixed(2)}
-                                  {isMelhorTotal && ' 🏆'}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
-                      </div>
-                    </div>
+                            return fornecedoresComProdutos.map((fornecedor, fornIndex) => {
+                              const total = calcularTotalFornecedor(fornecedor);
+                              const isMelhorTotal = total === menorTotal && total > 0;
+                              
+                              return (
+                                <td 
+                                  key={fornecedor} 
+                                  className={`w-[180px] min-w-[180px] p-3 text-center ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                                >
+                                  <div className={`text-base font-bold ${isMelhorTotal ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-blue-600'}`}>
+                                    R$ {total.toFixed(2)}
+                                    {isMelhorTotal && ' 🏆'}
+                                  </div>
+                                </td>
+                              );
+                            });
+                          })()}
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
                 </div>
               </div>
