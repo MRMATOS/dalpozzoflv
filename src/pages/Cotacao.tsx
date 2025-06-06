@@ -867,13 +867,13 @@ const Cotacao = () => {
                       {/* Header fixo da tabela */}
                       <thead className="sticky top-[0px] bg-gray-50 z-20 border-b">
                         <tr>
-                          <th className="w-[180px] min-w-[180px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
+                          <th className="w-[120px] min-w-[120px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
                           <th className="w-[150px] min-w-[150px] p-3 text-left font-medium text-muted-foreground border-r">Tipo</th>
                           <th className="w-[200px] min-w-[200px] p-3 text-left font-medium text-muted-foreground border-r">Estoques</th>
                           {fornecedoresComProdutos.map((fornecedor, index) => (
                             <th 
                               key={fornecedor} 
-                              className={`w-[180px] min-w-[180px] p-3 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                              className={`w-[120px] min-w-[120px] p-3 font-medium text-muted-foreground text-center ${index < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
                             >
                               {fornecedor}
                             </th>
@@ -890,7 +890,7 @@ const Cotacao = () => {
                           
                           return (
                             <tr key={index} className="border-b last:border-b-0 hover:bg-gray-50">
-                              <td className="w-[180px] min-w-[180px] p-3 font-medium border-r">
+                              <td className="w-[120px] min-w-[120px] p-3 font-medium border-r">
                                 <span className="truncate block">{item.produto}</span>
                               </td>
                               <td className="w-[150px] min-w-[150px] p-3 border-r">
@@ -925,7 +925,7 @@ const Cotacao = () => {
                       {/* Linha de Totais */}
                       <tfoot className="sticky bottom-0 bg-gray-100 border-t-2 z-10">
                         <tr className="font-semibold">
-                          <td className="w-[180px] min-w-[180px] p-3 border-r">TOTAL GERAL</td>
+                          <td className="w-[120px] min-w-[120px] p-3 border-r">TOTAL GERAL</td>
                           <td className="w-[150px] min-w-[150px] p-3 border-r"></td>
                           <td className="w-[200px] min-w-[200px] p-3 border-r"></td>
                           {(() => {
@@ -940,7 +940,7 @@ const Cotacao = () => {
                               return (
                                 <td 
                                   key={fornecedor} 
-                                  className={`w-[180px] min-w-[180px] p-3 text-center ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
+                                  className={`w-[120px] min-w-[120px] p-3 text-center ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}
                                 >
                                   <div className={`text-base font-bold ${isMelhorTotal ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-blue-600'}`}>
                                     R$ {total.toFixed(2)}
