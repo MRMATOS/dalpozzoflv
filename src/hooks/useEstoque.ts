@@ -66,12 +66,8 @@ export const useEstoque = () => {
             };
           }
 
-          // Obter nome atual da loja
-          const lojaAtual = lojas.find(l => l.nome === item.loja);
-          const nomeLojaAtual = lojaAtual ? lojaAtual.nome : item.loja;
-
-          // Adicionar quantidade por loja usando nome atual
-          estoquesAgrupados[produtoId].estoques_por_loja[nomeLojaAtual] = item.quantidade || 0;
+          // Usar o nome da loja diretamente do banco (já padronizado)
+          estoquesAgrupados[produtoId].estoques_por_loja[item.loja] = item.quantidade || 0;
           estoquesAgrupados[produtoId].total_estoque += item.quantidade || 0;
         });
 
@@ -115,7 +111,7 @@ export const useEstoque = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [lojas]); // Adicionado lojas como dependência
+  }, [lojas]);
 
   const obterEstoqueProduto = (produtoNome: string, tipo?: string) => {
     console.log('Buscando estoque para:', { produtoNome, tipo });
@@ -151,7 +147,7 @@ export const useEstoque = () => {
       return 'Sem estoque informado';
     }
 
-    // Formatar estoques por loja
+    // Formatar estoques por loja usando os nomes corretos
     const estoquesFormatados = Object.entries(estoque.estoques_por_loja)
       .filter(([_, quantidade]) => quantidade > 0)
       .map(([loja, quantidade]) => `${loja}: ${quantidade} ${estoque.unidade}`)

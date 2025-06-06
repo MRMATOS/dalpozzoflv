@@ -39,18 +39,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on load
   useEffect(() => {
-    const storedUser = localStorage.getItem('flv_user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setProfile(userData);
-      } catch (error) {
-        console.error('Error parsing stored user:', error);
-        localStorage.removeItem('flv_user');
+    const loadStoredUser = async () => {
+      const storedUser = localStorage.getItem('flv_user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          
+          // Verificar se o usuário ainda existe e está ativo, e buscar dados atualizados
+          const { data: usuarioAtualizado, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('id', userData.id)
+            .eq('ativo', true)
+            .single();
+
+          if (error || !usuarioAtualizado) {
+            console.log('Usuário não encontrado ou inativo, removendo do localStorage');
+            localStorage.removeItem('flv_user');
+          } else {
+            // Usar dados atualizados do banco
+            const userDataAtualizado = {
+              id: usuarioAtualizado.id,
+              nome: usuarioAtualizado.nome,
+              loja: usuarioAtualizado.loja, // Nome da loja já padronizado
+              codigo_acesso: usuarioAtualizado.codigo_acesso,
+              tipo: usuarioAtualizado.tipo,
+              ativo: usuarioAtualizado.ativo,
+              ultimo_login: usuarioAtualizado.ultimo_login
+            };
+
+            setUser(userDataAtualizado);
+            setProfile(userDataAtualizado);
+            
+            // Atualizar localStorage com dados mais recentes
+            localStorage.setItem('flv_user', JSON.stringify(userDataAtualizado));
+          }
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('flv_user');
+        }
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+
+    loadStoredUser();
   }, []);
 
   const signIn = async (codigoAcesso: string): Promise<{ success: boolean; error?: string }> => {
@@ -82,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userData = {
         id: usuario.id,
         nome: usuario.nome,
-        loja: usuario.loja,
+        loja: usuario.loja, // Nome da loja já padronizado
         codigo_acesso: usuario.codigo_acesso,
         tipo: usuario.tipo,
         ativo: usuario.ativo,
