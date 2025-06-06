@@ -865,7 +865,7 @@ const Cotacao = () => {
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-max table-fixed">
                       {/* Header fixo da tabela */}
-                      <thead className="sticky top-[100px] bg-gray-50 z-20 border-b">
+                      <thead className="sticky top-0 bg-gray-50 z-20 border-b">
                         <tr>
                           <th className="w-[180px] min-w-[180px] p-3 text-left font-medium text-muted-foreground border-r">Produto</th>
                           <th className="w-[150px] min-w-[150px] p-3 text-left font-medium text-muted-foreground border-r">Tipo</th>
