@@ -540,6 +540,80 @@ export type Database = {
           },
         ]
       }
+      transferencias: {
+        Row: {
+          confirmado_em: string | null
+          confirmado_por: string | null
+          criado_em: string
+          id: string
+          loja_destino: string
+          loja_origem: string
+          produto_id: string | null
+          quantidade_requisitada: number
+          quantidade_transferida: number | null
+          requisicao_id: string | null
+          status: string
+          transferido_por: string | null
+        }
+        Insert: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          criado_em?: string
+          id?: string
+          loja_destino: string
+          loja_origem?: string
+          produto_id?: string | null
+          quantidade_requisitada?: number
+          quantidade_transferida?: number | null
+          requisicao_id?: string | null
+          status?: string
+          transferido_por?: string | null
+        }
+        Update: {
+          confirmado_em?: string | null
+          confirmado_por?: string | null
+          criado_em?: string
+          id?: string
+          loja_destino?: string
+          loja_origem?: string
+          produto_id?: string | null
+          quantidade_requisitada?: number
+          quantidade_transferida?: number | null
+          requisicao_id?: string | null
+          status?: string
+          transferido_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transferencias_confirmado_por_fkey"
+            columns: ["confirmado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transferencias_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transferencias_requisicao_id_fkey"
+            columns: ["requisicao_id"]
+            isOneToOne: false
+            referencedRelation: "requisicoes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transferencias_transferido_por_fkey"
+            columns: ["transferido_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null

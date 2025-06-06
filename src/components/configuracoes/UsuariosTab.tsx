@@ -13,13 +13,13 @@ import { useLojas } from '@/hooks/useLojas';
 import { useAuth } from '@/contexts/AuthContext';
 import { z } from 'zod';
 
-const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque'] as const;
+const tiposUsuario = ['master', 'comprador', 'requisitante', 'estoque', 'transferencia'] as const;
 
 const userSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   loja: z.string().min(1, "Loja é obrigatória"),
   codigo_acesso: z.string().min(3, "Código de acesso deve ter pelo menos 3 caracteres"),
-  tipo: z.enum(['master', 'comprador', 'requisitante', 'estoque'], {
+  tipo: z.enum(['master', 'comprador', 'requisitante', 'estoque', 'transferencia'], {
     errorMap: () => ({ message: "Tipo de usuário inválido" })
   })
 });
