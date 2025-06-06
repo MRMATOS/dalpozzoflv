@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLojas } from './useLojas';
 
 interface EstoqueProduto {
   produto_id: string;
@@ -17,6 +18,7 @@ interface EstoqueProduto {
 export const useEstoque = () => {
   const [estoqueProdutos, setEstoqueProdutos] = useState<EstoqueProduto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { lojas } = useLojas();
 
   useEffect(() => {
     const fetchEstoque = async () => {
@@ -64,8 +66,12 @@ export const useEstoque = () => {
             };
           }
 
-          // Adicionar quantidade por loja
-          estoquesAgrupados[produtoId].estoques_por_loja[item.loja] = item.quantidade || 0;
+          // Obter nome atual da loja
+          const lojaAtual = lojas.find(l => l.nome === item.loja);
+          const nomeLojaAtual = lojaAtual ? lojaAtual.nome : item.loja;
+
+          // Adicionar quantidade por loja usando nome atual
+          estoquesAgrupados[produtoId].estoques_por_loja[nomeLojaAtual] = item.quantidade || 0;
           estoquesAgrupados[produtoId].total_estoque += item.quantidade || 0;
         });
 
@@ -109,7 +115,7 @@ export const useEstoque = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [lojas]); // Adicionado lojas como dependência
 
   const obterEstoqueProduto = (produtoNome: string, tipo?: string) => {
     console.log('Buscando estoque para:', { produtoNome, tipo });

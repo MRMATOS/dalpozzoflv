@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +11,7 @@ import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
 import { useEstoque } from '@/hooks/useEstoque';
+import FornecedorCell from '@/components/cotacao/FornecedorCell';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -899,43 +899,16 @@ const Cotacao = () => {
                             const opcoesUnidade = obterOpcoesUnidade(item.produto, item.tipo);
                             
                             return (
-                              <div key={fornecedor} className={`p-4 flex flex-col items-center space-y-2 ${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''}`}>
-                                {preco !== null ? (
-                                  <>
-                                    <div className={`font-semibold text-center ${isMelhorPreco ? 'text-green-600 bg-green-100 px-2 py-1 rounded' : 'text-gray-700'}`}>
-                                      R$ {preco.toFixed(2)}
-                                      {isMelhorPreco && ' 🏆'}
-                                    </div>
-                                    
-                                    {/* Dropdown "Pedir em" */}
-                                    <Select 
-                                      value={item.unidadePedido[fornecedor] || 'Caixa'} 
-                                      onValueChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
-                                    >
-                                      <SelectTrigger className="w-20 text-xs">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {opcoesUnidade.map(unidade => (
-                                          <SelectItem key={unidade} value={unidade}>
-                                            {unidade}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                    
-                                    <Input
-                                      type="number"
-                                      placeholder={`Qtd em ${item.unidadePedido[fornecedor] || 'Caixa'}`}
-                                      min="0"
-                                      value={item.quantidades[fornecedor] || ''}
-                                      onChange={(e) => atualizarQuantidade(index, fornecedor, e.target.value)}
-                                      className="w-24 text-center text-xs"
-                                    />
-                                  </>
-                                ) : (
-                                  <div className="text-gray-400">-</div>
-                                )}
+                              <div key={fornecedor} className={`${fornIndex < fornecedoresComProdutos.length - 1 ? 'border-r' : ''} h-full`}>
+                                <FornecedorCell
+                                  preco={preco}
+                                  quantidade={item.quantidades[fornecedor] || 0}
+                                  unidadePedido={item.unidadePedido[fornecedor] || 'Caixa'}
+                                  isMelhorPreco={isMelhorPreco}
+                                  opcoesUnidade={opcoesUnidade}
+                                  onQuantidadeChange={(value) => atualizarQuantidade(index, fornecedor, value)}
+                                  onUnidadeChange={(value) => atualizarUnidadePedido(index, fornecedor, value)}
+                                />
                               </div>
                             );
                           })}
