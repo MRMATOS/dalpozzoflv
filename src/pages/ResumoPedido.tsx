@@ -12,7 +12,7 @@ interface ItemTabelaComparativa {
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
-  unidadesPedido: { [fornecedor: string]: string };
+  unidadesPedido?: { [fornecedor: string]: string };
 }
 
 interface ResumoFornecedor {
@@ -59,11 +59,12 @@ const ResumoPedido = () => {
     const resumo: { [fornecedor: string]: ResumoFornecedor } = {};
 
     tabelaComparativa.forEach(item => {
-      Object.entries(item.quantidades).forEach(([fornecedor, quantidade]) => {
-        if (quantidade > 0 && item.fornecedores[fornecedor] !== null) {
+      Object.entries(item.quantidades || {}).forEach(([fornecedor, quantidade]) => {
+        if (quantidade > 0 && item.fornecedores?.[fornecedor] !== null && item.fornecedores?.[fornecedor] !== undefined) {
           const preco = item.fornecedores[fornecedor]!;
           const subtotal = quantidade * preco;
-          const unidade = item.unidadesPedido[fornecedor] || 'Caixa';
+          // Usar a unidade do objeto unidadesPedido se existir, senão usar 'Caixa' como padrão
+          const unidade = item.unidadesPedido?.[fornecedor] || 'Caixa';
 
           if (!resumo[fornecedor]) {
             resumo[fornecedor] = {
