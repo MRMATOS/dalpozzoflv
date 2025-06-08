@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 
 interface FornecedorCellProps {
   preco: number | null;
@@ -39,11 +38,11 @@ const FornecedorCell: React.FC<FornecedorCellProps> = ({
           {isMelhorPreco && ' 🏆'}
         </div>
         
-        {/* Dropdown "Pedir em" - sempre mostra placeholder fixo */}
+        {/* Dropdown "Pedir em" - sempre mostra texto fixo */}
         <div className="w-full">
           <Select onValueChange={onUnidadeChange}>
             <SelectTrigger className="w-full text-sm h-8">
-              <SelectValue placeholder="Pedir em:" />
+              <span className="text-gray-700">Pedir em:</span>
             </SelectTrigger>
             <SelectContent className="z-50 bg-white border shadow-lg">
               {opcoesUnidade.map(unidade => (
