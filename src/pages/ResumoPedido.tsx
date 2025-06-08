@@ -12,6 +12,7 @@ interface ItemTabelaComparativa {
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
+  unidadesPedido: { [fornecedor: string]: string };
 }
 
 interface ResumoFornecedor {
@@ -22,6 +23,7 @@ interface ResumoFornecedor {
     quantidade: number;
     preco: number;
     subtotal: number;
+    unidade: string;
   }[];
   total: number;
 }
@@ -34,6 +36,24 @@ const ResumoPedido = () => {
   // Receber os dados da tabela comparativa
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
 
+  // Função para pluralizar unidades
+  const pluralizarUnidade = (unidade: string, quantidade: number): string => {
+    if (quantidade === 1) {
+      return unidade;
+    }
+
+    const pluralizacao: { [key: string]: string } = {
+      'Caixa': 'Caixas',
+      'Dúzia': 'Dúzias',
+      'Unidade': 'Unidades',
+      'Bandeja': 'Bandejas',
+      'Maço': 'Maços',
+      'Kg': 'Kg' // Kg não muda no plural
+    };
+
+    return pluralizacao[unidade] || unidade;
+  };
+
   // Processar dados para criar resumo por fornecedor
   const resumoFornecedores: ResumoFornecedor[] = React.useMemo(() => {
     const resumo: { [fornecedor: string]: ResumoFornecedor } = {};
@@ -43,6 +63,7 @@ const ResumoPedido = () => {
         if (quantidade > 0 && item.fornecedores[fornecedor] !== null) {
           const preco = item.fornecedores[fornecedor]!;
           const subtotal = quantidade * preco;
+          const unidade = item.unidadesPedido[fornecedor] || 'Caixa';
 
           if (!resumo[fornecedor]) {
             resumo[fornecedor] = {
@@ -57,7 +78,8 @@ const ResumoPedido = () => {
             tipo: item.tipo,
             quantidade,
             preco,
-            subtotal
+            subtotal,
+            unidade
           });
 
           resumo[fornecedor].total += subtotal;
@@ -72,9 +94,11 @@ const ResumoPedido = () => {
     let mensagem = `Segue o pedido de compra com os itens selecionados:\n\n`;
 
     resumoFornecedor.itens.forEach(item => {
+      const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
+      
       mensagem += `Produto: ${item.produto}\n`;
       mensagem += `Tipo: ${item.tipo}\n`;
-      mensagem += `Quantidade: ${item.quantidade}\n`;
+      mensagem += `Quantidade: ${item.quantidade} ${unidadePlural}\n`;
       mensagem += `Preço unitário: R$ ${item.preco.toFixed(2)}\n`;
       mensagem += `Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
     });
@@ -187,27 +211,31 @@ const ResumoPedido = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {resumoFornecedor.itens.map((item, itemIndex) => (
-                    <div key={itemIndex} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-medium text-gray-900">{item.produto}</h3>
-                          <Badge variant="secondary">{item.tipo}</Badge>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-                          <div>
-                            <span className="font-medium">Quantidade:</span> {item.quantidade}
+                  {resumoFornecedor.itens.map((item, itemIndex) => {
+                    const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
+                    
+                    return (
+                      <div key={itemIndex} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-medium text-gray-900">{item.produto}</h3>
+                            <Badge variant="secondary">{item.tipo}</Badge>
                           </div>
-                          <div>
-                            <span className="font-medium">Preço unitário:</span> R$ {item.preco.toFixed(2)}
-                          </div>
-                          <div>
-                            <span className="font-medium">Subtotal:</span> R$ {item.subtotal.toFixed(2)}
+                          <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+                            <div>
+                              <span className="font-medium">Quantidade:</span> {item.quantidade} {unidadePlural}
+                            </div>
+                            <div>
+                              <span className="font-medium">Preço unitário:</span> R$ {item.preco.toFixed(2)}
+                            </div>
+                            <div>
+                              <span className="font-medium">Subtotal:</span> R$ {item.subtotal.toFixed(2)}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {/* Total do Fornecedor */}
                   <div className="border-t pt-4">
