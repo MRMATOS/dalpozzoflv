@@ -5,9 +5,10 @@ import { Navigate } from 'react-router-dom';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRole?: string;
+  allowedTypes?: string[];
 }
 
-const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRouteProps) => {
   const { user, profile, loading, hasRole } = useAuth();
 
   if (loading) {
@@ -47,6 +48,21 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
         </div>
       </div>
     );
+  }
+
+  // Check allowed types if specified
+  if (allowedTypes && allowedTypes.length > 0) {
+    const hasAllowedType = allowedTypes.some(type => hasRole(type));
+    if (!hasAllowedType) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Acesso Negado</h2>
+            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+          </div>
+        </div>
+      );
+    }
   }
 
   return <>{children}</>;

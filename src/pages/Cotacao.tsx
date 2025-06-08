@@ -411,7 +411,7 @@ const Cotacao = () => {
     if (dadosRestaurados) {
       setProdutosExtraidos(dadosRestaurados.produtosExtraidos);
       setTabelaComparativa(dadosRestaurados.tabelaComparativa);
-      setFornecedoresProcessados(dadosRestaurados.fornecedoresProcessados);
+      setFornecedoresProcessados(new Set<string>());
     }
   };
 
@@ -419,7 +419,7 @@ const Cotacao = () => {
     const dadosLimpos = novaCotacao();
     setProdutosExtraidos(dadosLimpos.produtosExtraidos);
     setTabelaComparativa(dadosLimpos.tabelaComparativa);
-    setFornecedoresProcessados(dadosLimpos.fornecedoresProcessados);
+    setFornecedoresProcessados(new Set<string>());
   };
 
   // Função para calcular percentual de suprimento por loja

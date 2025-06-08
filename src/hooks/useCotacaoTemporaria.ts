@@ -56,9 +56,9 @@ export const useCotacaoTemporaria = () => {
         if (data) {
           setCotacaoId(data.id);
           return {
-            produtosExtraidos: (data.produtos_extraidos as ProdutoExtraido[]) || [],
-            tabelaComparativa: (data.tabela_comparativa as ItemTabelaComparativa[]) || [],
-            fornecedoresProcessados: new Set()
+            produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+            tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+            fornecedoresProcessados: new Set<string>()
           };
         }
       } catch (error) {
@@ -135,9 +135,9 @@ export const useCotacaoTemporaria = () => {
         toast.success(`Cotação restaurada do dia ${new Date(data.enviado_em).toLocaleDateString('pt-BR')}`);
         
         return {
-          produtosExtraidos: (data.produtos_extraidos as ProdutoExtraido[]) || [],
-          tabelaComparativa: (data.tabela_comparativa as ItemTabelaComparativa[]) || [],
-          fornecedoresProcessados: new Set()
+          produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+          tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+          fornecedoresProcessados: new Set<string>()
         };
       }
 
@@ -155,9 +155,9 @@ export const useCotacaoTemporaria = () => {
     setCotacaoId(null);
     setCotacaoRestaurada(null);
     return {
-      produtosExtraidos: [],
-      tabelaComparativa: [],
-      fornecedoresProcessados: new Set()
+      produtosExtraidos: [] as ProdutoExtraido[],
+      tabelaComparativa: [] as ItemTabelaComparativa[],
+      fornecedoresProcessados: new Set<string>()
     };
   }, []);
 
