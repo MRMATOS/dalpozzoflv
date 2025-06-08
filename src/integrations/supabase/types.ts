@@ -82,6 +82,13 @@ export type Database = {
             referencedRelation: "requisicoes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cotacoes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
         ]
       }
       escala_abastecimento: {
@@ -436,6 +443,13 @@ export type Database = {
             referencedRelation: "fornecedores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pedidos_compra_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
         ]
       }
       produtos: {
@@ -664,7 +678,15 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usuarios: {
         Row: {
