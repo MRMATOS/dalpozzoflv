@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -819,14 +820,13 @@ const Cotacao = () => {
     }
 
     console.log('Navegando para resumo-pedido com dados:', {
-      tabelaComparativa,
-      marcarComoEnviada
+      tabelaComparativa
     });
 
+    // Remove a função do estado de navegação para evitar DataCloneError
     navigate('/resumo-pedido', {
       state: { 
-        tabelaComparativa,
-        marcarComoEnviada // Passa a função para marcar como enviada
+        tabelaComparativa
       }
     });
   };

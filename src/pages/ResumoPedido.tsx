@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -36,9 +38,11 @@ const ResumoPedido = () => {
   const { fornecedores } = useFornecedores();
   const { user } = useAuth();
   
-  // Receber os dados da tabela comparativa e função para marcar como enviada
+  // Usar o hook para acessar a função marcarComoEnviada
+  const { marcarComoEnviada } = useCotacaoTemporaria();
+  
+  // Receber os dados da tabela comparativa
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
-  const marcarComoEnviada = location.state?.marcarComoEnviada;
   const isHistorico = location.state?.isHistorico || false; // Flag para identificar se vem do histórico
 
   // Função para pluralizar unidades
@@ -171,7 +175,7 @@ const ResumoPedido = () => {
       const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
       if (!pedidoCriado) return;
 
-      // Marcar cotação como enviada se a função foi fornecida
+      // Marcar cotação como enviada usando o hook
       if (marcarComoEnviada) {
         await marcarComoEnviada();
       }
