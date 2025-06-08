@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,7 @@ interface ItemTabelaComparativa {
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
-  unidadePedido: { [fornecedor: string]: string }; // Corrigido: era unidadesPedido
+  unidadePedido: { [fornecedor: string]: string };
 }
 
 interface ResumoFornecedor {
@@ -43,7 +42,7 @@ const ResumoPedido = () => {
   
   // Receber os dados da tabela comparativa
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
-  const isHistorico = location.state?.isHistorico || false; // Flag para identificar se vem do histórico
+  const isHistorico = location.state?.isHistorico || false;
 
   // Função para pluralizar unidades
   const pluralizarUnidade = (unidade: string, quantidade: number): string => {
@@ -119,33 +118,88 @@ const ResumoPedido = () => {
   };
 
   const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
+    console.log('=== INÍCIO CRIAÇÃO PEDIDO ===');
+    console.log('User atual:', user);
+    console.log('Resumo fornecedor:', resumoFornecedor);
+    
     if (!user?.id) {
+      console.error('Erro: Usuário não autenticado - user.id não existe');
       toast.error('Usuário não autenticado');
       return false;
     }
 
+    console.log('User ID:', user.id, 'Type:', typeof user.id);
+
     try {
+      // Primeiro, verificar se o usuário existe na tabela usuarios
+      console.log('Verificando se usuário existe na tabela usuarios...');
+      const { data: usuarioExistente, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('id, nome, loja, tipo')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      console.log('Resultado busca usuário:', { usuarioExistente, usuarioError });
+
+      if (usuarioError) {
+        console.error('Erro ao buscar usuário:', usuarioError);
+        toast.error('Erro ao verificar usuário no sistema');
+        return false;
+      }
+
+      if (!usuarioExistente) {
+        console.error('Usuário não encontrado na tabela usuarios');
+        toast.error('Usuário não encontrado no sistema');
+        return false;
+      }
+
+      // Buscar fornecedor
+      console.log('Buscando fornecedor:', resumoFornecedor.fornecedor);
       const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
+      console.log('Fornecedor encontrado:', fornecedorData);
+      
       if (!fornecedorData) {
+        console.error('Fornecedor não encontrado:', resumoFornecedor.fornecedor);
         toast.error('Fornecedor não encontrado');
         return false;
       }
 
+      console.log('Fornecedor ID:', fornecedorData.id, 'Type:', typeof fornecedorData.id);
+
+      // Preparar dados do pedido
+      const dadosPedido = {
+        user_id: user.id,
+        fornecedor_id: fornecedorData.id,
+        total: resumoFornecedor.total,
+        status: 'enviado'
+      };
+
+      console.log('Dados do pedido a serem inseridos:', dadosPedido);
+
       // Criar o pedido
+      console.log('Inserindo pedido na tabela pedidos_compra...');
       const { data: pedido, error: pedidoError } = await supabase
         .from('pedidos_compra')
-        .insert({
-          user_id: user.id,
-          fornecedor_id: fornecedorData.id,
-          total: resumoFornecedor.total,
-          status: 'enviado'
-        })
+        .insert(dadosPedido)
         .select('id')
         .single();
 
-      if (pedidoError) throw pedidoError;
+      console.log('Resultado inserção pedido:', { pedido, pedidoError });
 
-      // Criar os itens do pedido
+      if (pedidoError) {
+        console.error('Erro detalhado ao criar pedido:', {
+          error: pedidoError,
+          message: pedidoError.message,
+          details: pedidoError.details,
+          hint: pedidoError.hint,
+          code: pedidoError.code
+        });
+        throw pedidoError;
+      }
+
+      console.log('Pedido criado com sucesso, ID:', pedido.id);
+
+      // Preparar itens do pedido
       const itens = resumoFornecedor.itens.map(item => ({
         pedido_id: pedido.id,
         produto_nome: item.produto,
@@ -155,28 +209,54 @@ const ResumoPedido = () => {
         unidade: item.unidade
       }));
 
+      console.log('Itens do pedido a serem inseridos:', itens);
+
+      // Criar os itens do pedido
+      console.log('Inserindo itens do pedido...');
       const { error: itensError } = await supabase
         .from('itens_pedido')
         .insert(itens);
 
-      if (itensError) throw itensError;
+      console.log('Resultado inserção itens:', { itensError });
 
+      if (itensError) {
+        console.error('Erro detalhado ao criar itens:', {
+          error: itensError,
+          message: itensError.message,
+          details: itensError.details,
+          hint: itensError.hint,
+          code: itensError.code
+        });
+        throw itensError;
+      }
+
+      console.log('=== PEDIDO CRIADO COM SUCESSO ===');
       return true;
     } catch (error) {
-      console.error('Erro ao criar pedido:', error);
+      console.error('=== ERRO GERAL NA CRIAÇÃO DO PEDIDO ===');
+      console.error('Erro completo:', error);
+      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
       toast.error('Erro ao salvar pedido no banco de dados');
       return false;
     }
   };
 
   const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
+    console.log('=== INÍCIO PROCESSO WHATSAPP ===');
+    console.log('Is histórico:', isHistorico);
+    
     // Se não é histórico, criar pedido no banco
     if (!isHistorico) {
+      console.log('Criando pedido no banco...');
       const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
-      if (!pedidoCriado) return;
+      if (!pedidoCriado) {
+        console.log('Falha ao criar pedido, interrompendo processo');
+        return;
+      }
 
       // Marcar cotação como enviada usando o hook
       if (marcarComoEnviada) {
+        console.log('Marcando cotação como enviada...');
         await marcarComoEnviada();
       }
     }
@@ -189,7 +269,7 @@ const ResumoPedido = () => {
     }
 
     const mensagem = gerarMensagemWhatsApp(resumoFornecedor);
-    const telefone = fornecedorData.telefone.replace(/\D/g, ''); // Remove caracteres não numéricos
+    const telefone = fornecedorData.telefone.replace(/\D/g, '');
     const link = `https://api.whatsapp.com/send?phone=${telefone}&text=${mensagem}`;
     
     window.open(link, '_blank');
@@ -197,6 +277,8 @@ const ResumoPedido = () => {
     if (!isHistorico) {
       toast.success('Pedido salvo e enviado com sucesso!');
     }
+    
+    console.log('=== PROCESSO WHATSAPP CONCLUÍDO ===');
   };
 
   if (resumoFornecedores.length === 0) {

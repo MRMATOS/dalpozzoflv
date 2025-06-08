@@ -75,6 +75,10 @@ export const useCotacaoTemporaria = () => {
   const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
     if (!user?.id || !dadosCotacao.produtosExtraidos.length) return;
 
+    console.log('=== SALVANDO COTAÇÃO ===');
+    console.log('User ID:', user.id);
+    console.log('Dados cotação:', dadosCotacao);
+
     setSalvandoAutomaticamente(true);
 
     try {
@@ -85,15 +89,23 @@ export const useCotacaoTemporaria = () => {
         data: new Date().toISOString()
       };
 
+      console.log('Dados preparados para salvar:', dadosParaSalvar);
+
       if (cotacaoId) {
+        console.log('Atualizando cotação existente, ID:', cotacaoId);
         // Atualizar cotação existente
         const { error } = await supabase
           .from('cotacoes')
           .update(dadosParaSalvar)
           .eq('id', cotacaoId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar cotação:', error);
+          throw error;
+        }
+        console.log('Cotação atualizada com sucesso');
       } else {
+        console.log('Criando nova cotação');
         // Criar nova cotação
         const { data, error } = await supabase
           .from('cotacoes')
@@ -101,11 +113,15 @@ export const useCotacaoTemporaria = () => {
           .select('id')
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao criar cotação:', error);
+          throw error;
+        }
+        console.log('Nova cotação criada, ID:', data.id);
         setCotacaoId(data.id);
       }
     } catch (error) {
-      console.error('Erro ao salvar cotação:', error);
+      console.error('Erro geral ao salvar cotação:', error);
     } finally {
       setSalvandoAutomaticamente(false);
     }
@@ -163,7 +179,14 @@ export const useCotacaoTemporaria = () => {
 
   // Marcar cotação como enviada
   const marcarComoEnviada = useCallback(async (): Promise<string | null> => {
-    if (!cotacaoId || !user?.id) return null;
+    console.log('=== MARCANDO COTAÇÃO COMO ENVIADA ===');
+    console.log('Cotação ID:', cotacaoId);
+    console.log('User ID:', user?.id);
+
+    if (!cotacaoId || !user?.id) {
+      console.log('Dados insuficientes para marcar como enviada');
+      return null;
+    }
 
     try {
       const { error } = await supabase
@@ -171,8 +194,12 @@ export const useCotacaoTemporaria = () => {
         .update({ enviado_em: new Date().toISOString() })
         .eq('id', cotacaoId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao marcar cotação como enviada:', error);
+        throw error;
+      }
 
+      console.log('Cotação marcada como enviada com sucesso');
       return cotacaoId;
     } catch (error) {
       console.error('Erro ao marcar cotação como enviada:', error);
