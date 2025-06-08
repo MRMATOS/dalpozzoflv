@@ -402,6 +402,26 @@ const Cotacao = () => {
   // Lista de fornecedores únicos dos produtos extraídos
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
 
+  // Verificar se há dados na cotação
+  const temDados = produtosExtraidos.length > 0 || tabelaComparativa.length > 0;
+
+  // Handlers para os botões de ação
+  const handleRestaurarCotacao = async () => {
+    const dadosRestaurados = await restaurarUltimaCotacao();
+    if (dadosRestaurados) {
+      setProdutosExtraidos(dadosRestaurados.produtosExtraidos);
+      setTabelaComparativa(dadosRestaurados.tabelaComparativa);
+      setFornecedoresProcessados(dadosRestaurados.fornecedoresProcessados);
+    }
+  };
+
+  const handleNovaCotacao = () => {
+    const dadosLimpos = novaCotacao();
+    setProdutosExtraidos(dadosLimpos.produtosExtraidos);
+    setTabelaComparativa(dadosLimpos.tabelaComparativa);
+    setFornecedoresProcessados(dadosLimpos.fornecedoresProcessados);
+  };
+
   // Função para calcular percentual de suprimento por loja
   const calcularPercentualSuprimento = (loja: string) => {
     const requisicoesDaLoja = requisicoes.filter(req => req.loja === loja);

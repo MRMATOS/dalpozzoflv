@@ -56,8 +56,8 @@ export const useCotacaoTemporaria = () => {
         if (data) {
           setCotacaoId(data.id);
           return {
-            produtosExtraidos: data.produtos_extraidos || [],
-            tabelaComparativa: data.tabela_comparativa || [],
+            produtosExtraidos: (data.produtos_extraidos as ProdutoExtraido[]) || [],
+            tabelaComparativa: (data.tabela_comparativa as ItemTabelaComparativa[]) || [],
             fornecedoresProcessados: new Set()
           };
         }
@@ -80,8 +80,8 @@ export const useCotacaoTemporaria = () => {
     try {
       const dadosParaSalvar = {
         user_id: user.id,
-        produtos_extraidos: dadosCotacao.produtosExtraidos,
-        tabela_comparativa: dadosCotacao.tabelaComparativa,
+        produtos_extraidos: JSON.parse(JSON.stringify(dadosCotacao.produtosExtraidos)),
+        tabela_comparativa: JSON.parse(JSON.stringify(dadosCotacao.tabelaComparativa)),
         data: new Date().toISOString()
       };
 
@@ -135,8 +135,8 @@ export const useCotacaoTemporaria = () => {
         toast.success(`Cotação restaurada do dia ${new Date(data.enviado_em).toLocaleDateString('pt-BR')}`);
         
         return {
-          produtosExtraidos: data.produtos_extraidos || [],
-          tabelaComparativa: data.tabela_comparativa || [],
+          produtosExtraidos: (data.produtos_extraidos as ProdutoExtraido[]) || [],
+          tabelaComparativa: (data.tabela_comparativa as ItemTabelaComparativa[]) || [],
           fornecedoresProcessados: new Set()
         };
       }
