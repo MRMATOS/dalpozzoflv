@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
 import { useEstoque } from '@/hooks/useEstoque';
+import { supabase } from '@/integrations/supabase/client';
 import FornecedorCell from '@/components/cotacao/FornecedorCell';
 
 // Interfaces para tipagem
@@ -339,6 +340,30 @@ const Cotacao = () => {
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
   const [buscaProduto, setBuscaProduto] = useState('');
+  const [produtosDB, setProdutosDB] = useState<any[]>([]);
+
+  // Buscar produtos do banco de dados
+  React.useEffect(() => {
+    const buscarProdutos = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('produtos')
+          .select('*')
+          .eq('ativo', true);
+        
+        if (error) {
+          console.error('Erro ao buscar produtos:', error);
+          return;
+        }
+        
+        setProdutosDB(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar produtos:', error);
+      }
+    };
+
+    buscarProdutos();
+  }, []);
 
   // Filtrar produtos baseado na busca
   const produtosFiltrados = tabelaComparativa.filter(item => 
@@ -383,6 +408,37 @@ const Cotacao = () => {
 
     return totalRequisitado > 0 ? Math.round((totalSuprido / totalRequisitado) * 100) : 0;
   };
+
+  // Função para obter unidade padrão do produto no banco
+  const obterUnidadePadraoProduto = (produto: string, tipo: string): string => {
+    // Primeiro, tenta encontrar correspondência exata pelo nome completo
+    const nomeCompleto = `${produto} ${tipo}`.toLowerCase();
+    const produtoExato = produtosDB.find(p => 
+      p.produto?.toLowerCase().includes(produto.toLowerCase()) &&
+      (p.nome_variacao?.toLowerCase() === tipo.toLowerCase() || 
+       p.nome_base?.toLowerCase() === tipo.toLowerCase())
+    );
+    
+    if (produtoExato && produtoExato.unidade) {
+      return produtoExato.unidade;
+    }
+
+    // Se não encontrou, busca apenas pelo produto base
+    const produtoBase = produtosDB.find(p => 
+      p.produto?.toLowerCase().includes(produto.toLowerCase()) ||
+      p.nome_base?.toLowerCase().includes(produto.toLowerCase())
+    );
+    
+    if (produtoBase && produtoBase.unidade) {
+      return produtoBase.unidade;
+    }
+
+    // Fallback para Caixa se não encontrar
+    return 'Caixa';
+  };
+
+  // Lista de todas as unidades disponíveis (baseada na configuração dos produtos)
+  const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
 
   // Função para obter quantidade requisitada para um produto - CORRIGIDA
   const obterQuantidadeRequisitada = (produto: string, tipo: string) => {
@@ -607,6 +663,9 @@ const Cotacao = () => {
       const chave = `${produto.produto}_${produto.tipo}`;
       
       if (!produtosAgrupados[chave]) {
+        // Obter unidade padrão do produto do banco de dados
+        const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
+        
         produtosAgrupados[chave] = {
           produto: produto.produto,
           tipo: produto.tipo,
@@ -619,7 +678,7 @@ const Cotacao = () => {
         fornecedoresList.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
           produtosAgrupados[chave].quantidades[f] = 0;
-          produtosAgrupados[chave].unidadePedido[f] = 'Caixa';
+          produtosAgrupados[chave].unidadePedido[f] = unidadePadrao; // Usar unidade padrão do produto
         });
       }
       
@@ -680,17 +739,8 @@ const Cotacao = () => {
 
   // Função para obter opções de unidade para um produto
   const obterOpcoesUnidade = (produto: string, tipo: string) => {
-    const estoque = obterEstoqueProduto(produto, tipo);
-    const unidadeEstoque = estoque?.unidade || 'Caixa';
-    
-    const opcoes = ['Kg'];
-    if (unidadeEstoque.toLowerCase() === 'caixa') {
-      opcoes.unshift('Caixa');
-    } else {
-      opcoes.push(unidadeEstoque);
-    }
-    
-    return opcoes;
+    // Retorna todas as unidades disponíveis no sistema
+    return unidadesDisponiveis;
   };
 
   // Função para calcular total de um fornecedor
@@ -862,7 +912,7 @@ const Cotacao = () => {
 
                 {/* Container da tabela com scroll horizontal */}
                 <div className="border rounded-lg overflow-hidden bg-white relative">
-                  <div className="overflow-auto max-h-[600px]">   {/* y + x scroll */}
+                  <div className="overflow-auto max-h-[600px]">
                     <table className="w-full min-w-max table-fixed">
                       {/* Header fixo da tabela */}
                       <thead className="sticky top-[0px] bg-gray-50 z-20 border-b">
@@ -884,7 +934,6 @@ const Cotacao = () => {
                       {/* Conteúdo da tabela */}
                       <tbody className="bg-white">
                         {produtosFiltrados.map((item, index) => {
-                          // Calcular menor preço para este produto
                           const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
                           const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
                           
@@ -929,7 +978,6 @@ const Cotacao = () => {
                           <td className="w-[150px] min-w-[150px] p-3 border-r"></td>
                           <td className="w-[160px] min-w-[160px] p-3 border-r"></td>
                           {(() => {
-                            // Calcular totais e encontrar o menor
                             const totais = fornecedoresComProdutos.map(f => calcularTotalFornecedor(f)).filter(t => t > 0);
                             const menorTotal = totais.length > 0 ? Math.min(...totais) : 0;
                             
