@@ -166,6 +166,42 @@ const ResumoPedido = () => {
 
       console.log('Fornecedor ID:', fornecedorData.id, 'Type:', typeof fornecedorData.id);
 
+      // Buscar os IDs dos produtos pelos nomes
+      console.log('Buscando IDs dos produtos...');
+      const nomesProdutos = resumoFornecedor.itens.map(item => item.produto);
+      console.log('Nomes dos produtos:', nomesProdutos);
+
+      const { data: produtos, error: produtosError } = await supabase
+        .from('produtos')
+        .select('id, produto')
+        .in('produto', nomesProdutos);
+
+      console.log('Produtos encontrados:', produtos);
+
+      if (produtosError) {
+        console.error('Erro ao buscar produtos:', produtosError);
+        toast.error('Erro ao buscar produtos no sistema');
+        return false;
+      }
+
+      // Criar mapeamento de nome para ID
+      const mapeamentoProdutos: { [nome: string]: string } = {};
+      produtos?.forEach(produto => {
+        if (produto.produto) {
+          mapeamentoProdutos[produto.produto] = produto.id;
+        }
+      });
+
+      console.log('Mapeamento de produtos:', mapeamentoProdutos);
+
+      // Verificar se todos os produtos foram encontrados
+      const produtosNaoEncontrados = nomesProdutos.filter(nome => !mapeamentoProdutos[nome]);
+      if (produtosNaoEncontrados.length > 0) {
+        console.error('Produtos não encontrados:', produtosNaoEncontrados);
+        toast.error(`Produtos não encontrados: ${produtosNaoEncontrados.join(', ')}`);
+        return false;
+      }
+
       // Preparar dados do pedido
       const dadosPedido = {
         user_id: user.id,
@@ -199,10 +235,10 @@ const ResumoPedido = () => {
 
       console.log('Pedido criado com sucesso, ID:', pedido.id);
 
-      // Preparar itens do pedido
+      // Preparar itens do pedido com os IDs corretos dos produtos
       const itens = resumoFornecedor.itens.map(item => ({
         pedido_id: pedido.id,
-        produto_nome: item.produto,
+        produto_id: mapeamentoProdutos[item.produto], // Usar o ID do produto em vez do nome
         tipo: item.tipo,
         quantidade: item.quantidade,
         preco: item.preco,
