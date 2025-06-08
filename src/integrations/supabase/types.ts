@@ -39,23 +39,32 @@ export type Database = {
       cotacoes: {
         Row: {
           data: string | null
+          enviado_em: string | null
           fornecedor_id: string | null
           id: string
+          produtos_extraidos: Json | null
           requisicao_id: string | null
+          tabela_comparativa: Json | null
           user_id: string | null
         }
         Insert: {
           data?: string | null
+          enviado_em?: string | null
           fornecedor_id?: string | null
           id?: string
+          produtos_extraidos?: Json | null
           requisicao_id?: string | null
+          tabela_comparativa?: Json | null
           user_id?: string | null
         }
         Update: {
           data?: string | null
+          enviado_em?: string | null
           fornecedor_id?: string | null
           id?: string
+          produtos_extraidos?: Json | null
           requisicao_id?: string | null
+          tabela_comparativa?: Json | null
           user_id?: string | null
         }
         Relationships: [
@@ -215,26 +224,35 @@ export type Database = {
       itens_cotacao: {
         Row: {
           cotacao_id: string | null
+          fornecedor_nome: string | null
           id: string
           preco: number | null
           produto_id: string | null
+          produto_nome: string | null
           quantidade: number | null
+          tipo: string | null
           unidade: string | null
         }
         Insert: {
           cotacao_id?: string | null
+          fornecedor_nome?: string | null
           id?: string
           preco?: number | null
           produto_id?: string | null
+          produto_nome?: string | null
           quantidade?: number | null
+          tipo?: string | null
           unidade?: string | null
         }
         Update: {
           cotacao_id?: string | null
+          fornecedor_nome?: string | null
           id?: string
           preco?: number | null
           produto_id?: string | null
+          produto_nome?: string | null
           quantidade?: number | null
+          tipo?: string | null
           unidade?: string | null
         }
         Relationships: [
@@ -367,30 +385,43 @@ export type Database = {
       }
       pedidos_compra: {
         Row: {
+          cotacao_id: string | null
           criado_em: string | null
           criado_por: string | null
           fornecedor_id: string | null
           id: string
           status: string | null
+          total: number | null
           user_id: string | null
         }
         Insert: {
+          cotacao_id?: string | null
           criado_em?: string | null
           criado_por?: string | null
           fornecedor_id?: string | null
           id?: string
           status?: string | null
+          total?: number | null
           user_id?: string | null
         }
         Update: {
+          cotacao_id?: string | null
           criado_em?: string | null
           criado_por?: string | null
           fornecedor_id?: string | null
           id?: string
           status?: string | null
+          total?: number | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pedidos_compra_cotacao_id_fkey"
+            columns: ["cotacao_id"]
+            isOneToOne: false
+            referencedRelation: "cotacoes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedidos_compra_criado_por_fkey"
             columns: ["criado_por"]

@@ -12,7 +12,10 @@ import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
 import { useEstoque } from '@/hooks/useEstoque';
 import { supabase } from '@/integrations/supabase/client';
+import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
 import FornecedorCell from '@/components/cotacao/FornecedorCell';
+import CotacaoActionButtons from '@/components/cotacao/CotacaoActionButtons';
+import CotacaoRestauradaMessage from '@/components/cotacao/CotacaoRestauradaMessage';
 
 // Interfaces para tipagem
 interface ProdutoExtraido {
@@ -43,6 +46,16 @@ const Cotacao = () => {
   const { fornecedores } = useFornecedores();
   const { requisicoes, lojasComRequisicoes } = useRequisicoes();
   const { estoqueProdutos, isLoading: isLoadingEstoque, obterEstoqueProduto } = useEstoque();
+  
+  // Hook para persistência
+  const { 
+    salvarCotacao, 
+    restaurarUltimaCotacao, 
+    novaCotacao, 
+    marcarComoEnviada,
+    cotacaoRestaurada,
+    salvandoAutomaticamente
+  } = useCotacaoTemporaria();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
   const dicionarioProdutos = {
@@ -364,6 +377,21 @@ const Cotacao = () => {
 
     buscarProdutos();
   }, []);
+
+  // Auto-salvar quando dados mudarem
+  React.useEffect(() => {
+    if (produtosExtraidos.length > 0) {
+      const timeoutId = setTimeout(() => {
+        salvarCotacao({
+          produtosExtraidos,
+          tabelaComparativa,
+          fornecedoresProcessados
+        });
+      }, 2000); // Salva após 2 segundos de inatividade
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados]);
 
   // Filtrar produtos baseado na busca
   const produtosFiltrados = tabelaComparativa.filter(item => 
@@ -764,7 +792,10 @@ const Cotacao = () => {
     }
 
     navigate('/resumo-pedido', {
-      state: { tabelaComparativa }
+      state: { 
+        tabelaComparativa,
+        marcarComoEnviada // Passa a função para marcar como enviada
+      }
     });
   };
 
@@ -783,6 +814,9 @@ const Cotacao = () => {
                 <h1 className="text-lg font-semibold text-gray-900">Nova Cotação</h1>
                 <p className="text-sm text-gray-500">Sistema FLV</p>
               </div>
+              {salvandoAutomaticamente && (
+                <div className="text-xs text-blue-600">Salvando...</div>
+              )}
             </div>
             
             <div className="flex items-center space-x-4">
@@ -857,12 +891,17 @@ const Cotacao = () => {
               )}
             </div>
 
+            {/* Mensagem de cotação restaurada */}
+            {cotacaoRestaurada && (
+              <CotacaoRestauradaMessage dataRestauracao={cotacaoRestaurada} />
+            )}
+
             {/* Tabela Comparativa */}
             {tabelaComparativa.length > 0 && (
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
                 
-                {/* Área fixa com busca, cards de loja e botão resumo */}
+                {/* Área fixa com busca, cards de loja e botões de ação */}
                 <div className="sticky top-0 bg-white z-30 pb-4 border-b mb-4">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                     {/* Input de busca */}
@@ -902,11 +941,13 @@ const Cotacao = () => {
                       })}
                     </div>
                     
-                    {/* Botão Ver Resumo */}
-                    <Button onClick={irParaResumo} className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 w-full sm:w-auto">
-                      <FileText className="w-4 h-4" />
-                      Ver Resumo
-                    </Button>
+                    {/* Botões de Ação */}
+                    <CotacaoActionButtons
+                      onRestaurarCotacao={handleRestaurarCotacao}
+                      onNovaCotacao={handleNovaCotacao}
+                      onVerResumo={irParaResumo}
+                      temDados={temDados}
+                    />
                   </div>
                 </div>
 

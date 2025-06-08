@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ItemTabelaComparativa {
   produto: string;
@@ -32,9 +34,12 @@ const ResumoPedido = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { fornecedores } = useFornecedores();
+  const { user } = useAuth();
   
-  // Receber os dados da tabela comparativa
+  // Receber os dados da tabela comparativa e função para marcar como enviada
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
+  const marcarComoEnviada = location.state?.marcarComoEnviada;
+  const isHistorico = location.state?.isHistorico || false; // Flag para identificar se vem do histórico
 
   // Função para pluralizar unidades
   const pluralizarUnidade = (unidade: string, quantidade: number): string => {
@@ -109,11 +114,73 @@ const ResumoPedido = () => {
     return encodeURIComponent(mensagem);
   };
 
-  const abrirWhatsApp = (resumoFornecedor: ResumoFornecedor) => {
+  const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
+    if (!user?.id) {
+      toast.error('Usuário não autenticado');
+      return false;
+    }
+
+    try {
+      const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
+      if (!fornecedorData) {
+        toast.error('Fornecedor não encontrado');
+        return false;
+      }
+
+      // Criar o pedido
+      const { data: pedido, error: pedidoError } = await supabase
+        .from('pedidos_compra')
+        .insert({
+          user_id: user.id,
+          fornecedor_id: fornecedorData.id,
+          total: resumoFornecedor.total,
+          status: 'enviado'
+        })
+        .select('id')
+        .single();
+
+      if (pedidoError) throw pedidoError;
+
+      // Criar os itens do pedido
+      const itens = resumoFornecedor.itens.map(item => ({
+        pedido_id: pedido.id,
+        produto_nome: item.produto,
+        tipo: item.tipo,
+        quantidade: item.quantidade,
+        preco: item.preco,
+        unidade: item.unidade
+      }));
+
+      const { error: itensError } = await supabase
+        .from('itens_pedido')
+        .insert(itens);
+
+      if (itensError) throw itensError;
+
+      return true;
+    } catch (error) {
+      console.error('Erro ao criar pedido:', error);
+      toast.error('Erro ao salvar pedido no banco de dados');
+      return false;
+    }
+  };
+
+  const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
+    // Se não é histórico, criar pedido no banco
+    if (!isHistorico) {
+      const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
+      if (!pedidoCriado) return;
+
+      // Marcar cotação como enviada se a função foi fornecida
+      if (marcarComoEnviada) {
+        await marcarComoEnviada();
+      }
+    }
+
     const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
     
     if (!fornecedorData?.telefone) {
-      alert('Telefone do fornecedor não encontrado!');
+      toast.error('Telefone do fornecedor não encontrado!');
       return;
     }
 
@@ -122,6 +189,10 @@ const ResumoPedido = () => {
     const link = `https://api.whatsapp.com/send?phone=${telefone}&text=${mensagem}`;
     
     window.open(link, '_blank');
+    
+    if (!isHistorico) {
+      toast.success('Pedido salvo e enviado com sucesso!');
+    }
   };
 
   if (resumoFornecedores.length === 0) {
@@ -176,13 +247,15 @@ const ResumoPedido = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/cotacao')}
+                onClick={() => navigate(isHistorico ? '/historico-pedidos' : '/cotacao')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Resumo do Pedido</h1>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  {isHistorico ? 'Detalhes do Pedido' : 'Resumo do Pedido'}
+                </h1>
                 <p className="text-sm text-gray-500">Sistema FLV</p>
               </div>
             </div>
@@ -201,13 +274,16 @@ const ResumoPedido = () => {
                     <Package className="text-blue-600" />
                     {resumoFornecedor.fornecedor}
                   </CardTitle>
-                  <Button
-                    onClick={() => abrirWhatsApp(resumoFornecedor)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Gerar pedido por WhatsApp
-                  </Button>
+                  {/* Só mostra botão WhatsApp se não for do histórico */}
+                  {!isHistorico && (
+                    <Button
+                      onClick={() => abrirWhatsApp(resumoFornecedor)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Gerar pedido por WhatsApp
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
