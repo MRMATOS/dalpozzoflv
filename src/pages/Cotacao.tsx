@@ -801,15 +801,27 @@ const Cotacao = () => {
   };
 
   const irParaResumo = () => {
+    console.log('irParaResumo chamado');
+    console.log('tabelaComparativa:', tabelaComparativa);
+    
     // Verificar se há produtos com quantidades definidas
-    const temProdutosComQuantidade = tabelaComparativa.some(item =>
-      Object.values(item.quantidades).some(quantidade => quantidade > 0)
-    );
+    const temProdutosComQuantidade = tabelaComparativa.some(item => {
+      const quantidades = Object.values(item.quantidades || {});
+      console.log(`Produto ${item.produto} - quantidades:`, quantidades);
+      return quantidades.some(quantidade => quantidade > 0);
+    });
+
+    console.log('temProdutosComQuantidade:', temProdutosComQuantidade);
 
     if (!temProdutosComQuantidade) {
       toast.error('Defina as quantidades dos produtos antes de gerar o resumo');
       return;
     }
+
+    console.log('Navegando para resumo-pedido com dados:', {
+      tabelaComparativa,
+      marcarComoEnviada
+    });
 
     navigate('/resumo-pedido', {
       state: { 

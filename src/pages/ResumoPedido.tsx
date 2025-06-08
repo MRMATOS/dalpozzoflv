@@ -14,7 +14,7 @@ interface ItemTabelaComparativa {
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
-  unidadesPedido?: { [fornecedor: string]: string };
+  unidadePedido: { [fornecedor: string]: string }; // Corrigido: era unidadesPedido
 }
 
 interface ResumoFornecedor {
@@ -68,8 +68,8 @@ const ResumoPedido = () => {
         if (quantidade > 0 && item.fornecedores?.[fornecedor] !== null && item.fornecedores?.[fornecedor] !== undefined) {
           const preco = item.fornecedores[fornecedor]!;
           const subtotal = quantidade * preco;
-          // Usar a unidade do objeto unidadesPedido se existir, senão usar 'Caixa' como padrão
-          const unidade = item.unidadesPedido?.[fornecedor] || 'Caixa';
+          // Usar a unidade do objeto unidadePedido se existir, senão usar 'Caixa' como padrão
+          const unidade = item.unidadePedido?.[fornecedor] || 'Caixa';
 
           if (!resumo[fornecedor]) {
             resumo[fornecedor] = {
