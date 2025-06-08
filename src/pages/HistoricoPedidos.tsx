@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -84,7 +83,10 @@ const HistoricoPedidos = () => {
     try {
       const { data, error } = await supabase
         .from('itens_pedido')
-        .select('*')
+        .select(`
+          *,
+          produtos(nome_base, nome_variacao)
+        `)
         .eq('pedido_id', pedidoId);
 
       if (error) {
@@ -92,14 +94,24 @@ const HistoricoPedidos = () => {
         return;
       }
 
-      const itens = data.map(item => ({
-        produto_nome: item.produto_nome || 'Produto não identificado',
-        tipo: item.tipo || 'Tipo não identificado',
-        quantidade: item.quantidade || 0,
-        preco: item.preco || 0,
-        subtotal: (item.quantidade || 0) * (item.preco || 0),
-        unidade: item.unidade || 'Caixa'
-      }));
+      const itens = data.map(item => {
+        // Construir o nome do produto a partir dos dados relacionados ou usar campos existentes
+        let produtoNome = 'Produto não identificado';
+        
+        if (item.produtos) {
+          const produto = item.produtos as any;
+          produtoNome = produto.nome_base || produto.nome_variacao || 'Produto não identificado';
+        }
+
+        return {
+          produto_nome: produtoNome,
+          tipo: item.tipo || 'Tipo não identificado',
+          quantidade: item.quantidade || 0,
+          preco: item.preco || 0,
+          subtotal: (item.quantidade || 0) * (item.preco || 0),
+          unidade: item.unidade || 'Caixa'
+        };
+      });
 
       setItensPedido(itens);
     } catch (error) {
