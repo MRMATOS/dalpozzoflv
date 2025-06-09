@@ -32,11 +32,19 @@ export const useCotacaoTemporaria = () => {
   const [cotacaoId, setCotacaoId] = useState<string | null>(null);
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
   const [salvandoAutomaticamente, setSalvandoAutomaticamente] = useState(false);
+  const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
+  const [dadosCarregados, setDadosCarregados] = useState<CotacaoData | null>(null);
 
   // Carregar cotação em rascunho ao inicializar
   useEffect(() => {
     const carregarCotacaoRascunho = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setIsLoadingCotacao(false);
+        return;
+      }
+
+      console.log('=== CARREGANDO COTAÇÃO EM RASCUNHO ===');
+      console.log('User ID:', user.id);
 
       try {
         const { data, error } = await supabase
@@ -50,22 +58,44 @@ export const useCotacaoTemporaria = () => {
 
         if (error) {
           console.error('Erro ao carregar cotação em rascunho:', error);
+          setIsLoadingCotacao(false);
           return;
         }
 
         if (data) {
+          console.log('Cotação encontrada:', data);
           setCotacaoId(data.id);
-          return {
+          
+          const dadosRestaurados = {
             produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
             tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
             fornecedoresProcessados: new Set<string>()
           };
+          
+          setDadosCarregados(dadosRestaurados);
+          console.log('Dados carregados automaticamente:', dadosRestaurados);
+          
+          if (dadosRestaurados.produtosExtraidos.length > 0) {
+            toast.success('Cotação em andamento restaurada automaticamente');
+          }
+        } else {
+          console.log('Nenhuma cotação em rascunho encontrada');
+          setDadosCarregados({
+            produtosExtraidos: [],
+            tabelaComparativa: [],
+            fornecedoresProcessados: new Set<string>()
+          });
         }
       } catch (error) {
         console.error('Erro ao buscar cotação:', error);
+        setDadosCarregados({
+          produtosExtraidos: [],
+          tabelaComparativa: [],
+          fornecedoresProcessados: new Set<string>()
+        });
+      } finally {
+        setIsLoadingCotacao(false);
       }
-
-      return null;
     };
 
     carregarCotacaoRascunho();
@@ -73,11 +103,10 @@ export const useCotacaoTemporaria = () => {
 
   // Salvar cotação automaticamente
   const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
-    if (!user?.id || !dadosCotacao.produtosExtraidos.length) return;
+    if (!user?.id || !dadosCotacao.produtosExtraidos.length || salvandoAutomaticamente) return;
 
     console.log('=== SALVANDO COTAÇÃO ===');
     console.log('User ID:', user.id);
-    console.log('Dados cotação:', dadosCotacao);
 
     setSalvandoAutomaticamente(true);
 
@@ -93,7 +122,6 @@ export const useCotacaoTemporaria = () => {
 
       if (cotacaoId) {
         console.log('Atualizando cotação existente, ID:', cotacaoId);
-        // Atualizar cotação existente
         const { error } = await supabase
           .from('cotacoes')
           .update(dadosParaSalvar)
@@ -106,7 +134,6 @@ export const useCotacaoTemporaria = () => {
         console.log('Cotação atualizada com sucesso');
       } else {
         console.log('Criando nova cotação');
-        // Criar nova cotação
         const { data, error } = await supabase
           .from('cotacoes')
           .insert(dadosParaSalvar)
@@ -125,7 +152,7 @@ export const useCotacaoTemporaria = () => {
     } finally {
       setSalvandoAutomaticamente(false);
     }
-  }, [user?.id, cotacaoId]);
+  }, [user?.id, cotacaoId, salvandoAutomaticamente]);
 
   // Restaurar última cotação enviada
   const restaurarUltimaCotacao = useCallback(async (): Promise<CotacaoData | null> => {
@@ -170,18 +197,19 @@ export const useCotacaoTemporaria = () => {
   const novaCotacao = useCallback(() => {
     setCotacaoId(null);
     setCotacaoRestaurada(null);
-    return {
+    const dadosLimpos = {
       produtosExtraidos: [] as ProdutoExtraido[],
       tabelaComparativa: [] as ItemTabelaComparativa[],
       fornecedoresProcessados: new Set<string>()
     };
+    setDadosCarregados(dadosLimpos);
+    return dadosLimpos;
   }, []);
 
   // Marcar cotação como enviada
   const marcarComoEnviada = useCallback(async (): Promise<string | null> => {
     console.log('=== MARCANDO COTAÇÃO COMO ENVIADA ===');
     console.log('Cotação ID:', cotacaoId);
-    console.log('User ID:', user?.id);
 
     if (!cotacaoId || !user?.id) {
       console.log('Dados insuficientes para marcar como enviada');
@@ -213,6 +241,8 @@ export const useCotacaoTemporaria = () => {
     novaCotacao,
     marcarComoEnviada,
     cotacaoRestaurada,
-    salvandoAutomaticamente
+    salvandoAutomaticamente,
+    isLoadingCotacao,
+    dadosCarregados
   };
 };

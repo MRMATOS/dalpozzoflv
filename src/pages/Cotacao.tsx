@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, ArrowLeft, Calculator, Search, FileText, Trash2 } from 'lucide-react';
+import { Upload, ArrowLeft, Calculator, Search, FileText, Trash2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
@@ -55,7 +54,9 @@ const Cotacao = () => {
     novaCotacao, 
     marcarComoEnviada,
     cotacaoRestaurada,
-    salvandoAutomaticamente
+    salvandoAutomaticamente,
+    isLoadingCotacao,
+    dadosCarregados
   } = useCotacaoTemporaria();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
@@ -355,9 +356,25 @@ const Cotacao = () => {
   const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
   const [buscaProduto, setBuscaProduto] = useState('');
   const [produtosDB, setProdutosDB] = useState<any[]>([]);
+  const [dadosInicializados, setDadosInicializados] = useState(false);
+
+  // Inicializar dados quando carregados do hook
+  useEffect(() => {
+    if (!isLoadingCotacao && dadosCarregados && !dadosInicializados) {
+      console.log('=== INICIALIZANDO DADOS DA COTAÇÃO ===');
+      console.log('Dados carregados:', dadosCarregados);
+      
+      setProdutosExtraidos(dadosCarregados.produtosExtraidos);
+      setTabelaComparativa(dadosCarregados.tabelaComparativa);
+      setFornecedoresProcessados(dadosCarregados.fornecedoresProcessados);
+      setDadosInicializados(true);
+      
+      console.log('Dados inicializados com sucesso');
+    }
+  }, [isLoadingCotacao, dadosCarregados, dadosInicializados]);
 
   // Buscar produtos do banco de dados
-  React.useEffect(() => {
+  useEffect(() => {
     const buscarProdutos = async () => {
       try {
         const { data, error } = await supabase
@@ -379,20 +396,21 @@ const Cotacao = () => {
     buscarProdutos();
   }, []);
 
-  // Auto-salvar quando dados mudarem
-  React.useEffect(() => {
-    if (produtosExtraidos.length > 0) {
+  // Auto-salvar quando dados mudarem (apenas após inicialização)
+  useEffect(() => {
+    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao) {
       const timeoutId = setTimeout(() => {
+        console.log('Auto-salvando cotação...');
         salvarCotacao({
           produtosExtraidos,
           tabelaComparativa,
           fornecedoresProcessados
         });
-      }, 2000); // Salva após 2 segundos de inatividade
+      }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados]);
+  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados, dadosInicializados, isLoadingCotacao]);
 
   // Filtrar produtos baseado na busca
   const produtosFiltrados = tabelaComparativa.filter(item => 
@@ -831,6 +849,21 @@ const Cotacao = () => {
     });
   };
 
+  // Mostrar loading enquanto carrega dados
+  if (isLoadingCotacao) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-96">
+          <CardContent className="p-8 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Carregando Cotação</h2>
+            <p className="text-sm text-gray-600">Verificando cotações em andamento...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -847,7 +880,10 @@ const Cotacao = () => {
                 <p className="text-sm text-gray-500">Sistema FLV</p>
               </div>
               {salvandoAutomaticamente && (
-                <div className="text-xs text-blue-600">Salvando...</div>
+                <div className="flex items-center text-xs text-blue-600">
+                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  Salvando...
+                </div>
               )}
             </div>
             
