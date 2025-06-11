@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSecureAuth } from '@/hooks/useSecureAuth';
+import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -28,7 +29,8 @@ interface CotacaoData {
 }
 
 export const useCotacaoTemporaria = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useSecureAuth();
+  const { secureInsert, secureUpdate } = useSecureOperations();
   const [cotacaoId, setCotacaoId] = useState<string | null>(null);
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
   const [salvandoAutomaticamente, setSalvandoAutomaticamente] = useState(false);
@@ -38,7 +40,7 @@ export const useCotacaoTemporaria = () => {
   // Carregar cotação em rascunho ao inicializar
   useEffect(() => {
     const carregarCotacaoRascunho = async () => {
-      if (!user?.id) {
+      if (!isAuthenticated || !user?.id) {
         setIsLoadingCotacao(false);
         return;
       }
@@ -99,11 +101,11 @@ export const useCotacaoTemporaria = () => {
     };
 
     carregarCotacaoRascunho();
-  }, [user?.id]);
+  }, [user?.id, isAuthenticated]);
 
   // Salvar cotação automaticamente
   const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
-    if (!user?.id || !dadosCotacao.produtosExtraidos.length || salvandoAutomaticamente) return;
+    if (!isAuthenticated || !user?.id || !dadosCotacao.produtosExtraidos.length || salvandoAutomaticamente) return;
 
     console.log('=== SALVANDO COTAÇÃO ===');
     console.log('User ID:', user.id);
@@ -112,7 +114,6 @@ export const useCotacaoTemporaria = () => {
 
     try {
       const dadosParaSalvar = {
-        user_id: user.id,
         produtos_extraidos: JSON.parse(JSON.stringify(dadosCotacao.produtosExtraidos)),
         tabela_comparativa: JSON.parse(JSON.stringify(dadosCotacao.tabelaComparativa)),
         data: new Date().toISOString()
@@ -122,27 +123,20 @@ export const useCotacaoTemporaria = () => {
 
       if (cotacaoId) {
         console.log('Atualizando cotação existente, ID:', cotacaoId);
-        const { error } = await supabase
-          .from('cotacoes')
-          .update(dadosParaSalvar)
-          .eq('id', cotacaoId);
-
+        const { error } = await secureUpdate('cotacoes', cotacaoId, dadosParaSalvar);
+        
         if (error) {
           console.error('Erro ao atualizar cotação:', error);
-          throw error;
+          throw new Error(error);
         }
         console.log('Cotação atualizada com sucesso');
       } else {
         console.log('Criando nova cotação');
-        const { data, error } = await supabase
-          .from('cotacoes')
-          .insert(dadosParaSalvar)
-          .select('id')
-          .single();
-
+        const { data, error } = await secureInsert('cotacoes', dadosParaSalvar);
+        
         if (error) {
           console.error('Erro ao criar cotação:', error);
-          throw error;
+          throw new Error(error);
         }
         console.log('Nova cotação criada, ID:', data.id);
         setCotacaoId(data.id);
@@ -152,11 +146,11 @@ export const useCotacaoTemporaria = () => {
     } finally {
       setSalvandoAutomaticamente(false);
     }
-  }, [user?.id, cotacaoId, salvandoAutomaticamente]);
+  }, [user?.id, cotacaoId, salvandoAutomaticamente, secureInsert, secureUpdate, isAuthenticated]);
 
   // Restaurar última cotação enviada
   const restaurarUltimaCotacao = useCallback(async (): Promise<CotacaoData | null> => {
-    if (!user?.id) return null;
+    if (!isAuthenticated || !user?.id) return null;
 
     try {
       const { data, error } = await supabase
@@ -191,7 +185,7 @@ export const useCotacaoTemporaria = () => {
       toast.error('Erro ao restaurar cotação');
       return null;
     }
-  }, [user?.id]);
+  }, [user?.id, isAuthenticated]);
 
   // Criar nova cotação (limpar dados)
   const novaCotacao = useCallback(() => {
@@ -211,20 +205,19 @@ export const useCotacaoTemporaria = () => {
     console.log('=== MARCANDO COTAÇÃO COMO ENVIADA ===');
     console.log('Cotação ID:', cotacaoId);
 
-    if (!cotacaoId || !user?.id) {
+    if (!cotacaoId || !isAuthenticated || !user?.id) {
       console.log('Dados insuficientes para marcar como enviada');
       return null;
     }
 
     try {
-      const { error } = await supabase
-        .from('cotacoes')
-        .update({ enviado_em: new Date().toISOString() })
-        .eq('id', cotacaoId);
+      const { error } = await secureUpdate('cotacoes', cotacaoId, { 
+        enviado_em: new Date().toISOString() 
+      });
 
       if (error) {
         console.error('Erro ao marcar cotação como enviada:', error);
-        throw error;
+        throw new Error(error);
       }
 
       console.log('Cotação marcada como enviada com sucesso');
@@ -233,7 +226,7 @@ export const useCotacaoTemporaria = () => {
       console.error('Erro ao marcar cotação como enviada:', error);
       return null;
     }
-  }, [cotacaoId, user?.id]);
+  }, [cotacaoId, user?.id, secureUpdate, isAuthenticated]);
 
   return {
     salvarCotacao,

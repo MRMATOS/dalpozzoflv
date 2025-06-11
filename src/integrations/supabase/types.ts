@@ -726,6 +726,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_loja: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_profile: {
         Args: { _user_id: string }
         Returns: {
