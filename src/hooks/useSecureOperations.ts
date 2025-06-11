@@ -35,7 +35,7 @@ export const useSecureOperations = () => {
 
       console.log(`Inserindo dados em ${table}:`, dataWithUser);
 
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from(table)
         .insert(dataWithUser)
         .select()
@@ -81,7 +81,7 @@ export const useSecureOperations = () => {
 
       console.log(`Atualizando dados em ${table} (ID: ${validatedId}):`, sanitizedData);
 
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from(table)
         .update(sanitizedData)
         .eq('id', validatedId)
@@ -124,7 +124,7 @@ export const useSecureOperations = () => {
 
       console.log(`Deletando registro em ${table} (ID: ${validatedId})`);
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from(table)
         .delete()
         .eq('id', validatedId);
