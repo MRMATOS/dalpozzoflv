@@ -105,7 +105,6 @@ const Estoque = () => {
     return () => container.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Restante das funções permanecem iguais
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
     setProdutos(prev => prev.map(produto => 
       produto.id === produtoId ? {
@@ -145,6 +144,8 @@ const Estoque = () => {
 
     try {
       setSaving(true);
+      console.log('Salvando estoque para loja:', profile.loja);
+      
       const dadosEstoque = produtos.map(produto => ({
         produto_id: produto.id,
         loja: profile.loja,
@@ -152,19 +153,27 @@ const Estoque = () => {
         atualizado_em: new Date().toISOString()
       }));
 
+      console.log('Dados para salvar:', dadosEstoque);
+
+      // Usar upsert com a constraint correta
       const { error } = await supabase
         .from('estoque_atual')
         .upsert(dadosEstoque, {
-          onConflict: 'produto_id,loja'
+          onConflict: 'produto_id,loja',
+          ignoreDuplicates: false
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao salvar estoque:', error);
+        throw error;
+      }
 
       toast({
         title: "Estoque salvo",
         description: "O estoque foi atualizado com sucesso!"
       });
     } catch (error) {
+      console.error('Erro ao salvar estoque:', error);
       toast({
         title: "Erro ao salvar",
         description: "Não foi possível salvar o estoque. Tente novamente.",
@@ -238,7 +247,7 @@ const Estoque = () => {
           </Alert>
         )}
 
-        {/* Lista de produtos - Estilo igual ao da requisição */}
+        {/* Lista de produtos */}
         <div 
           ref={productsContainerRef}
           className="flex-1 overflow-y-auto space-y-3 pb-4"

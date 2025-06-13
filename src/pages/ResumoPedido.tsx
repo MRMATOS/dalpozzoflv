@@ -1,323 +1,182 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
-import { useFornecedores } from '@/hooks/useFornecedores';
-import { useAuth } from '@/contexts/AuthContext';
+import { ArrowLeft, MessageCircle, FileText, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
+import { useFornecedores } from '@/hooks/useFornecedores';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-interface ItemTabelaComparativa {
-  produto: string;
-  tipo: string;
-  fornecedores: { [fornecedor: string]: number | null };
-  quantidades: { [fornecedor: string]: number };
-  unidadePedido: { [fornecedor: string]: string };
-}
-
-interface ResumoFornecedor {
-  fornecedor: string;
-  itens: {
-    produto: string;
-    tipo: string;
-    quantidade: number;
-    preco: number;
-    subtotal: number;
-    unidade: string;
-  }[];
-  total: number;
-}
+import { useToast } from '@/hooks/use-toast';
 
 const ResumoPedido = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { fornecedores } = useFornecedores();
   const { user } = useAuth();
-  
-  // Usar o hook para acessar a função marcarComoEnviada
-  const { marcarComoEnviada } = useCotacaoTemporaria();
-  
-  // Receber os dados da tabela comparativa
-  const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
-  const isHistorico = location.state?.isHistorico || false;
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { cotacao, limparCotacao } = useCotacaoTemporaria();
+  const { fornecedores } = useFornecedores();
+  const [enviandoPedidos, setEnviandoPedidos] = useState<{ [fornecedor: string]: boolean }>({});
 
-  // Função para pluralizar unidades
-  const pluralizarUnidade = (unidade: string, quantidade: number): string => {
-    if (quantidade === 1) {
-      return unidade;
-    }
-
-    const pluralizacao: { [key: string]: string } = {
-      'Caixa': 'Caixas',
-      'Dúzia': 'Dúzias',
-      'Unidade': 'Unidades',
-      'Bandeja': 'Bandejas',
-      'Maço': 'Maços',
-      'Kg': 'Kg' // Kg não muda no plural
-    };
-
-    return pluralizacao[unidade] || unidade;
-  };
-
-  // Processar dados para criar resumo por fornecedor
-  const resumoFornecedores: ResumoFornecedor[] = React.useMemo(() => {
-    const resumo: { [fornecedor: string]: ResumoFornecedor } = {};
-
-    tabelaComparativa.forEach(item => {
-      Object.entries(item.quantidades || {}).forEach(([fornecedor, quantidade]) => {
-        if (quantidade > 0 && item.fornecedores?.[fornecedor] !== null && item.fornecedores?.[fornecedor] !== undefined) {
-          const preco = item.fornecedores[fornecedor]!;
-          const subtotal = quantidade * preco;
-          // Usar a unidade do objeto unidadePedido se existir, senão usar 'Caixa' como padrão
-          const unidade = item.unidadePedido?.[fornecedor] || 'Caixa';
-
-          if (!resumo[fornecedor]) {
-            resumo[fornecedor] = {
-              fornecedor,
-              itens: [],
-              total: 0
-            };
+  const obterDadosPorFornecedor = () => {
+    const dadosPorFornecedor: { [fornecedor: string]: any[] } = {};
+    
+    cotacao.items.forEach(item => {
+      Object.entries(item.fornecedores).forEach(([fornecedor, dados]) => {
+        if (dados.selecionado && dados.preco && dados.quantidade) {
+          if (!dadosPorFornecedor[fornecedor]) {
+            dadosPorFornecedor[fornecedor] = [];
           }
-
-          resumo[fornecedor].itens.push({
+          dadosPorFornecedor[fornecedor].push({
             produto: item.produto,
             tipo: item.tipo,
-            quantidade,
-            preco,
-            subtotal,
-            unidade
+            quantidade: dados.quantidade,
+            preco: dados.preco,
+            subtotal: dados.preco * dados.quantidade
           });
-
-          resumo[fornecedor].total += subtotal;
         }
       });
     });
-
-    return Object.values(resumo);
-  }, [tabelaComparativa]);
-
-  const gerarMensagemWhatsApp = (resumoFornecedor: ResumoFornecedor) => {
-    let mensagem = `Segue o pedido de compra com os itens selecionados:\n\n`;
-
-    resumoFornecedor.itens.forEach(item => {
-      const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
-      
-      mensagem += `Produto: ${item.produto}\n`;
-      mensagem += `Tipo: ${item.tipo}\n`;
-      mensagem += `Quantidade: ${item.quantidade} ${unidadePlural}\n`;
-      mensagem += `Preço unitário: R$ ${item.preco.toFixed(2)}\n`;
-      mensagem += `Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
-    });
-
-    mensagem += `Total geral: R$ ${resumoFornecedor.total.toFixed(2)}`;
-
-    return encodeURIComponent(mensagem);
+    
+    return dadosPorFornecedor;
   };
 
-  const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO CRIAÇÃO PEDIDO ===');
-    console.log('User atual:', user);
-    console.log('Resumo fornecedor:', resumoFornecedor);
-    
-    if (!user?.id) {
-      console.error('Erro: Usuário não autenticado - user.id não existe');
-      toast.error('Usuário não autenticado');
-      return false;
-    }
+  const calcularTotalFornecedor = (items: any[]) => {
+    return items.reduce((total, item) => total + item.subtotal, 0);
+  };
 
-    console.log('User ID:', user.id, 'Type:', typeof user.id);
-
+  const criarPedidoNoBanco = async (fornecedorNome: string, items: any[], total: number) => {
     try {
-      // Primeiro, verificar se o usuário existe na tabela usuarios
-      console.log('Verificando se usuário existe na tabela usuarios...');
-      const { data: usuarioExistente, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('id, nome, loja, tipo')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      console.log('Resultado busca usuário:', { usuarioExistente, usuarioError });
-
-      if (usuarioError) {
-        console.error('Erro ao buscar usuário:', usuarioError);
-        toast.error('Erro ao verificar usuário no sistema');
-        return false;
-      }
-
-      if (!usuarioExistente) {
-        console.error('Usuário não encontrado na tabela usuarios');
-        toast.error('Usuário não encontrado no sistema');
-        return false;
+      console.log('Criando pedido no banco para:', fornecedorNome);
+      console.log('User ID:', user?.id);
+      
+      if (!user?.id) {
+        throw new Error('Usuário não autenticado');
       }
 
       // Buscar fornecedor
-      console.log('Buscando fornecedor:', resumoFornecedor.fornecedor);
-      const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
-      console.log('Fornecedor encontrado:', fornecedorData);
-      
-      if (!fornecedorData) {
-        console.error('Fornecedor não encontrado:', resumoFornecedor.fornecedor);
-        toast.error('Fornecedor não encontrado');
-        return false;
+      const fornecedor = fornecedores.find(f => f.nome === fornecedorNome);
+      if (!fornecedor) {
+        throw new Error(`Fornecedor ${fornecedorNome} não encontrado`);
       }
 
-      console.log('Fornecedor ID:', fornecedorData.id, 'Type:', typeof fornecedorData.id);
-
-      // Buscar os IDs dos produtos pelos nomes
-      console.log('Buscando IDs dos produtos...');
-      const nomesProdutos = resumoFornecedor.itens.map(item => item.produto);
-      console.log('Nomes dos produtos:', nomesProdutos);
-
-      const { data: produtos, error: produtosError } = await supabase
-        .from('produtos')
-        .select('id, produto')
-        .in('produto', nomesProdutos);
-
-      console.log('Produtos encontrados:', produtos);
-
-      if (produtosError) {
-        console.error('Erro ao buscar produtos:', produtosError);
-        toast.error('Erro ao buscar produtos no sistema');
-        return false;
-      }
-
-      // Criar mapeamento de nome para ID
-      const mapeamentoProdutos: { [nome: string]: string } = {};
-      produtos?.forEach(produto => {
-        if (produto.produto) {
-          mapeamentoProdutos[produto.produto] = produto.id;
-        }
-      });
-
-      console.log('Mapeamento de produtos:', mapeamentoProdutos);
-
-      // Verificar se todos os produtos foram encontrados
-      const produtosNaoEncontrados = nomesProdutos.filter(nome => !mapeamentoProdutos[nome]);
-      if (produtosNaoEncontrados.length > 0) {
-        console.error('Produtos não encontrados:', produtosNaoEncontrados);
-        toast.error(`Produtos não encontrados: ${produtosNaoEncontrados.join(', ')}`);
-        return false;
-      }
-
-      // Preparar dados do pedido
-      const dadosPedido = {
-        user_id: user.id,
-        fornecedor_id: fornecedorData.id,
-        total: resumoFornecedor.total,
-        status: 'enviado'
-      };
-
-      console.log('Dados do pedido a serem inseridos:', dadosPedido);
-
-      // Criar o pedido
-      console.log('Inserindo pedido na tabela pedidos_compra...');
+      // Criar pedido principal
       const { data: pedido, error: pedidoError } = await supabase
         .from('pedidos_compra')
-        .insert(dadosPedido)
-        .select('id')
+        .insert({
+          fornecedor_id: fornecedor.id,
+          total: total,
+          status: 'enviado',
+          cotacao_id: null,
+          user_id: user.id,
+          criado_por: user.id
+        })
+        .select()
         .single();
 
-      console.log('Resultado inserção pedido:', { pedido, pedidoError });
-
       if (pedidoError) {
-        console.error('Erro detalhado ao criar pedido:', {
-          error: pedidoError,
-          message: pedidoError.message,
-          details: pedidoError.details,
-          hint: pedidoError.hint,
-          code: pedidoError.code
-        });
+        console.error('Erro ao criar pedido:', pedidoError);
         throw pedidoError;
       }
 
-      console.log('Pedido criado com sucesso, ID:', pedido.id);
+      console.log('Pedido criado:', pedido);
 
-      // Preparar itens do pedido com os IDs corretos dos produtos
-      const itens = resumoFornecedor.itens.map(item => ({
+      // Criar itens do pedido
+      const itensParaInserir = items.map(item => ({
         pedido_id: pedido.id,
-        produto_id: mapeamentoProdutos[item.produto], // Usar o ID do produto em vez do nome
-        tipo: item.tipo,
+        produto_id: null, // Vamos precisar buscar o ID do produto
         quantidade: item.quantidade,
         preco: item.preco,
-        unidade: item.unidade
+        tipo: item.tipo,
+        unidade: 'caixa'
       }));
 
-      console.log('Itens do pedido a serem inseridos:', itens);
-
-      // Criar os itens do pedido
-      console.log('Inserindo itens do pedido...');
       const { error: itensError } = await supabase
         .from('itens_pedido')
-        .insert(itens);
-
-      console.log('Resultado inserção itens:', { itensError });
+        .insert(itensParaInserir);
 
       if (itensError) {
-        console.error('Erro detalhado ao criar itens:', {
-          error: itensError,
-          message: itensError.message,
-          details: itensError.details,
-          hint: itensError.hint,
-          code: itensError.code
-        });
+        console.error('Erro ao criar itens do pedido:', itensError);
         throw itensError;
       }
 
-      console.log('=== PEDIDO CRIADO COM SUCESSO ===');
-      return true;
+      return pedido;
     } catch (error) {
-      console.error('=== ERRO GERAL NA CRIAÇÃO DO PEDIDO ===');
-      console.error('Erro completo:', error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
-      toast.error('Erro ao salvar pedido no banco de dados');
-      return false;
+      console.error('Erro ao criar pedido no banco:', error);
+      throw error;
     }
   };
 
-  const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO PROCESSO WHATSAPP ===');
-    console.log('Is histórico:', isHistorico);
-    
-    // Se não é histórico, criar pedido no banco
-    if (!isHistorico) {
-      console.log('Criando pedido no banco...');
-      const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
-      if (!pedidoCriado) {
-        console.log('Falha ao criar pedido, interrompendo processo');
-        return;
-      }
+  const enviarParaWhatsApp = async (fornecedorNome: string) => {
+    const dados = obterDadosPorFornecedor();
+    const items = dados[fornecedorNome];
+    const total = calcularTotalFornecedor(items);
 
-      // Marcar cotação como enviada usando o hook
-      if (marcarComoEnviada) {
-        console.log('Marcando cotação como enviada...');
-        await marcarComoEnviada();
-      }
-    }
+    setEnviandoPedidos(prev => ({ ...prev, [fornecedorNome]: true }));
 
-    const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
-    
-    if (!fornecedorData?.telefone) {
-      toast.error('Telefone do fornecedor não encontrado!');
-      return;
-    }
+    try {
+      // Primeiro criar o pedido no banco
+      await criarPedidoNoBanco(fornecedorNome, items, total);
 
-    const mensagem = gerarMensagemWhatsApp(resumoFornecedor);
-    const telefone = fornecedorData.telefone.replace(/\D/g, '');
-    const link = `https://api.whatsapp.com/send?phone=${telefone}&text=${mensagem}`;
-    
-    window.open(link, '_blank');
-    
-    if (!isHistorico) {
-      toast.success('Pedido salvo e enviado com sucesso!');
+      // Montar mensagem do WhatsApp
+      let mensagem = `🛒 *PEDIDO - SUPERMERCADO DAL POZZO*\n\n`;
+      mensagem += `📞 Fornecedor: ${fornecedorNome}\n`;
+      mensagem += `📅 Data: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+      mensagem += `📋 *ITENS DO PEDIDO:*\n\n`;
+
+      items.forEach((item, index) => {
+        mensagem += `${index + 1}. ${item.produto}`;
+        if (item.tipo) {
+          mensagem += ` (${item.tipo})`;
+        }
+        mensagem += `\n   📦 Qtd: ${item.quantidade} caixas\n`;
+        mensagem += `   💰 Preço: R$ ${item.preco.toFixed(2)}\n`;
+        mensagem += `   💵 Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
+      });
+
+      mensagem += `💰 *TOTAL GERAL: R$ ${total.toFixed(2)}*\n\n`;
+      mensagem += `✅ Pedido confirmado!\n`;
+      mensagem += `📞 Aguardamos confirmação de entrega.`;
+
+      // Buscar telefone do fornecedor
+      const fornecedor = fornecedores.find(f => f.nome === fornecedorNome);
+      const telefone = fornecedor?.telefone || '';
+
+      // Gerar link do WhatsApp
+      const linkWhatsApp = `https://wa.me/${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(mensagem)}`;
+      
+      // Abrir WhatsApp
+      window.open(linkWhatsApp, '_blank');
+
+      toast({
+        title: "Pedido enviado!",
+        description: `Pedido para ${fornecedorNome} foi criado e enviado via WhatsApp.`
+      });
+
+    } catch (error) {
+      console.error('Erro ao enviar pedido:', error);
+      toast({
+        title: "Erro ao enviar pedido",
+        description: "Não foi possível criar o pedido. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setEnviandoPedidos(prev => ({ ...prev, [fornecedorNome]: false }));
     }
-    
-    console.log('=== PROCESSO WHATSAPP CONCLUÍDO ===');
   };
 
-  if (resumoFornecedores.length === 0) {
+  const gerarPDF = (fornecedorNome: string) => {
+    // Implementação do PDF será adicionada posteriormente
+    toast({
+      title: "Em desenvolvimento",
+      description: "Funcionalidade de PDF será implementada em breve.",
+    });
+  };
+
+  const dadosPorFornecedor = obterDadosPorFornecedor();
+  const fornecedoresComPedidos = Object.keys(dadosPorFornecedor);
+
+  if (fornecedoresComPedidos.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white shadow-sm border-b">
@@ -328,14 +187,12 @@ const ResumoPedido = () => {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigate('/cotacao')}
+                  className="flex items-center space-x-2"
                 >
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Voltar
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Voltar</span>
                 </Button>
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">Resumo do Pedido</h1>
-                  <p className="text-sm text-gray-500">Sistema FLV</p>
-                </div>
+                <h1 className="text-lg font-semibold text-gray-900">Resumo do Pedido</h1>
               </div>
             </div>
           </div>
@@ -344,10 +201,10 @@ const ResumoPedido = () => {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <Card>
             <CardContent className="p-8 text-center">
-              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhum item selecionado</h2>
-              <p className="text-gray-600 mb-4">
-                Volte para a cotação e defina as quantidades dos produtos que deseja comprar.
+              <p className="text-gray-500 mb-4">
+                Você precisa selecionar itens na cotação antes de gerar pedidos.
               </p>
               <Button onClick={() => navigate('/cotacao')}>
                 Voltar para Cotação
@@ -361,7 +218,6 @@ const ResumoPedido = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -369,86 +225,125 @@ const ResumoPedido = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(isHistorico ? '/historico-pedidos' : '/cotacao')}
+                onClick={() => navigate('/cotacao')}
+                className="flex items-center space-x-2"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
+                <ArrowLeft className="w-4 h-4" />
+                <span>Voltar</span>
               </Button>
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <Package className="text-white text-sm" />
+              </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">
-                  {isHistorico ? 'Detalhes do Pedido' : 'Resumo do Pedido'}
-                </h1>
-                <p className="text-sm text-gray-500">Sistema FLV</p>
+                <h1 className="text-lg font-semibold text-gray-900">Resumo do Pedido</h1>
+                <p className="text-sm text-gray-500">Super Dal Pozzo</p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
-          {resumoFornecedores.map((resumoFornecedor, index) => (
-            <Card key={index}>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle className="flex items-center gap-3">
-                    <Package className="text-blue-600" />
-                    {resumoFornecedor.fornecedor}
-                  </CardTitle>
-                  {/* Só mostra botão WhatsApp se não for do histórico */}
-                  {!isHistorico && (
-                    <Button
-                      onClick={() => abrirWhatsApp(resumoFornecedor)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Gerar pedido por WhatsApp
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {resumoFornecedor.itens.map((item, itemIndex) => {
-                    const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
-                    
-                    return (
-                      <div key={itemIndex} className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-medium text-gray-900">{item.produto}</h3>
-                            <Badge variant="secondary">{item.tipo}</Badge>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-                            <div>
-                              <span className="font-medium">Quantidade:</span> {item.quantidade} {unidadePlural}
-                            </div>
-                            <div>
-                              <span className="font-medium">Preço unitário:</span> R$ {item.preco.toFixed(2)}
-                            </div>
-                            <div>
-                              <span className="font-medium">Subtotal:</span> R$ {item.subtotal.toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  
-                  {/* Total do Fornecedor */}
-                  <div className="border-t pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-gray-900">Total geral:</span>
-                      <span className="text-xl font-bold text-blue-600">
-                        R$ {resumoFornecedor.total.toFixed(2)}
-                      </span>
+          {fornecedoresComPedidos.map(fornecedor => {
+            const items = dadosPorFornecedor[fornecedor];
+            const total = calcularTotalFornecedor(items);
+            const enviando = enviandoPedidos[fornecedor];
+
+            return (
+              <Card key={fornecedor}>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl">{fornecedor}</CardTitle>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-green-600">
+                        R$ {total.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {items.length} {items.length === 1 ? 'item' : 'itens'}
+                      </p>
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 mb-6">
+                    {items.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{item.produto}</h4>
+                          {item.tipo && (
+                            <p className="text-sm text-gray-600">Tipo: {item.tipo}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {item.quantidade} cx × R$ {item.preco.toFixed(2)}
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            = R$ {item.subtotal.toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <Button
+                      onClick={() => enviarParaWhatsApp(fornecedor)}
+                      disabled={enviando}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      {enviando ? 'Enviando...' : 'Enviar WhatsApp'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => gerarPDF(fornecedor)}
+                      className="flex-1"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      Gerar PDF
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Resumo Final</h3>
+                  <p className="text-sm text-gray-600">
+                    Total de {fornecedoresComPedidos.length} fornecedor(es)
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
+                <div className="text-right">
+                  <p className="text-2xl font-bold">
+                    R$ {Object.values(dadosPorFornecedor)
+                      .flat()
+                      .reduce((total, item) => total + item.subtotal, 0)
+                      .toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-500">Total geral</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    limparCotacao();
+                    navigate('/cotacao');
+                  }}
+                  className="w-full"
+                >
+                  Nova Cotação
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </main>
     </div>
