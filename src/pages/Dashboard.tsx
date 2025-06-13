@@ -397,7 +397,7 @@ const Dashboard = () => {
               <Settings className="h-4 w-4 text-gray-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-600">Config</div>
+              <div className="text-2xl font-bold text-gray-600">Cadastros</div>
               <p className="text-xs text-muted-foreground">Produtos, usuários, fornecedores</p>
               <Button 
                 size="sm" 
