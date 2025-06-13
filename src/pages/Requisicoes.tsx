@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -185,7 +184,7 @@ const Requisicoes = () => {
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Nova Requisição</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Requisição</h1>
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
@@ -197,12 +196,8 @@ const Requisicoes = () => {
                 onClick={() => navigate('/historico-requisicoes')}
               >
                 <Search className="h-4 w-4 mr-2" />
-                Ver Histórico
+                Histórico
               </Button>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500">Requisitante</p>
-              </div>
             </div>
           </div>
         </div>
@@ -210,39 +205,36 @@ const Requisicoes = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Summary */}
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar produto..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600 text-right">
-              <div>{totalItems} produtos selecionados</div>
-              {totalItems > 0 && (
-                <div className="text-xs">
-                  {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg
-                </div>
-              )}
+        {/* Search and submit */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar produto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-            <Button 
+            <Button
               onClick={handleSubmitRequisition}
               disabled={totalItems === 0 || createRequisitionMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
             >
               {createRequisitionMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Enviar Requisição
+              Enviar
             </Button>
+          </div>
+          <div className="mt-2 flex justify-end text-sm text-gray-600">
+            {totalItems} produtos selecionados
+            {totalItems > 0 && (
+              <> • {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</>
+            )}
           </div>
         </div>
 
@@ -272,3 +264,4 @@ const Requisicoes = () => {
 };
 
 export default Requisicoes;
+
