@@ -56,10 +56,7 @@ const Cotacao = () => {
     cotacaoRestaurada,
     salvandoAutomaticamente,
     isLoadingCotacao,
-    dadosCarregados,
-    sincronizarComTabela,
-    converterTabelaParaCotacao,
-    obterItensSelecionados
+    dadosCarregados
   } = useCotacaoTemporaria();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
@@ -399,9 +396,9 @@ const Cotacao = () => {
     buscarProdutos();
   }, []);
 
-  // Auto-salvar quando dados mudarem e sincronizar
+  // Auto-salvar quando dados mudarem (apenas após inicialização)
   useEffect(() => {
-    if (dadosInicializados && tabelaComparativa.length > 0 && !isLoadingCotacao) {
+    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao) {
       const timeoutId = setTimeout(() => {
         console.log('Auto-salvando cotação...');
         salvarCotacao({
@@ -409,14 +406,11 @@ const Cotacao = () => {
           tabelaComparativa,
           fornecedoresProcessados
         });
-        
-        // Sincronizar com hook
-        sincronizarComTabela(tabelaComparativa);
       }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados, dadosInicializados, isLoadingCotacao, sincronizarComTabela]);
+  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados, dadosInicializados, isLoadingCotacao]);
 
   // Filtrar produtos baseado na busca
   const produtosFiltrados = tabelaComparativa.filter(item => 
@@ -843,16 +837,16 @@ const Cotacao = () => {
       return;
     }
 
-    // Sincronizar dados antes de navegar
-    console.log('Sincronizando tabela antes de navegar...');
-    sincronizarComTabela(tabelaComparativa);
+    console.log('Navegando para resumo-pedido com dados:', {
+      tabelaComparativa
+    });
 
-    // Verificar se há itens selecionados no hook
-    const itensSelecionados = obterItensSelecionados();
-    console.log('Itens selecionados no hook:', itensSelecionados);
-
-    console.log('Navegando para resumo-pedido');
-    navigate('/resumo-pedido');
+    // Remove a função do estado de navegação para evitar DataCloneError
+    navigate('/resumo-pedido', {
+      state: { 
+        tabelaComparativa
+      }
+    });
   };
 
   // Mostrar loading enquanto carrega dados

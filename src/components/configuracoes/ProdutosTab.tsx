@@ -342,7 +342,7 @@ const ProdutosTab = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>
-            {principais} produtos - {total} com variações
+            Produtos Principais ({principais}) - Total com variações ({total})
           </CardTitle>
           <Button onClick={() => setShowNewProduct(true)} disabled={showNewProduct}>
             <Plus className="w-4 h-4 mr-2" />

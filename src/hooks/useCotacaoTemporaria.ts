@@ -1,26 +1,11 @@
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useSecureAuth } from '@/hooks/useSecureAuth';
+import { useSecureOperations } from '@/hooks/useSecureOperations';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-export interface ItemCotacao {
-  produto: string;
-  tipo?: string;
-  fornecedores: {
-    [fornecedor: string]: {
-      preco?: number;
-      quantidade?: number;
-      selecionado?: boolean;
-    };
-  };
-}
-
-export interface CotacaoTemporaria {
-  items: ItemCotacao[];
-  requisicaoId?: string;
-}
-
-// Interfaces para compatibilidade com a página Cotacao
-export interface ProdutoExtraido {
+interface ProdutoExtraido {
   produto: string;
   tipo: string;
   preco: number;
@@ -29,7 +14,7 @@ export interface ProdutoExtraido {
   aliasUsado: string;
 }
 
-export interface ItemTabelaComparativa {
+interface ItemTabelaComparativa {
   produto: string;
   tipo: string;
   fornecedores: { [fornecedor: string]: number | null };
@@ -37,305 +22,220 @@ export interface ItemTabelaComparativa {
   unidadePedido: { [fornecedor: string]: string };
 }
 
-export interface DadosCarregados {
+interface CotacaoData {
   produtosExtraidos: ProdutoExtraido[];
   tabelaComparativa: ItemTabelaComparativa[];
   fornecedoresProcessados: Set<string>;
 }
 
-const STORAGE_KEY = 'cotacao_temporaria';
-const STORAGE_KEY_EXTENDED = 'cotacao_temporaria_extended';
-
 export const useCotacaoTemporaria = () => {
-  const { user } = useAuth();
-  const [cotacao, setCotacao] = useState<CotacaoTemporaria>({ items: [] });
-  const [isLoading, setIsLoading] = useState(true);
-  const [salvandoAutomaticamente, setSalvandoAutomaticamente] = useState(false);
+  const { user, isAuthenticated } = useSecureAuth();
+  const { secureInsert, secureUpdate } = useSecureOperations();
+  const [cotacaoId, setCotacaoId] = useState<string | null>(null);
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
-  const [dadosCarregados, setDadosCarregados] = useState<DadosCarregados | null>(null);
+  const [salvandoAutomaticamente, setSalvandoAutomaticamente] = useState(false);
+  const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
+  const [dadosCarregados, setDadosCarregados] = useState<CotacaoData | null>(null);
 
-  // Carregar dados do localStorage quando o usuário estiver disponível
+  // Carregar cotação em rascunho ao inicializar
   useEffect(() => {
-    const carregarCotacao = () => {
-      if (!user) {
-        console.log('Usuário não carregado ainda, aguardando...');
+    const carregarCotacaoRascunho = async () => {
+      if (!isAuthenticated || !user?.id) {
+        setIsLoadingCotacao(false);
         return;
       }
 
+      console.log('=== CARREGANDO COTAÇÃO EM RASCUNHO ===');
+      console.log('User ID:', user.id);
+
       try {
-        const userStorageKey = `${STORAGE_KEY}_${user.id}`;
-        const userStorageKeyExtended = `${STORAGE_KEY_EXTENDED}_${user.id}`;
-        
-        const dados = localStorage.getItem(userStorageKey);
-        const dadosExtended = localStorage.getItem(userStorageKeyExtended);
-        
-        if (dados) {
-          const cotacaoSalva = JSON.parse(dados);
-          console.log('Cotação carregada do localStorage:', cotacaoSalva);
-          setCotacao(cotacaoSalva);
-        } else {
-          console.log('Nenhuma cotação encontrada no localStorage');
-          setCotacao({ items: [] });
+        const { data, error } = await supabase
+          .from('cotacoes')
+          .select('*')
+          .eq('user_id', user.id)
+          .is('enviado_em', null)
+          .order('data', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Erro ao carregar cotação em rascunho:', error);
+          setIsLoadingCotacao(false);
+          return;
         }
 
-        // Carregar dados estendidos se existirem
-        if (dadosExtended) {
-          const dadosExtendedParsed = JSON.parse(dadosExtended);
-          // Converter fornecedoresProcessados de array para Set
-          if (dadosExtendedParsed.fornecedoresProcessados) {
-            dadosExtendedParsed.fornecedoresProcessados = new Set(dadosExtendedParsed.fornecedoresProcessados);
+        if (data) {
+          console.log('Cotação encontrada:', data);
+          setCotacaoId(data.id);
+          
+          const dadosRestaurados = {
+            produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+            tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+            fornecedoresProcessados: new Set<string>()
+          };
+          
+          setDadosCarregados(dadosRestaurados);
+          console.log('Dados carregados automaticamente:', dadosRestaurados);
+          
+          if (dadosRestaurados.produtosExtraidos.length > 0) {
+            toast.success('Cotação em andamento restaurada automaticamente');
           }
-          setDadosCarregados(dadosExtendedParsed);
-          console.log('Dados estendidos carregados:', dadosExtendedParsed);
+        } else {
+          console.log('Nenhuma cotação em rascunho encontrada');
+          setDadosCarregados({
+            produtosExtraidos: [],
+            tabelaComparativa: [],
+            fornecedoresProcessados: new Set<string>()
+          });
         }
       } catch (error) {
-        console.error('Erro ao carregar cotação do localStorage:', error);
-        setCotacao({ items: [] });
+        console.error('Erro ao buscar cotação:', error);
+        setDadosCarregados({
+          produtosExtraidos: [],
+          tabelaComparativa: [],
+          fornecedoresProcessados: new Set<string>()
+        });
       } finally {
-        setIsLoading(false);
+        setIsLoadingCotacao(false);
       }
     };
 
-    carregarCotacao();
-  }, [user]);
+    carregarCotacaoRascunho();
+  }, [user?.id, isAuthenticated]);
 
-  // Salvar no localStorage sempre que a cotação mudar
-  useEffect(() => {
-    if (!user || isLoading) return;
+  // Salvar cotação automaticamente
+  const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
+    if (!isAuthenticated || !user?.id || !dadosCotacao.produtosExtraidos.length || salvandoAutomaticamente) return;
 
-    try {
-      const userStorageKey = `${STORAGE_KEY}_${user.id}`;
-      localStorage.setItem(userStorageKey, JSON.stringify(cotacao));
-      console.log('Cotação salva no localStorage:', cotacao);
-    } catch (error) {
-      console.error('Erro ao salvar cotação no localStorage:', error);
-    }
-  }, [cotacao, user, isLoading]);
-
-  // Função para converter tabelaComparativa para cotacao.items
-  const converterTabelaParaCotacao = (tabelaComparativa: ItemTabelaComparativa[]): ItemCotacao[] => {
-    return tabelaComparativa.map(item => {
-      const fornecedores: { [fornecedor: string]: { preco?: number; quantidade?: number; selecionado?: boolean } } = {};
-      
-      Object.keys(item.fornecedores).forEach(fornecedor => {
-        const preco = item.fornecedores[fornecedor];
-        const quantidade = item.quantidades[fornecedor] || 0;
-        const temQuantidade = quantidade > 0;
-        
-        fornecedores[fornecedor] = {
-          preco: preco || undefined,
-          quantidade: quantidade,
-          selecionado: temQuantidade && preco !== null
-        };
-      });
-
-      return {
-        produto: item.produto,
-        tipo: item.tipo,
-        fornecedores
-      };
-    });
-  };
-
-  // Função para converter cotacao.items para tabelaComparativa
-  const converterCotacaoParaTabela = (items: ItemCotacao[]): ItemTabelaComparativa[] => {
-    return items.map(item => {
-      const fornecedores: { [fornecedor: string]: number | null } = {};
-      const quantidades: { [fornecedor: string]: number } = {};
-      const unidadePedido: { [fornecedor: string]: string } = {};
-      
-      Object.entries(item.fornecedores).forEach(([fornecedor, dados]) => {
-        fornecedores[fornecedor] = dados.preco || null;
-        quantidades[fornecedor] = dados.quantidade || 0;
-        unidadePedido[fornecedor] = 'Caixa'; // Valor padrão
-      });
-
-      return {
-        produto: item.produto,
-        tipo: item.tipo || '',
-        fornecedores,
-        quantidades,
-        unidadePedido
-      };
-    });
-  };
-
-  const adicionarItem = (item: ItemCotacao) => {
-    setCotacao(prev => ({
-      ...prev,
-      items: [...prev.items, item]
-    }));
-  };
-
-  const atualizarItem = (index: number, item: ItemCotacao) => {
-    setCotacao(prev => ({
-      ...prev,
-      items: prev.items.map((i, idx) => idx === index ? item : i)
-    }));
-  };
-
-  const removerItem = (index: number) => {
-    setCotacao(prev => ({
-      ...prev,
-      items: prev.items.filter((_, idx) => idx !== index)
-    }));
-  };
-
-  const limparCotacao = () => {
-    setCotacao({ items: [] });
-    setDadosCarregados(null);
-    setCotacaoRestaurada(null);
-    
-    if (user) {
-      const userStorageKey = `${STORAGE_KEY}_${user.id}`;
-      const userStorageKeyExtended = `${STORAGE_KEY_EXTENDED}_${user.id}`;
-      localStorage.removeItem(userStorageKey);
-      localStorage.removeItem(userStorageKeyExtended);
-    }
-  };
-
-  const definirRequisicao = (requisicaoId: string) => {
-    setCotacao(prev => ({
-      ...prev,
-      requisicaoId
-    }));
-  };
-
-  const obterItensSelecionados = () => {
-    return cotacao.items.filter(item => 
-      Object.values(item.fornecedores).some(f => f.selecionado)
-    );
-  };
-
-  const obterTotalPorFornecedor = () => {
-    const totais: { [fornecedor: string]: number } = {};
-    
-    cotacao.items.forEach(item => {
-      Object.entries(item.fornecedores).forEach(([fornecedor, dados]) => {
-        if (dados.selecionado && dados.preco && dados.quantidade) {
-          if (!totais[fornecedor]) {
-            totais[fornecedor] = 0;
-          }
-          totais[fornecedor] += dados.preco * dados.quantidade;
-        }
-      });
-    });
-    
-    return totais;
-  };
-
-  // Função para sincronizar com tabelaComparativa
-  const sincronizarComTabela = (tabelaComparativa: ItemTabelaComparativa[]) => {
-    const novosItems = converterTabelaParaCotacao(tabelaComparativa);
-    setCotacao(prev => ({
-      ...prev,
-      items: novosItems
-    }));
-  };
-
-  // Funções específicas para a página Cotacao
-  const salvarCotacao = async (dados: DadosCarregados) => {
-    if (!user) return;
+    console.log('=== SALVANDO COTAÇÃO ===');
+    console.log('User ID:', user.id);
 
     setSalvandoAutomaticamente(true);
-    
+
     try {
-      const userStorageKeyExtended = `${STORAGE_KEY_EXTENDED}_${user.id}`;
-      
-      // Converter Set para array para serialização
       const dadosParaSalvar = {
-        ...dados,
-        fornecedoresProcessados: Array.from(dados.fornecedoresProcessados)
+        produtos_extraidos: JSON.parse(JSON.stringify(dadosCotacao.produtosExtraidos)),
+        tabela_comparativa: JSON.parse(JSON.stringify(dadosCotacao.tabelaComparativa)),
+        data: new Date().toISOString()
       };
-      
-      localStorage.setItem(userStorageKeyExtended, JSON.stringify(dadosParaSalvar));
-      console.log('Dados estendidos salvos:', dadosParaSalvar);
-      
-      // Sincronizar com a estrutura de cotacao
-      if (dados.tabelaComparativa && dados.tabelaComparativa.length > 0) {
-        sincronizarComTabela(dados.tabelaComparativa);
+
+      console.log('Dados preparados para salvar:', dadosParaSalvar);
+
+      if (cotacaoId) {
+        console.log('Atualizando cotação existente, ID:', cotacaoId);
+        const { error } = await secureUpdate('cotacoes', cotacaoId, dadosParaSalvar);
+        
+        if (error) {
+          console.error('Erro ao atualizar cotação:', error);
+          throw new Error(error);
+        }
+        console.log('Cotação atualizada com sucesso');
+      } else {
+        console.log('Criando nova cotação');
+        const { data, error } = await secureInsert('cotacoes', dadosParaSalvar);
+        
+        if (error) {
+          console.error('Erro ao criar cotação:', error);
+          throw new Error(error);
+        }
+        console.log('Nova cotação criada, ID:', data.id);
+        setCotacaoId(data.id);
       }
-      
-      // Simular delay de salvamento
-      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
-      console.error('Erro ao salvar cotação estendida:', error);
+      console.error('Erro geral ao salvar cotação:', error);
     } finally {
       setSalvandoAutomaticamente(false);
     }
-  };
+  }, [user?.id, cotacaoId, salvandoAutomaticamente, secureInsert, secureUpdate, isAuthenticated]);
 
-  const restaurarUltimaCotacao = async (): Promise<DadosCarregados | null> => {
-    if (!user) return null;
+  // Restaurar última cotação enviada
+  const restaurarUltimaCotacao = useCallback(async (): Promise<CotacaoData | null> => {
+    if (!isAuthenticated || !user?.id) return null;
 
     try {
-      const userStorageKeyExtended = `${STORAGE_KEY_EXTENDED}_${user.id}`;
-      const dados = localStorage.getItem(userStorageKeyExtended);
-      
-      if (dados) {
-        const dadosParsed = JSON.parse(dados);
-        // Converter array para Set
-        if (dadosParsed.fornecedoresProcessados) {
-          dadosParsed.fornecedoresProcessados = new Set(dadosParsed.fornecedoresProcessados);
-        }
-        
-        setDadosCarregados(dadosParsed);
-        setCotacaoRestaurada(new Date());
-        console.log('Cotação restaurada:', dadosParsed);
-        
-        // Sincronizar com a estrutura de cotacao
-        if (dadosParsed.tabelaComparativa) {
-          sincronizarComTabela(dadosParsed.tabelaComparativa);
-        }
-        
-        return dadosParsed;
+      const { data, error } = await supabase
+        .from('cotacoes')
+        .select('*')
+        .eq('user_id', user.id)
+        .not('enviado_em', 'is', null)
+        .order('enviado_em', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Erro ao restaurar cotação:', error);
+        return null;
       }
+
+      if (data) {
+        setCotacaoRestaurada(new Date(data.enviado_em));
+        toast.success(`Cotação restaurada do dia ${new Date(data.enviado_em).toLocaleDateString('pt-BR')}`);
+        
+        return {
+          produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+          tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+          fornecedoresProcessados: new Set<string>()
+        };
+      }
+
+      toast.info('Nenhuma cotação anterior encontrada');
+      return null;
     } catch (error) {
       console.error('Erro ao restaurar cotação:', error);
+      toast.error('Erro ao restaurar cotação');
+      return null;
     }
-    
-    return null;
-  };
+  }, [user?.id, isAuthenticated]);
 
-  const novaCotacao = (): DadosCarregados => {
-    const dadosLimpos: DadosCarregados = {
-      produtosExtraidos: [],
-      tabelaComparativa: [],
+  // Criar nova cotação (limpar dados)
+  const novaCotacao = useCallback(() => {
+    setCotacaoId(null);
+    setCotacaoRestaurada(null);
+    const dadosLimpos = {
+      produtosExtraidos: [] as ProdutoExtraido[],
+      tabelaComparativa: [] as ItemTabelaComparativa[],
       fornecedoresProcessados: new Set<string>()
     };
-    
     setDadosCarregados(dadosLimpos);
-    setCotacaoRestaurada(null);
-    limparCotacao();
-    
     return dadosLimpos;
-  };
+  }, []);
 
-  const marcarComoEnviada = async () => {
-    // Implementação para marcar cotação como enviada
-    console.log('Cotação marcada como enviada');
-  };
+  // Marcar cotação como enviada
+  const marcarComoEnviada = useCallback(async (): Promise<string | null> => {
+    console.log('=== MARCANDO COTAÇÃO COMO ENVIADA ===');
+    console.log('Cotação ID:', cotacaoId);
+
+    if (!cotacaoId || !isAuthenticated || !user?.id) {
+      console.log('Dados insuficientes para marcar como enviada');
+      return null;
+    }
+
+    try {
+      const { error } = await secureUpdate('cotacoes', cotacaoId, { 
+        enviado_em: new Date().toISOString() 
+      });
+
+      if (error) {
+        console.error('Erro ao marcar cotação como enviada:', error);
+        throw new Error(error);
+      }
+
+      console.log('Cotação marcada como enviada com sucesso');
+      return cotacaoId;
+    } catch (error) {
+      console.error('Erro ao marcar cotação como enviada:', error);
+      return null;
+    }
+  }, [cotacaoId, user?.id, secureUpdate, isAuthenticated]);
 
   return {
-    cotacao,
-    isLoading,
-    isLoadingCotacao: isLoading,
-    salvandoAutomaticamente,
-    cotacaoRestaurada,
-    dadosCarregados,
-    adicionarItem,
-    atualizarItem,
-    removerItem,
-    limparCotacao,
-    definirRequisicao,
-    obterItensSelecionados,
-    obterTotalPorFornecedor,
     salvarCotacao,
     restaurarUltimaCotacao,
     novaCotacao,
     marcarComoEnviada,
-    sincronizarComTabela,
-    converterTabelaParaCotacao,
-    converterCotacaoParaTabela
+    cotacaoRestaurada,
+    salvandoAutomaticamente,
+    isLoadingCotacao,
+    dadosCarregados
   };
 };

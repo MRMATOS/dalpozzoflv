@@ -74,6 +74,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) 
                 className="w-16 text-center h-8"
                 min="0"
               />
+              <span className="text-xs text-gray-500 mt-1">caixas</span>
             </div>
             
             <Button
@@ -85,7 +86,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) 
               <Plus className="h-4 w-4" />
             </Button>
             
-
+            {caixas > 0 && (
+              <div className="ml-3 text-sm text-gray-600">
+                = {(caixas * mediaPorCaixa).toFixed(1)}kg
+              </div>
+            )}
           </div>
         </div>
       </CardContent>

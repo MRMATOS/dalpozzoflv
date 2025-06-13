@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,9 +30,6 @@ const Requisicoes = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [requisitionItems, setRequisitionItems] = useState<Record<string, RequisitionItem>>({});
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const lastScrollPosition = useRef(0);
-  const productsContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: produtos, isLoading, error } = useQuery({
     queryKey: ['produtos-requisicao'],
@@ -47,35 +45,12 @@ const Requisicoes = () => {
     },
   });
 
-  useEffect(() => {
-    const container = productsContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const currentScrollPosition = container.scrollTop;
-      const scrollDirection = currentScrollPosition > lastScrollPosition.current ? 'down' : 'up';
-      
-      // Mostra o header imediatamente ao rolar para cima em qualquer posição
-      if (scrollDirection === 'up') {
-        setIsHeaderVisible(true);
-      } 
-      // Esconde o header ao rolar para baixo, exceto quando está no topo
-      else if (scrollDirection === 'down' && currentScrollPosition > 10) {
-        setIsHeaderVisible(false);
-      }
-
-      lastScrollPosition.current = currentScrollPosition;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const createRequisitionMutation = useMutation({
     mutationFn: async (items: RequisitionItem[]) => {
       console.log('Criando requisição para a loja:', profile?.loja);
       console.log('Items da requisição:', items);
 
+      // Primeiro, criar a requisição
       const { data: requisicao, error: requisicaoError } = await supabase
         .from('requisicoes')
         .insert([{
@@ -94,13 +69,14 @@ const Requisicoes = () => {
 
       console.log('Requisição criada:', requisicao);
 
+      // Depois, criar os itens da requisição
       const itensRequisicao = items.map(item => ({
         requisicao_id: requisicao.id,
         produto_id: item.productId,
         quantidade: item.caixas,
         quantidade_calculada: item.quilos,
-        escala: null,
-        multiplicador: null
+        escala: null, // Não usamos mais escalas
+        multiplicador: null // Não usamos mais multiplicadores
       }));
 
       console.log('Inserindo itens da requisição:', itensRequisicao);
@@ -194,9 +170,9 @@ const Requisicoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header - Com comportamento de hide/show no scroll */}
-      <header className={`bg-white shadow-sm border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'} fixed w-full z-20`}>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -209,7 +185,7 @@ const Requisicoes = () => {
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Requisição</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Nova Requisição</h1>
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
@@ -221,53 +197,57 @@ const Requisicoes = () => {
                 onClick={() => navigate('/historico-requisicoes')}
               >
                 <Search className="h-4 w-4 mr-2" />
-                Histórico
+                Ver Histórico
               </Button>
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
+                <p className="text-xs text-gray-500">Requisitante</p>
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Conteúdo principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 flex flex-col w-full mt-16">
-        {/* Barra de busca e botão de envio - Fixo abaixo do header */}
-        <div className="mb-4 flex-shrink-0 bg-gray-50 pt-4 pb-2 sticky top-16 z-10">
-          <div className="flex justify-between items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar produto..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search and Summary */}
+        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar produto..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-600 text-right">
+              <div>{totalItems} produtos selecionados</div>
+              {totalItems > 0 && (
+                <div className="text-xs">
+                  {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg
+                </div>
+              )}
             </div>
-            <Button
+            <Button 
               onClick={handleSubmitRequisition}
               disabled={totalItems === 0 || createRequisitionMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+              className="bg-green-600 hover:bg-green-700"
             >
               {createRequisitionMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Enviar
+              Enviar Requisição
             </Button>
-          </div>
-          <div className="mt-2 flex justify-end text-sm text-gray-600">
-            {totalItems} produtos selecionados
-            {totalItems > 0 && (
-              <> • {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</>
-            )}
           </div>
         </div>
 
-        {/* Lista de produtos - Área com scroll */}
-        <div 
-          ref={productsContainerRef}
-          className="flex-1 overflow-y-auto space-y-3 pb-4"
-        >
+        {/* Products Grid */}
+        <div className="space-y-3">
           {filteredProducts.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">
@@ -286,7 +266,7 @@ const Requisicoes = () => {
             ))
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 };

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,9 +25,6 @@ const Estoque = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
-  const lastScrollPosition = useRef(0);
-  const productsContainerRef = useRef<HTMLDivElement>(null);
 
   // Carregar produtos e estoque atual
   useEffect(() => {
@@ -35,6 +33,7 @@ const Estoque = () => {
         setLoading(true);
         console.log('Carregando produtos para a loja:', profile?.loja);
 
+        // Buscar produtos ativos
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
           .select('id, produto, unidade')
@@ -47,6 +46,7 @@ const Estoque = () => {
           return;
         }
 
+        // Buscar estoque atual da loja
         const { data: estoqueData, error: estoqueError } = await supabase
           .from('estoque_atual')
           .select('produto_id, quantidade')
@@ -58,17 +58,20 @@ const Estoque = () => {
           return;
         }
 
+        // Mapear estoque por produto_id
         const estoqueMap = new Map();
         estoqueData?.forEach(item => {
           estoqueMap.set(item.produto_id, item.quantidade);
         });
 
+        // Combinar produtos com estoque atual
         const produtosComEstoque = produtosData?.map(produto => ({
           ...produto,
           quantidade_atual: estoqueMap.get(produto.id) || 0
         })) || [];
 
         setProdutos(produtosComEstoque);
+        console.log('Produtos carregados:', produtosComEstoque);
       } catch (error) {
         console.error('Erro geral:', error);
         setError('Erro interno ao carregar dados');
@@ -82,29 +85,7 @@ const Estoque = () => {
     }
   }, [profile]);
 
-  // Controle do scroll para mostrar/esconder header
-  useEffect(() => {
-    const container = productsContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const currentScrollPosition = container.scrollTop;
-      const scrollDirection = currentScrollPosition > lastScrollPosition.current ? 'down' : 'up';
-      
-      if (scrollDirection === 'up') {
-        setIsHeaderVisible(true);
-      } 
-      else if (scrollDirection === 'down' && currentScrollPosition > 10) {
-        setIsHeaderVisible(false);
-      }
-
-      lastScrollPosition.current = currentScrollPosition;
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
-
+  // Atualizar quantidade de um produto
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
     setProdutos(prev => prev.map(produto => 
       produto.id === produtoId ? {
@@ -114,6 +95,7 @@ const Estoque = () => {
     ));
   };
 
+  // Incrementar quantidade
   const incrementarQuantidade = (produtoId: string) => {
     setProdutos(prev => prev.map(produto => 
       produto.id === produtoId ? {
@@ -123,6 +105,7 @@ const Estoque = () => {
     ));
   };
 
+  // Decrementar quantidade
   const decrementarQuantidade = (produtoId: string) => {
     setProdutos(prev => prev.map(produto => 
       produto.id === produtoId ? {
@@ -132,6 +115,7 @@ const Estoque = () => {
     ));
   };
 
+  // Salvar estoque
   const salvarEstoque = async () => {
     if (!profile?.loja) {
       toast({
@@ -144,8 +128,9 @@ const Estoque = () => {
 
     try {
       setSaving(true);
-      console.log('Salvando estoque para loja:', profile.loja);
-      
+      console.log('Salvando estoque para a loja:', profile.loja);
+
+      // Preparar dados para upsert
       const dadosEstoque = produtos.map(produto => ({
         produto_id: produto.id,
         loja: profile.loja,
@@ -155,28 +140,34 @@ const Estoque = () => {
 
       console.log('Dados para salvar:', dadosEstoque);
 
-      // Usar upsert com a constraint correta
+      // Fazer upsert (insert ou update)
       const { error } = await supabase
         .from('estoque_atual')
         .upsert(dadosEstoque, {
-          onConflict: 'produto_id,loja',
-          ignoreDuplicates: false
+          onConflict: 'produto_id,loja'
         });
 
       if (error) {
         console.error('Erro ao salvar estoque:', error);
-        throw error;
+        toast({
+          title: "Erro ao salvar",
+          description: "Não foi possível salvar o estoque. Tente novamente.",
+          variant: "destructive"
+        });
+        return;
       }
 
       toast({
         title: "Estoque salvo",
         description: "O estoque foi atualizado com sucesso!"
       });
+
+      console.log('Estoque salvo com sucesso para a loja:', profile.loja);
     } catch (error) {
-      console.error('Erro ao salvar estoque:', error);
+      console.error('Erro geral ao salvar:', error);
       toast({
-        title: "Erro ao salvar",
-        description: "Não foi possível salvar o estoque. Tente novamente.",
+        title: "Erro interno",
+        description: "Erro interno ao salvar estoque.",
         variant: "destructive"
       });
     } finally {
@@ -196,9 +187,9 @@ const Estoque = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className={`bg-white shadow-sm border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'} fixed w-full z-20`}>
+      <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -219,25 +210,29 @@ const Estoque = () => {
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
+            
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
+                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
+              </div>
+              <Button variant="outline" onClick={signOut} size="sm">
+                Sair
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Conteúdo principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 flex flex-col w-full mt-16">
-        {/* Seção de título e botão salvar */}
-        <div className="mb-6 flex justify-between items-center sticky top-16 z-10 bg-gray-50 pt-4 pb-2">
-          <h2 className="text-2xl font-bold text-gray-900">
-            Atualizar estoque
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Atualizar Estoque
           </h2>
-          <Button
-            onClick={salvarEstoque}
-            disabled={saving}
-            className="bg-green-600 hover:bg-green-700 shrink-0"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Salvando...' : 'Salvar'}
-          </Button>
+          <p className="text-gray-600">
+            Atualize as quantidades disponíveis dos produtos em sua loja.
+          </p>
         </div>
 
         {error && (
@@ -247,68 +242,85 @@ const Estoque = () => {
           </Alert>
         )}
 
-        {/* Lista de produtos */}
-        <div 
-          ref={productsContainerRef}
-          className="flex-1 overflow-y-auto space-y-3 pb-4"
-        >
-          {produtos.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Produtos da Loja</CardTitle>
+              <CardDescription>
+                Digite a quantidade atual de cada produto em estoque
+              </CardDescription>
+            </div>
+            <Button
+              onClick={salvarEstoque}
+              disabled={saving}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {saving ? 'Salvando...' : 'Salvar Estoque'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {produtos.length === 0 ? (
+              <div className="text-center py-8">
                 <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                 <p className="text-gray-500">Nenhum produto cadastrado</p>
-              </CardContent>
-            </Card>
-          ) : (
-            produtos.map(produto => (
-              <div key={produto.id} className="bg-white p-4 rounded-lg shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{produto.produto}</h3>
-                    <p className="text-sm text-gray-500">Unidade: {produto.unidade}</p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => decrementarQuantidade(produto.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                        onChange={(e) => {
-                          const valor = e.target.value;
-                          if (valor === '') {
-                            atualizarQuantidade(produto.id, 0);
-                          } else {
-                            atualizarQuantidade(produto.id, parseFloat(valor) || 0);
-                          }
-                        }}
-                        placeholder="0"
-                        className="w-20 text-center"
-                      />
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => incrementarQuantidade(produto.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {produtos.map(produto => (
+                  <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{produto.produto}</h3>
+                      <p className="text-sm text-gray-500">Unidade: {produto.unidade}</p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-2">
+                        <label className="text-sm font-medium text-gray-700">
+                          Quantidade:
+                        </label>
+                        <div className="flex items-center space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => decrementarQuantidade(produto.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.1"
+                            value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                            onChange={(e) => {
+                              const valor = e.target.value;
+                              if (valor === '') {
+                                atualizarQuantidade(produto.id, 0);
+                              } else {
+                                atualizarQuantidade(produto.id, parseFloat(valor) || 0);
+                              }
+                            }}
+                            placeholder="0"
+                            className="w-20 text-center"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => incrementarQuantidade(produto.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                ))}
               </div>
-            ))
-          )}
-        </div>
-      </div>
+            )}
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 };
