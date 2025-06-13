@@ -239,24 +239,26 @@ const Requisicoes = () => {
         </div>
 
         {/* Products Grid */}
-        <div className="space-y-3">
-          {filteredProducts.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuantityChange={handleQuantityChange}
-              />
-            ))
-          )}
+        <div className="flex flex-1 w-full">
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {filteredProducts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-500">
+                    {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onQuantityChange={handleQuantityChange}
+                />
+              ))
+            )}
+          </div>
         </div>
       </main>
     </div>
