@@ -7,7 +7,7 @@ import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
-import { supabase } from '@/integrations/supabase/client';
+import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { toast } from 'sonner';
 
 interface ItemTabelaComparativa {
@@ -36,9 +36,8 @@ const ResumoPedido = () => {
   const location = useLocation();
   const { fornecedores } = useFornecedores();
   const { user } = useAuth();
-  
-  // Usar o hook para acessar a função marcarComoEnviada
   const { marcarComoEnviada } = useCotacaoTemporaria();
+  const { secureInsert } = useSecureOperations();
   
   // Receber os dados da tabela comparativa
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
@@ -56,7 +55,7 @@ const ResumoPedido = () => {
       'Unidade': 'Unidades',
       'Bandeja': 'Bandejas',
       'Maço': 'Maços',
-      'Kg': 'Kg' // Kg não muda no plural
+      'Kg': 'Kg'
     };
 
     return pluralizacao[unidade] || unidade;
@@ -71,7 +70,6 @@ const ResumoPedido = () => {
         if (quantidade > 0 && item.fornecedores?.[fornecedor] !== null && item.fornecedores?.[fornecedor] !== undefined) {
           const preco = item.fornecedores[fornecedor]!;
           const subtotal = quantidade * preco;
-          // Usar a unidade do objeto unidadePedido se existir, senão usar 'Caixa' como padrão
           const unidade = item.unidadePedido?.[fornecedor] || 'Caixa';
 
           if (!resumo[fornecedor]) {
@@ -118,45 +116,20 @@ const ResumoPedido = () => {
   };
 
   const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO CRIAÇÃO PEDIDO ===');
+    console.log('=== INÍCIO CRIAÇÃO PEDIDO (NOVA VERSÃO) ===');
     console.log('User atual:', user);
     console.log('Resumo fornecedor:', resumoFornecedor);
     
     if (!user?.id) {
-      console.error('Erro: Usuário não autenticado - user.id não existe');
+      console.error('Erro: Usuário não autenticado');
       toast.error('Usuário não autenticado');
       return false;
     }
 
-    console.log('User ID:', user.id, 'Type:', typeof user.id);
-
     try {
-      // Primeiro, verificar se o usuário existe na tabela usuarios
-      console.log('Verificando se usuário existe na tabela usuarios...');
-      const { data: usuarioExistente, error: usuarioError } = await supabase
-        .from('usuarios')
-        .select('id, nome, loja, tipo')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      console.log('Resultado busca usuário:', { usuarioExistente, usuarioError });
-
-      if (usuarioError) {
-        console.error('Erro ao buscar usuário:', usuarioError);
-        toast.error('Erro ao verificar usuário no sistema');
-        return false;
-      }
-
-      if (!usuarioExistente) {
-        console.error('Usuário não encontrado na tabela usuarios');
-        toast.error('Usuário não encontrado no sistema');
-        return false;
-      }
-
       // Buscar fornecedor
       console.log('Buscando fornecedor:', resumoFornecedor.fornecedor);
       const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
-      console.log('Fornecedor encontrado:', fornecedorData);
       
       if (!fornecedorData) {
         console.error('Fornecedor não encontrado:', resumoFornecedor.fornecedor);
@@ -164,9 +137,9 @@ const ResumoPedido = () => {
         return false;
       }
 
-      console.log('Fornecedor ID:', fornecedorData.id, 'Type:', typeof fornecedorData.id);
+      console.log('Fornecedor encontrado:', fornecedorData);
 
-      // Buscar os IDs dos produtos pelos nomes
+      // Buscar IDs dos produtos
       console.log('Buscando IDs dos produtos...');
       const nomesProdutos = resumoFornecedor.itens.map(item => item.produto);
       console.log('Nomes dos produtos:', nomesProdutos);
@@ -176,13 +149,13 @@ const ResumoPedido = () => {
         .select('id, produto')
         .in('produto', nomesProdutos);
 
-      console.log('Produtos encontrados:', produtos);
-
       if (produtosError) {
         console.error('Erro ao buscar produtos:', produtosError);
         toast.error('Erro ao buscar produtos no sistema');
         return false;
       }
+
+      console.log('Produtos encontrados:', produtos);
 
       // Criar mapeamento de nome para ID
       const mapeamentoProdutos: { [nome: string]: string } = {};
@@ -192,8 +165,6 @@ const ResumoPedido = () => {
         }
       });
 
-      console.log('Mapeamento de produtos:', mapeamentoProdutos);
-
       // Verificar se todos os produtos foram encontrados
       const produtosNaoEncontrados = nomesProdutos.filter(nome => !mapeamentoProdutos[nome]);
       if (produtosNaoEncontrados.length > 0) {
@@ -202,7 +173,8 @@ const ResumoPedido = () => {
         return false;
       }
 
-      // Preparar dados do pedido
+      // Criar pedido usando operação segura
+      console.log('Criando pedido com operação segura...');
       const dadosPedido = {
         user_id: user.id,
         fornecedor_id: fornecedorData.id,
@@ -210,60 +182,39 @@ const ResumoPedido = () => {
         status: 'enviado'
       };
 
-      console.log('Dados do pedido a serem inseridos:', dadosPedido);
+      console.log('Dados do pedido:', dadosPedido);
 
-      // Criar o pedido
-      console.log('Inserindo pedido na tabela pedidos_compra...');
-      const { data: pedido, error: pedidoError } = await supabase
-        .from('pedidos_compra')
-        .insert(dadosPedido)
-        .select('id')
-        .single();
-
-      console.log('Resultado inserção pedido:', { pedido, pedidoError });
+      const { data: pedido, error: pedidoError } = await secureInsert('pedidos_compra', dadosPedido);
 
       if (pedidoError) {
-        console.error('Erro detalhado ao criar pedido:', {
-          error: pedidoError,
-          message: pedidoError.message,
-          details: pedidoError.details,
-          hint: pedidoError.hint,
-          code: pedidoError.code
-        });
-        throw pedidoError;
+        console.error('Erro ao criar pedido:', pedidoError);
+        toast.error('Erro ao criar pedido: ' + pedidoError);
+        return false;
       }
 
-      console.log('Pedido criado com sucesso, ID:', pedido.id);
+      console.log('Pedido criado com sucesso:', pedido);
 
-      // Preparar itens do pedido com os IDs corretos dos produtos
+      // Criar itens do pedido
+      console.log('Criando itens do pedido...');
       const itens = resumoFornecedor.itens.map(item => ({
         pedido_id: pedido.id,
-        produto_id: mapeamentoProdutos[item.produto], // Usar o ID do produto em vez do nome
+        produto_id: mapeamentoProdutos[item.produto],
         tipo: item.tipo,
         quantidade: item.quantidade,
         preco: item.preco,
         unidade: item.unidade
       }));
 
-      console.log('Itens do pedido a serem inseridos:', itens);
+      console.log('Itens a serem inseridos:', itens);
 
-      // Criar os itens do pedido
-      console.log('Inserindo itens do pedido...');
-      const { error: itensError } = await supabase
-        .from('itens_pedido')
-        .insert(itens);
-
-      console.log('Resultado inserção itens:', { itensError });
-
-      if (itensError) {
-        console.error('Erro detalhado ao criar itens:', {
-          error: itensError,
-          message: itensError.message,
-          details: itensError.details,
-          hint: itensError.hint,
-          code: itensError.code
-        });
-        throw itensError;
+      // Inserir itens um por um para melhor controle de erros
+      for (const item of itens) {
+        const { error: itemError } = await secureInsert('itens_pedido', item);
+        if (itemError) {
+          console.error('Erro ao inserir item:', itemError, item);
+          toast.error('Erro ao inserir item do pedido');
+          return false;
+        }
       }
 
       console.log('=== PEDIDO CRIADO COM SUCESSO ===');
@@ -271,14 +222,13 @@ const ResumoPedido = () => {
     } catch (error) {
       console.error('=== ERRO GERAL NA CRIAÇÃO DO PEDIDO ===');
       console.error('Erro completo:', error);
-      console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A');
-      toast.error('Erro ao salvar pedido no banco de dados');
+      toast.error('Erro inesperado ao salvar pedido');
       return false;
     }
   };
 
   const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO PROCESSO WHATSAPP ===');
+    console.log('=== INÍCIO PROCESSO WHATSAPP (NOVA VERSÃO) ===');
     console.log('Is histórico:', isHistorico);
     
     // Se não é histórico, criar pedido no banco
@@ -290,7 +240,7 @@ const ResumoPedido = () => {
         return;
       }
 
-      // Marcar cotação como enviada usando o hook
+      // Marcar cotação como enviada
       if (marcarComoEnviada) {
         console.log('Marcando cotação como enviada...');
         await marcarComoEnviada();

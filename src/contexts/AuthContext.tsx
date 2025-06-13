@@ -38,30 +38,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função para criar uma sessão anônima no Supabase com o user_id
-  const createSupabaseSession = async (userData: UserProfile) => {
+  // Criar sessão definitiva no Supabase Auth
+  const createDefinitiveSupabaseSession = async (userData: UserProfile): Promise<boolean> => {
     try {
-      // Usar o ID do usuário como email temporário para criar sessão
-      const tempEmail = `${userData.id}@sistema.local`;
-      const tempPassword = userData.codigo_acesso;
+      console.log('=== CRIANDO SESSÃO DEFINITIVA SUPABASE ===');
+      console.log('User data:', userData);
       
-      console.log('Criando sessão Supabase para usuário:', userData.nome);
+      // Usar um email determinístico baseado no ID
+      const deterministicEmail = `user-${userData.id}@flv.local`;
+      const password = `flv-${userData.codigo_acesso}-${userData.id}`;
       
-      // Tentar fazer login primeiro (caso já exista)
+      console.log('Email determinístico:', deterministicEmail);
+      
+      // Primeiro, tentar fazer logout de qualquer sessão existente
+      await supabase.auth.signOut();
+      
+      // Tentar fazer login
+      console.log('Tentando login...');
       let { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: tempEmail,
-        password: tempPassword,
+        email: deterministicEmail,
+        password: password,
       });
 
-      // Se não conseguir fazer login, criar usuário
       if (signInError) {
-        console.log('Usuário não existe no Auth, criando...');
+        console.log('Login falhou, criando usuário:', signInError.message);
+        
+        // Se login falhar, criar usuário
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: tempEmail,
-          password: tempPassword,
+          email: deterministicEmail,
+          password: password,
           options: {
             data: {
-              user_id: userData.id,
+              system_user_id: userData.id,
               nome: userData.nome,
               loja: userData.loja,
               tipo: userData.tipo
@@ -70,126 +78,183 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         if (signUpError) {
-          console.warn('Erro ao criar usuário no Auth:', signUpError);
-          return;
+          console.error('Erro ao criar usuário:', signUpError);
+          
+          // Se falhou porque usuário já existe, tentar login novamente
+          if (signUpError.message.includes('already registered')) {
+            console.log('Usuário existe, tentando login novamente...');
+            const { data: retryAuth, error: retryError } = await supabase.auth.signInWithPassword({
+              email: deterministicEmail,
+              password: password,
+            });
+            
+            if (retryError) {
+              console.error('Retry login falhou:', retryError);
+              return false;
+            }
+            authData = retryAuth;
+          } else {
+            return false;
+          }
+        } else {
+          authData = signUpData;
         }
-        
-        authData = signUpData;
       }
 
       if (authData.user) {
-        console.log('Sessão Supabase criada com sucesso');
+        console.log('Sessão Supabase criada com sucesso:', authData.user.id);
         
-        // Verificar se usuário existe na tabela usuarios com o mesmo ID
-        const { data: existingUser, error: userError } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('id', userData.id)
-          .single();
-
-        if (userError && userError.code === 'PGRST116') {
-          // Usuário não existe na tabela usuarios, criar
-          console.log('Criando registro na tabela usuarios');
-          await supabase
-            .from('usuarios')
-            .insert({
-              id: userData.id,
-              nome: userData.nome,
-              loja: userData.loja,
-              codigo_acesso: userData.codigo_acesso,
-              tipo: userData.tipo,
-              ativo: userData.ativo,
-              ultimo_login: userData.ultimo_login
-            });
-        } else if (!userError) {
-          // Usuário existe, atualizar último login
-          console.log('Atualizando último login na tabela usuarios');
-          await supabase
-            .from('usuarios')
-            .update({ ultimo_login: new Date().toISOString() })
-            .eq('id', userData.id);
-        }
+        // Sincronizar com tabela usuarios
+        await syncUsuariosTable(userData, authData.user.id);
+        
+        return true;
       }
+      
+      return false;
     } catch (error) {
-      console.error('Erro ao criar sessão Supabase:', error);
+      console.error('Erro crítico na criação de sessão:', error);
+      return false;
     }
   };
 
-  // Check for existing session on load
+  // Sincronizar dados na tabela usuarios
+  const syncUsuariosTable = async (userData: UserProfile, authUserId: string) => {
+    try {
+      console.log('Sincronizando tabela usuarios...');
+      
+      // Verificar se registro existe
+      const { data: existingUser, error: selectError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('id', userData.id)
+        .maybeSingle();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        console.error('Erro ao verificar usuário existente:', selectError);
+        return;
+      }
+
+      if (!existingUser) {
+        // Inserir novo registro
+        console.log('Inserindo novo usuário na tabela usuarios');
+        const { error: insertError } = await supabase
+          .from('usuarios')
+          .insert({
+            id: userData.id,
+            nome: userData.nome,
+            loja: userData.loja,
+            codigo_acesso: userData.codigo_acesso,
+            tipo: userData.tipo,
+            ativo: userData.ativo,
+            ultimo_login: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('Erro ao inserir usuário:', insertError);
+        } else {
+          console.log('Usuário inserido com sucesso');
+        }
+      } else {
+        // Atualizar último login
+        console.log('Atualizando último login');
+        const { error: updateError } = await supabase
+          .from('usuarios')
+          .update({ ultimo_login: new Date().toISOString() })
+          .eq('id', userData.id);
+
+        if (updateError) {
+          console.error('Erro ao atualizar último login:', updateError);
+        }
+      }
+    } catch (error) {
+      console.error('Erro na sincronização da tabela usuarios:', error);
+    }
+  };
+
+  // Carregar usuário armazenado e garantir sessão ativa
   useEffect(() => {
-    const loadStoredUser = async () => {
+    const initializeAuth = async () => {
+      console.log('=== INICIALIZANDO AUTENTICAÇÃO ===');
+      
       const storedUser = localStorage.getItem('flv_user');
       if (storedUser) {
         try {
           const userData = JSON.parse(storedUser);
+          console.log('Usuário encontrado no localStorage:', userData.nome);
           
           // Validar dados básicos
           if (!userData.id || !userData.nome || !userData.loja) {
-            console.log('Dados de usuário inválidos no localStorage, removendo');
+            console.log('Dados inválidos, removendo do localStorage');
             localStorage.removeItem('flv_user');
             setLoading(false);
             return;
           }
           
-          // Verificar se o usuário ainda existe e está ativo no banco
-          const { data: usuarioAtualizado, error } = await supabase
+          // Verificar se ainda está ativo no banco
+          const { data: usuarioAtivo, error } = await supabase
             .from('usuarios')
             .select('*')
             .eq('id', userData.id)
             .eq('ativo', true)
-            .single();
+            .maybeSingle();
 
-          if (error || !usuarioAtualizado) {
-            console.log('Usuário não encontrado ou inativo, removendo do localStorage');
+          if (error || !usuarioAtivo) {
+            console.log('Usuário não encontrado ou inativo, removendo sessão');
             localStorage.removeItem('flv_user');
-          } else {
-            // Usar dados atualizados do banco
-            const userDataAtualizado = {
-              id: usuarioAtualizado.id,
-              nome: validateInput.text(usuarioAtualizado.nome),
-              loja: validateInput.text(usuarioAtualizado.loja),
-              codigo_acesso: usuarioAtualizado.codigo_acesso,
-              tipo: validateInput.text(usuarioAtualizado.tipo),
-              ativo: usuarioAtualizado.ativo,
-              ultimo_login: usuarioAtualizado.ultimo_login
-            };
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
 
+          // Dados atualizados do banco
+          const userDataAtualizado = {
+            id: usuarioAtivo.id,
+            nome: validateInput.text(usuarioAtivo.nome),
+            loja: validateInput.text(usuarioAtivo.loja),
+            codigo_acesso: usuarioAtivo.codigo_acesso,
+            tipo: validateInput.text(usuarioAtivo.tipo),
+            ativo: usuarioAtivo.ativo,
+            ultimo_login: usuarioAtivo.ultimo_login
+          };
+
+          // Criar sessão definitiva no Supabase
+          const sessionCreated = await createDefinitiveSupabaseSession(userDataAtualizado);
+          
+          if (sessionCreated) {
             setUser(userDataAtualizado);
             setProfile(userDataAtualizado);
-            
-            // Criar sessão no Supabase para permitir operações RLS
-            await createSupabaseSession(userDataAtualizado);
-            
-            // Atualizar localStorage com dados mais recentes
             localStorage.setItem('flv_user', JSON.stringify(userDataAtualizado));
-            
-            console.log('Usuário autenticado carregado:', userDataAtualizado.nome);
+            console.log('Usuário autenticado e sessão Supabase ativa:', userDataAtualizado.nome);
+          } else {
+            console.error('Falha ao criar sessão Supabase');
+            localStorage.removeItem('flv_user');
           }
         } catch (error) {
-          console.error('Error parsing stored user:', error);
+          console.error('Erro ao inicializar autenticação:', error);
           localStorage.removeItem('flv_user');
         }
       }
       setLoading(false);
     };
 
-    loadStoredUser();
+    initializeAuth();
   }, []);
 
   const signIn = async (codigoAcesso: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      console.log('=== PROCESSO DE LOGIN ===');
+      
       // Validar entrada
       const validatedCode = validateInput.codigoAcesso(codigoAcesso);
+      console.log('Código validado, buscando usuário...');
       
-      console.log('Tentando login com código validado');
-      
-      // Buscar usuário pelo código de acesso na tabela usuarios
+      // Buscar usuário
       const { data: usuario, error: usuarioError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('codigo_acesso', validatedCode)
         .eq('ativo', true)
-        .single();
+        .maybeSingle();
 
       if (usuarioError || !usuario) {
         console.error('Erro ao buscar usuário:', usuarioError);
@@ -198,7 +263,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Usuário encontrado:', usuario.nome);
 
-      // Validar dados do usuário
+      // Preparar dados do usuário
       const userData = {
         id: validateInput.uuid(usuario.id),
         nome: validateInput.text(usuario.nome),
@@ -209,26 +274,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ultimo_login: new Date().toISOString()
       };
 
-      // Atualizar último login de forma segura
-      try {
-        await supabase
-          .from('usuarios')
-          .update({ ultimo_login: userData.ultimo_login })
-          .eq('id', usuario.id);
-      } catch (updateError) {
-        console.warn('Erro ao atualizar último login:', updateError);
-        // Não bloquear o login por conta disso
+      // Criar sessão definitiva no Supabase
+      console.log('Criando sessão Supabase...');
+      const sessionCreated = await createDefinitiveSupabaseSession(userData);
+      
+      if (!sessionCreated) {
+        console.error('Falha crítica: não foi possível criar sessão Supabase');
+        return { success: false, error: "Erro interno de autenticação. Tente novamente." };
       }
 
-      // Criar sessão no Supabase para permitir operações RLS
-      await createSupabaseSession(userData);
-
-      // Armazenar usuário no localStorage e state
-      localStorage.setItem('flv_user', JSON.stringify(userData));
+      // Definir estados
       setUser(userData);
       setProfile(userData);
+      localStorage.setItem('flv_user', JSON.stringify(userData));
 
-      console.log('Login realizado com sucesso para:', userData.nome);
+      console.log('Login realizado com sucesso:', userData.nome);
       return { success: true };
     } catch (error: any) {
       console.error('Erro no login:', error);
@@ -242,16 +302,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       setLoading(true);
-      console.log('Fazendo logout do usuário:', user?.nome);
+      console.log('=== FAZENDO LOGOUT ===');
       
-      // Fazer logout do Supabase também
+      // Logout do Supabase
       await supabase.auth.signOut();
       
+      // Limpar dados locais
       localStorage.removeItem('flv_user');
       setUser(null);
       setProfile(null);
+      
+      console.log('Logout realizado com sucesso');
     } catch (error) {
-      console.error('Signout error:', error);
+      console.error('Erro no logout:', error);
     } finally {
       setLoading(false);
     }
