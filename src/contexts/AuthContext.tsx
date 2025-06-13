@@ -38,6 +38,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Função para criar uma sessão anônima no Supabase com o user_id
+  const createSupabaseSession = async (userData: UserProfile) => {
+    try {
+      // Usar o ID do usuário como email temporário para criar sessão
+      const tempEmail = `${userData.id}@sistema.local`;
+      const tempPassword = userData.codigo_acesso;
+      
+      console.log('Criando sessão Supabase para usuário:', userData.nome);
+      
+      // Tentar fazer login primeiro (caso já exista)
+      let { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: tempEmail,
+        password: tempPassword,
+      });
+
+      // Se não conseguir fazer login, criar usuário
+      if (signInError) {
+        console.log('Usuário não existe no Auth, criando...');
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: tempEmail,
+          password: tempPassword,
+          options: {
+            data: {
+              user_id: userData.id,
+              nome: userData.nome,
+              loja: userData.loja,
+              tipo: userData.tipo
+            }
+          }
+        });
+
+        if (signUpError) {
+          console.warn('Erro ao criar usuário no Auth:', signUpError);
+          return;
+        }
+        
+        authData = signUpData;
+      }
+
+      if (authData.user) {
+        console.log('Sessão Supabase criada com sucesso');
+        
+        // Verificar se usuário existe na tabela usuarios com o mesmo ID
+        const { data: existingUser, error: userError } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('id', userData.id)
+          .single();
+
+        if (userError && userError.code === 'PGRST116') {
+          // Usuário não existe na tabela usuarios, criar
+          console.log('Criando registro na tabela usuarios');
+          await supabase
+            .from('usuarios')
+            .insert({
+              id: userData.id,
+              nome: userData.nome,
+              loja: userData.loja,
+              codigo_acesso: userData.codigo_acesso,
+              tipo: userData.tipo,
+              ativo: userData.ativo,
+              ultimo_login: userData.ultimo_login
+            });
+        } else if (!userError) {
+          // Usuário existe, atualizar último login
+          console.log('Atualizando último login na tabela usuarios');
+          await supabase
+            .from('usuarios')
+            .update({ ultimo_login: new Date().toISOString() })
+            .eq('id', userData.id);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao criar sessão Supabase:', error);
+    }
+  };
+
   // Check for existing session on load
   useEffect(() => {
     const loadStoredUser = async () => {
@@ -54,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return;
           }
           
-          // Verificar se o usuário ainda existe e está ativo, e buscar dados atualizados
+          // Verificar se o usuário ainda existe e está ativo no banco
           const { data: usuarioAtualizado, error } = await supabase
             .from('usuarios')
             .select('*')
@@ -79,6 +156,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             setUser(userDataAtualizado);
             setProfile(userDataAtualizado);
+            
+            // Criar sessão no Supabase para permitir operações RLS
+            await createSupabaseSession(userDataAtualizado);
             
             // Atualizar localStorage com dados mais recentes
             localStorage.setItem('flv_user', JSON.stringify(userDataAtualizado));
@@ -140,6 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Não bloquear o login por conta disso
       }
 
+      // Criar sessão no Supabase para permitir operações RLS
+      await createSupabaseSession(userData);
+
       // Armazenar usuário no localStorage e state
       localStorage.setItem('flv_user', JSON.stringify(userData));
       setUser(userData);
@@ -160,6 +243,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       console.log('Fazendo logout do usuário:', user?.nome);
+      
+      // Fazer logout do Supabase também
+      await supabase.auth.signOut();
+      
       localStorage.removeItem('flv_user');
       setUser(null);
       setProfile(null);

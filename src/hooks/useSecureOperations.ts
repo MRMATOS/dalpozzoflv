@@ -27,13 +27,19 @@ export const useSecureOperations = () => {
       // Sanitizar dados
       const sanitizedData = sanitizeData.object(data);
 
-      // Adicionar user_id automaticamente se o campo existir
+      // Adicionar user_id automaticamente se o campo existir e não estiver presente
       const dataWithUser = {
         ...sanitizedData,
-        user_id: user.id
+        ...(sanitizedData.user_id === undefined && { user_id: user.id })
       };
 
       console.log(`Inserindo dados em ${table}:`, dataWithUser);
+
+      // Verificar se temos uma sessão ativa no Supabase
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.warn('Sessão Supabase não encontrada, tentando operação direta');
+      }
 
       const { data: result, error } = await (supabase as any)
         .from(table)
@@ -43,9 +49,19 @@ export const useSecureOperations = () => {
 
       if (error) {
         console.error(`Erro ao inserir em ${table}:`, error);
+        
+        // Se for erro de RLS, tentar explicar melhor
+        if (error.message.includes('row-level security policy')) {
+          return { 
+            data: null, 
+            error: `Erro de permissão: usuário não autorizado a inserir dados em ${table}` 
+          };
+        }
+        
         return { data: null, error: error.message };
       }
 
+      console.log(`Dados inseridos com sucesso em ${table}:`, result);
       return { data: result, error: null };
     } catch (error) {
       console.error(`Erro na operação de inserção em ${table}:`, error);
