@@ -8,6 +8,7 @@ import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface ItemTabelaComparativa {
@@ -116,7 +117,7 @@ const ResumoPedido = () => {
   };
 
   const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO CRIAÇÃO PEDIDO (NOVA VERSÃO) ===');
+    console.log('=== INÍCIO CRIAÇÃO PEDIDO ===');
     console.log('User atual:', user);
     console.log('Resumo fornecedor:', resumoFornecedor);
     
@@ -127,7 +128,6 @@ const ResumoPedido = () => {
     }
 
     try {
-      // Buscar fornecedor
       console.log('Buscando fornecedor:', resumoFornecedor.fornecedor);
       const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
       
@@ -139,7 +139,6 @@ const ResumoPedido = () => {
 
       console.log('Fornecedor encontrado:', fornecedorData);
 
-      // Buscar IDs dos produtos
       console.log('Buscando IDs dos produtos...');
       const nomesProdutos = resumoFornecedor.itens.map(item => item.produto);
       console.log('Nomes dos produtos:', nomesProdutos);
@@ -157,7 +156,6 @@ const ResumoPedido = () => {
 
       console.log('Produtos encontrados:', produtos);
 
-      // Criar mapeamento de nome para ID
       const mapeamentoProdutos: { [nome: string]: string } = {};
       produtos?.forEach(produto => {
         if (produto.produto) {
@@ -165,7 +163,6 @@ const ResumoPedido = () => {
         }
       });
 
-      // Verificar se todos os produtos foram encontrados
       const produtosNaoEncontrados = nomesProdutos.filter(nome => !mapeamentoProdutos[nome]);
       if (produtosNaoEncontrados.length > 0) {
         console.error('Produtos não encontrados:', produtosNaoEncontrados);
@@ -173,7 +170,6 @@ const ResumoPedido = () => {
         return false;
       }
 
-      // Criar pedido usando operação segura
       console.log('Criando pedido com operação segura...');
       const dadosPedido = {
         user_id: user.id,
@@ -194,7 +190,6 @@ const ResumoPedido = () => {
 
       console.log('Pedido criado com sucesso:', pedido);
 
-      // Criar itens do pedido
       console.log('Criando itens do pedido...');
       const itens = resumoFornecedor.itens.map(item => ({
         pedido_id: pedido.id,
@@ -207,7 +202,6 @@ const ResumoPedido = () => {
 
       console.log('Itens a serem inseridos:', itens);
 
-      // Inserir itens um por um para melhor controle de erros
       for (const item of itens) {
         const { error: itemError } = await secureInsert('itens_pedido', item);
         if (itemError) {
@@ -228,10 +222,9 @@ const ResumoPedido = () => {
   };
 
   const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO PROCESSO WHATSAPP (NOVA VERSÃO) ===');
+    console.log('=== INÍCIO PROCESSO WHATSAPP ===');
     console.log('Is histórico:', isHistorico);
     
-    // Se não é histórico, criar pedido no banco
     if (!isHistorico) {
       console.log('Criando pedido no banco...');
       const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
@@ -240,7 +233,6 @@ const ResumoPedido = () => {
         return;
       }
 
-      // Marcar cotação como enviada
       if (marcarComoEnviada) {
         console.log('Marcando cotação como enviada...');
         await marcarComoEnviada();
@@ -311,7 +303,6 @@ const ResumoPedido = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -335,7 +326,6 @@ const ResumoPedido = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {resumoFornecedores.map((resumoFornecedor, index) => (
@@ -346,7 +336,6 @@ const ResumoPedido = () => {
                     <Package className="text-blue-600" />
                     {resumoFornecedor.fornecedor}
                   </CardTitle>
-                  {/* Só mostra botão WhatsApp se não for do histórico */}
                   {!isHistorico && (
                     <Button
                       onClick={() => abrirWhatsApp(resumoFornecedor)}
@@ -386,7 +375,6 @@ const ResumoPedido = () => {
                     );
                   })}
                   
-                  {/* Total do Fornecedor */}
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-semibold text-gray-900">Total geral:</span>

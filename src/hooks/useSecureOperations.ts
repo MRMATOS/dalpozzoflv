@@ -2,7 +2,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { validateInput, sanitizeData } from '@/utils/inputValidation';
 import { useSecureAuth } from './useSecureAuth';
-import { toast } from 'sonner';
 
 // Hook para operações seguras com o banco de dados
 export const useSecureOperations = () => {
@@ -42,20 +41,7 @@ export const useSecureOperations = () => {
 
       console.log('Dados finais para inserção:', dataWithUser);
 
-      // Verificar sessão Supabase
-      const { data: session, error: sessionError } = await supabase.auth.getSession();
-      console.log('Status da sessão Supabase:', {
-        hasSession: !!session.session,
-        userId: session.session?.user?.id,
-        error: sessionError
-      });
-
-      if (!session.session) {
-        console.error('CRÍTICO: Sessão Supabase não encontrada');
-        return { data: null, error: 'Sessão expirada. Faça login novamente.' };
-      }
-
-      // Realizar inserção
+      // Realizar inserção diretamente, sem verificação de sessão Supabase Auth
       console.log(`Executando INSERT em ${table}...`);
       const { data: result, error } = await (supabase as any)
         .from(table)
@@ -131,13 +117,6 @@ export const useSecureOperations = () => {
       const sanitizedData = sanitizeData.object(data);
       console.log('Dados sanitizados para update:', sanitizedData);
 
-      // Verificar sessão Supabase
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        console.error('CRÍTICO: Sessão Supabase não encontrada');
-        return { data: null, error: 'Sessão expirada. Faça login novamente.' };
-      }
-
       console.log(`Executando UPDATE em ${table} para ID ${validatedId}...`);
       const { data: result, error } = await (supabase as any)
         .from(table)
@@ -181,12 +160,6 @@ export const useSecureOperations = () => {
       // Verificar permissão
       if (!hasPermission(requiredRole)) {
         return { success: false, error: 'Permissão insuficiente para deletar' };
-      }
-
-      // Verificar sessão Supabase
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        return { success: false, error: 'Sessão expirada. Faça login novamente.' };
       }
 
       console.log(`Executando DELETE em ${table} para ID ${validatedId}...`);
