@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,6 +29,9 @@ const Requisicoes = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [requisitionItems, setRequisitionItems] = useState<Record<string, RequisitionItem>>({});
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const lastScrollPosition = useRef(0);
+  const productsContainerRef = useRef<HTMLDivElement>(null);
 
   const { data: produtos, isLoading, error } = useQuery({
     queryKey: ['produtos-requisicao'],
@@ -44,12 +47,35 @@ const Requisicoes = () => {
     },
   });
 
+  useEffect(() => {
+    const container = productsContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const currentScrollPosition = container.scrollTop;
+      const scrollDirection = currentScrollPosition > lastScrollPosition.current ? 'down' : 'up';
+      
+      // Mostra o header imediatamente ao rolar para cima em qualquer posição
+      if (scrollDirection === 'up') {
+        setIsHeaderVisible(true);
+      } 
+      // Esconde o header ao rolar para baixo, exceto quando está no topo
+      else if (scrollDirection === 'down' && currentScrollPosition > 10) {
+        setIsHeaderVisible(false);
+      }
+
+      lastScrollPosition.current = currentScrollPosition;
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const createRequisitionMutation = useMutation({
     mutationFn: async (items: RequisitionItem[]) => {
       console.log('Criando requisição para a loja:', profile?.loja);
       console.log('Items da requisição:', items);
 
-      // Primeiro, criar a requisição
       const { data: requisicao, error: requisicaoError } = await supabase
         .from('requisicoes')
         .insert([{
@@ -68,14 +94,13 @@ const Requisicoes = () => {
 
       console.log('Requisição criada:', requisicao);
 
-      // Depois, criar os itens da requisição
       const itensRequisicao = items.map(item => ({
         requisicao_id: requisicao.id,
         produto_id: item.productId,
         quantidade: item.caixas,
         quantidade_calculada: item.quilos,
-        escala: null, // Não usamos mais escalas
-        multiplicador: null // Não usamos mais multiplicadores
+        escala: null,
+        multiplicador: null
       }));
 
       console.log('Inserindo itens da requisição:', itensRequisicao);
@@ -169,9 +194,9 @@ const Requisicoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header - Com comportamento de hide/show no scroll */}
+      <header className={`bg-white shadow-sm border-b transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'} fixed w-full z-20`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -203,10 +228,10 @@ const Requisicoes = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and submit */}
-        <div className="mb-4">
+      {/* Conteúdo principal */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex-1 flex flex-col w-full mt-16">
+        {/* Barra de busca e botão de envio - Fixo abaixo do header */}
+        <div className="mb-4 flex-shrink-0 bg-gray-50 pt-4 pb-2 sticky top-16 z-10">
           <div className="flex justify-between items-center gap-4">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -238,32 +263,32 @@ const Requisicoes = () => {
           </div>
         </div>
 
-        {/* Products Grid */}
-        <div className="flex flex-1 w-full">
-          <div className="flex-1 overflow-y-auto space-y-3">
-            {filteredProducts.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-gray-500">
-                    {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onQuantityChange={handleQuantityChange}
-                />
-              ))
-            )}
-          </div>
+        {/* Lista de produtos - Área com scroll */}
+        <div 
+          ref={productsContainerRef}
+          className="flex-1 overflow-y-auto space-y-3 pb-4"
+        >
+          {filteredProducts.length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-gray-500">
+                  {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onQuantityChange={handleQuantityChange}
+              />
+            ))
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
 
 export default Requisicoes;
-
