@@ -210,54 +210,37 @@ const Estoque = () => {
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
-              </div>
-              <Button variant="outline" onClick={signOut} size="sm">
-                Sair
-              </Button>
-            </div>
+    
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Atualizar Estoque
-          </h2>
-          <p className="text-gray-600">
-            Atualize as quantidades disponíveis dos produtos em sua loja.
-          </p>
-        </div>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* título à esquerda, botão à direita em qualquer tamanho de tela */}
+        <div className="mb-6 flex justify-between items-center">
+          <h2 className="text-2xl font-bold text-gray-900">
+            Atualizar estoque
+           </h2>
+        <Button
+          onClick={salvarEstoque}
+          disabled={saving}
+           className="bg-green-600 hover:bg-green-700 shrink-0"
+        >
+          <Save className="w-4 h-4 mr-2" />
+         {saving ? 'Salvando...' : 'Salvar'}
+       </Button>
+    </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+  {error && (
+    <Alert variant="destructive" className="mb-6">
+      <AlertCircle className="h-4 w-4" />
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
+  )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Produtos da Loja</CardTitle>
-              <CardDescription>
-                Digite a quantidade atual de cada produto em estoque
-              </CardDescription>
-            </div>
-            <Button
-              onClick={salvarEstoque}
-              disabled={saving}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Salvando...' : 'Salvar Estoque'}
-            </Button>
           </CardHeader>
           <CardContent>
             {produtos.length === 0 ? (
@@ -275,9 +258,7 @@ const Estoque = () => {
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          Quantidade:
-                        </label>
+
                         <div className="flex items-center space-x-1">
                           <Button
                             variant="outline"
