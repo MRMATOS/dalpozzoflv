@@ -112,6 +112,54 @@ export const useCotacaoTemporaria = () => {
     }
   }, [cotacao, user, isLoading]);
 
+  // Função para converter tabelaComparativa para cotacao.items
+  const converterTabelaParaCotacao = (tabelaComparativa: ItemTabelaComparativa[]): ItemCotacao[] => {
+    return tabelaComparativa.map(item => {
+      const fornecedores: { [fornecedor: string]: { preco?: number; quantidade?: number; selecionado?: boolean } } = {};
+      
+      Object.keys(item.fornecedores).forEach(fornecedor => {
+        const preco = item.fornecedores[fornecedor];
+        const quantidade = item.quantidades[fornecedor] || 0;
+        const temQuantidade = quantidade > 0;
+        
+        fornecedores[fornecedor] = {
+          preco: preco || undefined,
+          quantidade: quantidade,
+          selecionado: temQuantidade && preco !== null
+        };
+      });
+
+      return {
+        produto: item.produto,
+        tipo: item.tipo,
+        fornecedores
+      };
+    });
+  };
+
+  // Função para converter cotacao.items para tabelaComparativa
+  const converterCotacaoParaTabela = (items: ItemCotacao[]): ItemTabelaComparativa[] => {
+    return items.map(item => {
+      const fornecedores: { [fornecedor: string]: number | null } = {};
+      const quantidades: { [fornecedor: string]: number } = {};
+      const unidadePedido: { [fornecedor: string]: string } = {};
+      
+      Object.entries(item.fornecedores).forEach(([fornecedor, dados]) => {
+        fornecedores[fornecedor] = dados.preco || null;
+        quantidades[fornecedor] = dados.quantidade || 0;
+        unidadePedido[fornecedor] = 'Caixa'; // Valor padrão
+      });
+
+      return {
+        produto: item.produto,
+        tipo: item.tipo || '',
+        fornecedores,
+        quantidades,
+        unidadePedido
+      };
+    });
+  };
+
   const adicionarItem = (item: ItemCotacao) => {
     setCotacao(prev => ({
       ...prev,
@@ -176,6 +224,15 @@ export const useCotacaoTemporaria = () => {
     return totais;
   };
 
+  // Função para sincronizar com tabelaComparativa
+  const sincronizarComTabela = (tabelaComparativa: ItemTabelaComparativa[]) => {
+    const novosItems = converterTabelaParaCotacao(tabelaComparativa);
+    setCotacao(prev => ({
+      ...prev,
+      items: novosItems
+    }));
+  };
+
   // Funções específicas para a página Cotacao
   const salvarCotacao = async (dados: DadosCarregados) => {
     if (!user) return;
@@ -193,6 +250,11 @@ export const useCotacaoTemporaria = () => {
       
       localStorage.setItem(userStorageKeyExtended, JSON.stringify(dadosParaSalvar));
       console.log('Dados estendidos salvos:', dadosParaSalvar);
+      
+      // Sincronizar com a estrutura de cotacao
+      if (dados.tabelaComparativa && dados.tabelaComparativa.length > 0) {
+        sincronizarComTabela(dados.tabelaComparativa);
+      }
       
       // Simular delay de salvamento
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -220,6 +282,11 @@ export const useCotacaoTemporaria = () => {
         setDadosCarregados(dadosParsed);
         setCotacaoRestaurada(new Date());
         console.log('Cotação restaurada:', dadosParsed);
+        
+        // Sincronizar com a estrutura de cotacao
+        if (dadosParsed.tabelaComparativa) {
+          sincronizarComTabela(dadosParsed.tabelaComparativa);
+        }
         
         return dadosParsed;
       }
@@ -266,6 +333,9 @@ export const useCotacaoTemporaria = () => {
     salvarCotacao,
     restaurarUltimaCotacao,
     novaCotacao,
-    marcarComoEnviada
+    marcarComoEnviada,
+    sincronizarComTabela,
+    converterTabelaParaCotacao,
+    converterCotacaoParaTabela
   };
 };

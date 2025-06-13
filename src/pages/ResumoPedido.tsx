@@ -14,14 +14,18 @@ const ResumoPedido = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { cotacao, limparCotacao } = useCotacaoTemporaria();
+  const { cotacao, limparCotacao, obterItensSelecionados, obterTotalPorFornecedor } = useCotacaoTemporaria();
   const { fornecedores } = useFornecedores();
   const [enviandoPedidos, setEnviandoPedidos] = useState<{ [fornecedor: string]: boolean }>({});
 
+  // Obter dados por fornecedor a partir do hook
   const obterDadosPorFornecedor = () => {
     const dadosPorFornecedor: { [fornecedor: string]: any[] } = {};
     
-    cotacao.items.forEach(item => {
+    const itensSelecionados = obterItensSelecionados();
+    console.log('Itens selecionados no resumo:', itensSelecionados);
+    
+    itensSelecionados.forEach(item => {
       Object.entries(item.fornecedores).forEach(([fornecedor, dados]) => {
         if (dados.selecionado && dados.preco && dados.quantidade) {
           if (!dadosPorFornecedor[fornecedor]) {
@@ -38,6 +42,7 @@ const ResumoPedido = () => {
       });
     });
     
+    console.log('Dados por fornecedor:', dadosPorFornecedor);
     return dadosPorFornecedor;
   };
 
@@ -176,6 +181,8 @@ const ResumoPedido = () => {
   const dadosPorFornecedor = obterDadosPorFornecedor();
   const fornecedoresComPedidos = Object.keys(dadosPorFornecedor);
 
+  console.log('Fornecedores com pedidos:', fornecedoresComPedidos);
+
   if (fornecedoresComPedidos.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -204,7 +211,7 @@ const ResumoPedido = () => {
               <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhum item selecionado</h2>
               <p className="text-gray-500 mb-4">
-                Você precisa selecionar itens na cotação antes de gerar pedidos.
+                Você precisa definir quantidades na cotação e ter produtos com quantidades maior que zero.
               </p>
               <Button onClick={() => navigate('/cotacao')}>
                 Voltar para Cotação

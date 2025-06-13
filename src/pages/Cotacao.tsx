@@ -56,7 +56,10 @@ const Cotacao = () => {
     cotacaoRestaurada,
     salvandoAutomaticamente,
     isLoadingCotacao,
-    dadosCarregados
+    dadosCarregados,
+    sincronizarComTabela,
+    converterTabelaParaCotacao,
+    obterItensSelecionados
   } = useCotacaoTemporaria();
 
   // Dicionário estruturado hierarquicamente (mantendo exato como o original)
@@ -396,9 +399,9 @@ const Cotacao = () => {
     buscarProdutos();
   }, []);
 
-  // Auto-salvar quando dados mudarem (apenas após inicialização)
+  // Auto-salvar quando dados mudarem e sincronizar
   useEffect(() => {
-    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao) {
+    if (dadosInicializados && tabelaComparativa.length > 0 && !isLoadingCotacao) {
       const timeoutId = setTimeout(() => {
         console.log('Auto-salvando cotação...');
         salvarCotacao({
@@ -406,11 +409,14 @@ const Cotacao = () => {
           tabelaComparativa,
           fornecedoresProcessados
         });
+        
+        // Sincronizar com hook
+        sincronizarComTabela(tabelaComparativa);
       }, 2000);
 
       return () => clearTimeout(timeoutId);
     }
-  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados, dadosInicializados, isLoadingCotacao]);
+  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, fornecedoresProcessados, dadosInicializados, isLoadingCotacao, sincronizarComTabela]);
 
   // Filtrar produtos baseado na busca
   const produtosFiltrados = tabelaComparativa.filter(item => 
@@ -837,16 +843,16 @@ const Cotacao = () => {
       return;
     }
 
-    console.log('Navegando para resumo-pedido com dados:', {
-      tabelaComparativa
-    });
+    // Sincronizar dados antes de navegar
+    console.log('Sincronizando tabela antes de navegar...');
+    sincronizarComTabela(tabelaComparativa);
 
-    // Remove a função do estado de navegação para evitar DataCloneError
-    navigate('/resumo-pedido', {
-      state: { 
-        tabelaComparativa
-      }
-    });
+    // Verificar se há itens selecionados no hook
+    const itensSelecionados = obterItensSelecionados();
+    console.log('Itens selecionados no hook:', itensSelecionados);
+
+    console.log('Navegando para resumo-pedido');
+    navigate('/resumo-pedido');
   };
 
   // Mostrar loading enquanto carrega dados
