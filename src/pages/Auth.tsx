@@ -96,10 +96,6 @@ const Auth = () => {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
-            <div className="mt-4 text-xs text-gray-500">
-              <p>Use o código de acesso cadastrado na tabela 'usuarios'</p>
-            </div>
           </CardContent>
         </Card>
       </div>
