@@ -8,7 +8,7 @@ import { ProdutoExtraido, ItemTabelaComparativa } from '@/utils/productExtractio
 interface CotacaoData {
   produtosExtraidos: ProdutoExtraido[];
   tabelaComparativa: ItemTabelaComparativa[];
-  fornecedoresProcessados: Set<string>;
+  fornecedoresProcessados?: Set<string>; // Tornar opcional, pois não vem do DB
 }
 
 export const useCotacaoTemporaria = () => {
@@ -54,7 +54,7 @@ export const useCotacaoTemporaria = () => {
           const dadosRestaurados = {
             produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
             tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
-            fornecedoresProcessados: new Set<string>()
+            // O fornecedoresProcessados será reconstruído no hook useCotacao
           };
           
           setDadosCarregados(dadosRestaurados);
@@ -68,7 +68,6 @@ export const useCotacaoTemporaria = () => {
           setDadosCarregados({
             produtosExtraidos: [],
             tabelaComparativa: [],
-            fornecedoresProcessados: new Set<string>()
           });
         }
       } catch (error) {
@@ -76,7 +75,6 @@ export const useCotacaoTemporaria = () => {
         setDadosCarregados({
           produtosExtraidos: [],
           tabelaComparativa: [],
-          fornecedoresProcessados: new Set<string>()
         });
       } finally {
         setIsLoadingCotacao(false);
@@ -96,17 +94,19 @@ export const useCotacaoTemporaria = () => {
     setSalvandoAutomaticamente(true);
 
     try {
-      const dadosParaSalvar = {
-        produtos_extraidos: JSON.parse(JSON.stringify(dadosCotacao.produtosExtraidos)),
-        tabela_comparativa: JSON.parse(JSON.stringify(dadosCotacao.tabelaComparativa)),
+      // Omitimos fornecedoresProcessados antes de salvar
+      const { fornecedoresProcessados, ...dadosParaSalvar } = dadosCotacao;
+      const dadosParaSalvarJSON = {
+        produtos_extraidos: JSON.parse(JSON.stringify(dadosParaSalvar.produtosExtraidos)),
+        tabela_comparativa: JSON.parse(JSON.stringify(dadosParaSalvar.tabelaComparativa)),
         data: new Date().toISOString()
       };
 
-      console.log('Dados preparados para salvar:', dadosParaSalvar);
+      console.log('Dados preparados para salvar:', dadosParaSalvarJSON);
 
       if (cotacaoId) {
         console.log('Atualizando cotação existente, ID:', cotacaoId);
-        const { error } = await secureUpdate('cotacoes', cotacaoId, dadosParaSalvar);
+        const { error } = await secureUpdate('cotacoes', cotacaoId, dadosParaSalvarJSON);
         
         if (error) {
           console.error('Erro ao atualizar cotação:', error);
@@ -115,7 +115,7 @@ export const useCotacaoTemporaria = () => {
         console.log('Cotação atualizada com sucesso');
       } else {
         console.log('Criando nova cotação');
-        const { data, error } = await secureInsert('cotacoes', dadosParaSalvar);
+        const { data, error } = await secureInsert('cotacoes', dadosParaSalvarJSON);
         
         if (error) {
           console.error('Erro ao criar cotação:', error);
@@ -132,7 +132,7 @@ export const useCotacaoTemporaria = () => {
   }, [user?.id, cotacaoId, salvandoAutomaticamente, secureInsert, secureUpdate, isAuthenticated]);
 
   // Restaurar última cotação enviada
-  const restaurarUltimaCotacao = useCallback(async (): Promise<CotacaoData | null> => {
+  const restaurarUltimaCotacao = useCallback(async (): Promise<Omit<CotacaoData, 'fornecedoresProcessados'>> | null> => {
     if (!isAuthenticated || !user?.id) return null;
 
     try {
@@ -157,7 +157,6 @@ export const useCotacaoTemporaria = () => {
         return {
           produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
           tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
-          fornecedoresProcessados: new Set<string>()
         };
       }
 
@@ -177,7 +176,6 @@ export const useCotacaoTemporaria = () => {
     const dadosLimpos = {
       produtosExtraidos: [] as ProdutoExtraido[],
       tabelaComparativa: [] as ItemTabelaComparativa[],
-      fornecedoresProcessados: new Set<string>()
     };
     setDadosCarregados(dadosLimpos);
     return dadosLimpos;
