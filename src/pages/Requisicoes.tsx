@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -169,9 +170,9 @@ const Requisicoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header - Fixed */}
+      <header className="bg-white shadow-sm border-b flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -203,65 +204,71 @@ const Requisicoes = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Send Controls - Same Line */}
-        <div className="mb-4 flex gap-3 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Buscar produto..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Button 
-            onClick={handleSubmitRequisition}
-            disabled={totalItems === 0 || createRequisitionMutation.isPending}
-            className="bg-green-600 hover:bg-green-700 flex-shrink-0"
-          >
-            {createRequisitionMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Send className="h-4 w-4 mr-2" />
-            )}
-            Enviar
-          </Button>
-        </div>
-
-        {/* Summary */}
-        {totalItems > 0 && (
-          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="text-sm text-blue-800">
-              <span className="font-medium">{totalItems} produtos selecionados</span>
-              <span className="ml-4">{totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</span>
-            </div>
-          </div>
-        )}
-
-        {/* Products Grid */}
-        <div className="space-y-3">
-          {filteredProducts.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuantityChange={handleQuantityChange}
+      {/* Fixed Controls Section */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Search and Send Controls - Same Line */}
+          <div className="mb-4 flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar produto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
-            ))
+            </div>
+            
+            <Button 
+              onClick={handleSubmitRequisition}
+              disabled={totalItems === 0 || createRequisitionMutation.isPending}
+              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+            >
+              {createRequisitionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Enviar
+            </Button>
+          </div>
+
+          {/* Summary - Fixed */}
+          {totalItems > 0 && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-sm text-blue-800">
+                <span className="font-medium">{totalItems} produtos selecionados</span>
+                <span className="ml-4">{totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</span>
+              </div>
+            </div>
           )}
         </div>
-      </main>
+      </div>
+
+      {/* Scrollable Products Section */}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-3">
+            {filteredProducts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-500">
+                    {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onQuantityChange={handleQuantityChange}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
