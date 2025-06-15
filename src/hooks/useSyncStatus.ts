@@ -37,12 +37,13 @@ export const useSyncStatus = () => {
   }, [updateSyncStatus]);
 
   const failSync = useCallback((error: string) => {
-    updateSyncStatus({ 
+    setSyncStatus(prev => ({ 
+      ...prev,
       isSyncing: false, 
       syncError: error,
-      retryCount: (prev) => prev + 1
-    });
-  }, [updateSyncStatus]);
+      retryCount: prev.retryCount + 1
+    }));
+  }, []);
 
   const markUnsavedChanges = useCallback(() => {
     updateSyncStatus({ hasUnsavedChanges: true });
