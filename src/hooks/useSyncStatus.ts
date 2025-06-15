@@ -40,7 +40,7 @@ export const useSyncStatus = () => {
     updateSyncStatus({ 
       isSyncing: false, 
       syncError: error,
-      retryCount: prev => prev.retryCount + 1
+      retryCount: (prev) => prev + 1
     });
   }, [updateSyncStatus]);
 

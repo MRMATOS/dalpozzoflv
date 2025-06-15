@@ -61,31 +61,6 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = ({
             />
           </div>
           
-          <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
-            {lojasComRequisicoes.map(loja => {
-              const percentual = onCalcularPercentual(loja);
-              const corFundo = percentual >= 80 ? 'bg-green-100' : percentual >= 50 ? 'bg-yellow-100' : 'bg-red-100';
-              const corTexto = percentual >= 80 ? 'text-green-800' : percentual >= 50 ? 'text-yellow-800' : 'text-red-800';
-              
-              return (
-                <div key={loja} className={`px-3 py-2 rounded-lg border ${corFundo} ${corTexto} flex-1 min-w-[80px] sm:min-w-[100px]`}>
-                  <div className="flex justify-between items-center text-xs sm:text-sm font-medium">
-                    <span>{loja}</span>
-                    <span>{percentual}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                    <div 
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        percentual >= 80 ? 'bg-green-500' : percentual >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${percentual}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          
           <CotacaoActionButtons
             onRestaurarCotacao={onRestaurar}
             onNovaCotacao={onNova}
