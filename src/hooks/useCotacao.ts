@@ -1,10 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { extrairProdutos } from '@/services/cotacao/extractionService';
-import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
+import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
 import { ProdutoExtraido, ItemTabelaComparativa } from '@/utils/productExtraction/types';
-import { dicionarioProdutos } from '@/utils/productExtraction/dicionarioProdutos';
 import { toast } from 'sonner';
+import { useComparisonTable } from './useComparisonTable';
 
 // Tipos para as props do hook
 interface UseCotacaoProps {
@@ -22,14 +21,20 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     isLoadingCotacao,
     cotacaoRestaurada,
     salvandoAutomaticamente
-  } = useCotacaoTemporaria();
+  } = useCotacaoPersistence();
 
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
-  const [tabelaComparativa, setTabelaComparativa] = useState<ItemTabelaComparativa[]>([]);
   const [fornecedoresProcessados, setFornecedoresProcessados] = useState<Set<string>>(new Set());
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
   const [mensagemAtual, setMensagemAtual] = useState('');
   const [dadosInicializados, setDadosInicializados] = useState(false);
+
+  const {
+    tabelaComparativa,
+    setTabelaComparativa,
+    atualizarQuantidade,
+    atualizarUnidadePedido
+  } = useComparisonTable({ produtosExtraidos, produtosDB });
 
   // Inicializar dados quando carregados do hook de persistência
   useEffect(() => {
@@ -39,7 +44,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       setFornecedoresProcessados(new Set(dadosCarregados.produtosExtraidos.map(p => p.fornecedor)));
       setDadosInicializados(true);
     }
-  }, [isLoadingCotacao, dadosCarregados, dadosInicializados]);
+  }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa]);
 
   // Auto-salvar
   useEffect(() => {
@@ -53,53 +58,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       }, 2000);
       return () => clearTimeout(timeoutId);
     }
-  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, dadosInicializados, isLoadingCotacao]);
-
-  const obterUnidadePadraoProduto = useCallback((produto: string, tipo: string): string => {
-    const produtoExato = produtosDB.find(p => 
-      p.produto?.toLowerCase().includes(produto.toLowerCase()) &&
-      (p.nome_variacao?.toLowerCase() === tipo.toLowerCase() || 
-       p.nome_base?.toLowerCase() === tipo.toLowerCase())
-    );
-    if (produtoExato && produtoExato.unidade) return produtoExato.unidade;
-
-    const produtoBase = produtosDB.find(p => 
-      p.produto?.toLowerCase().includes(produto.toLowerCase()) ||
-      p.nome_base?.toLowerCase().includes(produto.toLowerCase())
-    );
-    if (produtoBase && produtoBase.unidade) return produtoBase.unidade;
-    
-    return 'Caixa';
-  }, [produtosDB]);
-
-  const criarTabelaComparativa = useCallback((produtos: ProdutoExtraido[], fornecedoresList: string[]) => {
-    const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
-
-    produtos.forEach(produto => {
-      const chave = `${produto.produto}_${produto.tipo}`;
-      if (!produtosAgrupados[chave]) {
-        const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
-        produtosAgrupados[chave] = {
-          produto: produto.produto,
-          tipo: produto.tipo,
-          fornecedores: {},
-          quantidades: {},
-          unidadePedido: {}
-        };
-        fornecedoresList.forEach(f => {
-          produtosAgrupados[chave].fornecedores[f] = null;
-          produtosAgrupados[chave].quantidades[f] = 0;
-          produtosAgrupados[chave].unidadePedido[f] = unidadePadrao;
-        });
-      }
-      produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
-    });
-
-    const tabela = Object.values(produtosAgrupados).sort((a, b) => 
-      a.produto.localeCompare(b.produto) || a.tipo.localeCompare(b.tipo)
-    );
-    setTabelaComparativa(tabela);
-  }, [obterUnidadePadraoProduto]);
+  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, dadosInicializados, isLoadingCotacao, fornecedoresProcessados]);
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
     const fornecedor = fornecedores.find(f => f.id === fornecedorId);
@@ -123,10 +82,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     novosProcessados.delete(nomeFornecedor);
     setFornecedoresProcessados(novosProcessados);
 
-    const novosFornecedores = [...new Set(novosExtraidos.map(p => p.fornecedor))];
-    criarTabelaComparativa(novosExtraidos, novosFornecedores);
     toast.success(`Produtos de ${nomeFornecedor} removidos.`);
-  }, [produtosExtraidos, fornecedoresProcessados, criarTabelaComparativa]);
+  }, [produtosExtraidos, fornecedoresProcessados]);
 
   const processarMensagem = useCallback(() => {
     if (!fornecedorSelecionado || !mensagemAtual.trim()) {
@@ -141,15 +98,13 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
       setProdutosExtraidos(novosExtraidos);
       setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
-      const fornecedoresComProdutos = [...new Set(novosExtraidos.map(p => p.fornecedor))];
-      criarTabelaComparativa(novosExtraidos, fornecedoresComProdutos);
       setFornecedorSelecionado(null);
       setMensagemAtual('');
       toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
     } else {
       toast.error('Nenhum produto foi encontrado na mensagem.');
     }
-  }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos, criarTabelaComparativa]);
+  }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos]);
   
   const handleRestaurarCotacao = async () => {
     const dadosRestaurados = await restaurarUltimaCotacao();
@@ -165,18 +120,6 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     setProdutosExtraidos(dadosLimpos.produtosExtraidos);
     setTabelaComparativa(dadosLimpos.tabelaComparativa);
     setFornecedoresProcessados(new Set());
-  };
-
-  const atualizarQuantidade = (produtoIndex: number, fornecedor: string, quantidade: string) => {
-    const novaTabela = [...tabelaComparativa];
-    novaTabela[produtoIndex].quantidades[fornecedor] = parseInt(quantidade) || 0;
-    setTabelaComparativa(novaTabela);
-  };
-
-  const atualizarUnidadePedido = (produtoIndex: number, fornecedor: string, unidade: string) => {
-    const novaTabela = [...tabelaComparativa];
-    novaTabela[produtoIndex].unidadePedido[fornecedor] = unidade;
-    setTabelaComparativa(novaTabela);
   };
   
   const calcularPercentualSuprimento = (loja: string) => {
@@ -221,4 +164,3 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     calcularPercentualSuprimento,
   };
 };
-
