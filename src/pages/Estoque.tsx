@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -193,9 +193,9 @@ const Estoque = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      {/* Header - Fixed */}
+      <header className="bg-white shadow-sm border-b flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -212,137 +212,110 @@ const Estoque = () => {
                 <Package className="text-white text-sm" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Controle de Estoque</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Estoque</h1>
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
-              </div>
-              <Button variant="outline" onClick={signOut} size="sm">
-                Sair
-              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Atualizar Estoque
-          </h2>
-          <p className="text-gray-600">
-            Atualize as quantidades disponíveis dos produtos em sua loja.
-          </p>
-        </div>
-
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Buscar produto..."
-              value={buscaProduto}
-              onChange={(e) => setBuscaProduto(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Produtos da Loja</CardTitle>
-              <CardDescription>
-                Digite a quantidade atual de cada produto em estoque
-              </CardDescription>
+      {/* Fixed Controls Section */}
+      <div className="bg-white border-b flex-shrink-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar produto..."
+                value={buscaProduto}
+                onChange={(e) => setBuscaProduto(e.target.value)}
+                className="pl-10"
+              />
             </div>
+          </div>
+
+          {error && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-900">Produtos</h2>
             <Button
               onClick={salvarEstoque}
               disabled={saving}
               className="bg-green-600 hover:bg-green-700"
             >
               <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Salvando...' : 'Salvar Estoque'}
+              {saving ? 'Salvando...' : 'Salvar'}
             </Button>
-          </CardHeader>
-          <CardContent>
-            {produtosFiltrados.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">
-                  {buscaProduto
-                    ? 'Nenhum produto encontrado para sua busca.'
-                    : 'Nenhum produto cadastrado'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {produtosFiltrados.map(produto => (
-                  <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{produto.produto || 'Produto sem nome'}</h3>
-                      <p className="text-sm text-gray-500">Unidade: {produto.unidade || 'N/D'}</p>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          Quantidade:
-                        </label>
-                        <div className="flex items-center space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => decrementarQuantidade(produto.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.1"
-                            value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                            onChange={(e) => {
-                              const valor = e.target.value;
-                              if (valor === '') {
-                                atualizarQuantidade(produto.id, 0);
-                              } else {
-                                atualizarQuantidade(produto.id, parseFloat(valor) || 0);
-                              }
-                            }}
-                            placeholder="0"
-                            className="w-20 text-center"
-                          />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => incrementarQuantidade(produto.id)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scrollable Products Section */}
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {produtosFiltrados.length === 0 ? (
+            <div className="text-center py-8">
+              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">
+                {buscaProduto
+                  ? 'Nenhum produto encontrado para sua busca.'
+                  : 'Nenhum produto cadastrado'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {produtosFiltrados.map(produto => (
+                <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900">{produto.produto || 'Produto sem nome'}</h3>
+                    <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </main>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => decrementarQuantidade(produto.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                      onChange={(e) => {
+                        const valor = e.target.value;
+                        if (valor === '') {
+                          atualizarQuantidade(produto.id, 0);
+                        } else {
+                          atualizarQuantidade(produto.id, parseFloat(valor) || 0);
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-20 text-center"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => incrementarQuantidade(produto.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
