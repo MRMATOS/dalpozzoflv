@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -124,8 +123,8 @@ const Estoque = () => {
   const salvarEstoque = async () => {
     if (!profile?.loja) {
       toast({
-        title: "Erro",
-        description: "Informação da loja não encontrada.",
+        title: "Erro de Perfil",
+        description: "Informação da loja não encontrada no seu perfil. Não é possível salvar.",
         variant: "destructive"
       });
       return;
@@ -133,7 +132,7 @@ const Estoque = () => {
 
     try {
       setSaving(true);
-      console.log('Salvando estoque para a loja:', profile.loja);
+      console.log(`Iniciando salvamento de estoque para a loja: ${profile.loja}`);
 
       // Preparar dados para upsert
       const dadosEstoque = produtos.map(produto => ({
@@ -143,7 +142,8 @@ const Estoque = () => {
         atualizado_em: new Date().toISOString()
       }));
 
-      console.log('Dados para salvar:', dadosEstoque);
+      console.log(`Preparando para salvar ${dadosEstoque.length} registros de estoque.`);
+      console.log('Dados para salvar (amostra):', dadosEstoque.slice(0, 5));
 
       // Fazer upsert (insert ou update)
       const { error } = await supabase
@@ -153,26 +153,27 @@ const Estoque = () => {
         });
 
       if (error) {
-        console.error('Erro ao salvar estoque:', error);
+        console.error('Erro detalhado do Supabase ao salvar estoque:', error);
         toast({
           title: "Erro ao salvar",
-          description: "Não foi possível salvar o estoque. Tente novamente.",
+          description: `Não foi possível salvar o estoque: ${error.message}. Verifique o console para mais detalhes.`,
           variant: "destructive"
         });
         return;
       }
 
       toast({
-        title: "Estoque salvo",
+        title: "Estoque salvo!",
         description: "O estoque foi atualizado com sucesso!"
       });
 
       console.log('Estoque salvo com sucesso para a loja:', profile.loja);
-    } catch (error) {
-      console.error('Erro geral ao salvar:', error);
+    } catch (catchedError) {
+      console.error('Erro geral (catch) ao salvar estoque:', catchedError);
+      const errorMessage = catchedError instanceof Error ? catchedError.message : "Erro desconhecido";
       toast({
         title: "Erro interno",
-        description: "Erro interno ao salvar estoque.",
+        description: `Ocorreu um erro inesperado: ${errorMessage}`,
         variant: "destructive"
       });
     } finally {
