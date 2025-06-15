@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
@@ -37,6 +38,24 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarUnidadePedido
   } = useComparisonTable({ produtosExtraidos, produtosDB });
 
+  // Função para remover produtos de um fornecedor (definida antes de selecionarFornecedor)
+  const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
+    try {
+      console.log('Removendo produtos do fornecedor:', nomeFornecedor);
+      const novosExtraidos = produtosExtraidos.filter(p => p.fornecedor !== nomeFornecedor);
+      setProdutosExtraidos(novosExtraidos);
+
+      const novosProcessados = new Set(fornecedoresProcessados);
+      novosProcessados.delete(nomeFornecedor);
+      setFornecedoresProcessados(novosProcessados);
+
+      toast.success(`Produtos de ${nomeFornecedor} removidos.`);
+    } catch (error) {
+      console.error('Erro ao remover produtos do fornecedor:', error);
+      toast.error('Erro ao remover produtos do fornecedor');
+    }
+  }, [produtosExtraidos, fornecedoresProcessados]);
+
   // Inicializar dados quando carregados do hook de persistência
   useEffect(() => {
     if (!isLoadingCotacao && dadosCarregados && !dadosInicializados) {
@@ -62,29 +81,27 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   }, [produtosExtraidos, tabelaComparativa, salvarCotacao, dadosInicializados, isLoadingCotacao, fornecedoresProcessados]);
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
-    const fornecedor = fornecedores.find(f => f.id === fornecedorId);
-    if (!fornecedor) return;
-
-    if (fornecedoresProcessados.has(fornecedor.nome)) {
-      if (window.confirm(`Deseja apagar os produtos do ${fornecedor.nome}? Esta ação não pode ser desfeita.`)) {
-        removerProdutosFornecedor(fornecedor.nome);
+    try {
+      console.log('Selecionando fornecedor:', fornecedorId);
+      const fornecedor = fornecedores.find(f => f.id === fornecedorId);
+      if (!fornecedor) {
+        console.error('Fornecedor não encontrado:', fornecedorId);
+        return;
       }
-      return;
+
+      if (fornecedoresProcessados.has(fornecedor.nome)) {
+        if (window.confirm(`Deseja apagar os produtos do ${fornecedor.nome}? Esta ação não pode ser desfeita.`)) {
+          removerProdutosFornecedor(fornecedor.nome);
+        }
+        return;
+      }
+      setFornecedorSelecionado(fornecedorId);
+      setMensagemAtual('');
+    } catch (error) {
+      console.error('Erro ao selecionar fornecedor:', error);
+      toast.error('Erro ao selecionar fornecedor');
     }
-    setFornecedorSelecionado(fornecedorId);
-    setMensagemAtual('');
-  }, [fornecedores, fornecedoresProcessados]);
-
-  const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
-    const novosExtraidos = produtosExtraidos.filter(p => p.fornecedor !== nomeFornecedor);
-    setProdutosExtraidos(novosExtraidos);
-
-    const novosProcessados = new Set(fornecedoresProcessados);
-    novosProcessados.delete(nomeFornecedor);
-    setFornecedoresProcessados(novosProcessados);
-
-    toast.success(`Produtos de ${nomeFornecedor} removidos.`);
-  }, [produtosExtraidos, fornecedoresProcessados]);
+  }, [fornecedores, fornecedoresProcessados, removerProdutosFornecedor]);
 
   const processarMensagem = useCallback(() => {
     if (!fornecedorSelecionado || !mensagemAtual.trim()) {
