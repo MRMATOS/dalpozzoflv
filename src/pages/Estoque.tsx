@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Produto {
   id: string;
-  produto: string;
-  unidade: string;
+  produto: string | null;
+  unidade: string | null;
   quantidade_atual?: number;
 }
 
@@ -86,7 +87,7 @@ const Estoque = () => {
   }, [profile]);
 
   const produtosFiltrados = produtos.filter(p =>
-    p.produto.toLowerCase().includes(buscaProduto.toLowerCase())
+    p.produto?.toLowerCase().includes(buscaProduto.toLowerCase())
   );
 
   // Atualizar quantidade de um produto
@@ -290,8 +291,8 @@ const Estoque = () => {
                 {produtosFiltrados.map(produto => (
                   <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{produto.produto}</h3>
-                      <p className="text-sm text-gray-500">Unidade: {produto.unidade}</p>
+                      <h3 className="font-medium text-gray-900">{produto.produto || 'Produto sem nome'}</h3>
+                      <p className="text-sm text-gray-500">Unidade: {produto.unidade || 'N/D'}</p>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-2">
