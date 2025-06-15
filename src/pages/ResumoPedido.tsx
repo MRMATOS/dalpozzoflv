@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Package, Loader2 } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
@@ -39,6 +39,7 @@ const ResumoPedido = () => {
   const { user } = useAuth();
   const { marcarComoEnviada } = useCotacaoPersistence();
   const { secureInsert } = useSecureOperations();
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState<string | null>(null);
   
   // Receber os dados da tabela comparativa
   const tabelaComparativa: ItemTabelaComparativa[] = location.state?.tabelaComparativa || [];
@@ -60,6 +61,35 @@ const ResumoPedido = () => {
     };
 
     return pluralizacao[unidade] || unidade;
+  };
+
+  // Função para formatar telefone brasileiro
+  const formatarTelefoneBrasil = (telefone: string): string => {
+    // Remove todos os caracteres não numéricos
+    const apenasNumeros = telefone.replace(/\D/g, '');
+    
+    // Se já tem código do país (55), retorna como está
+    if (apenasNumeros.startsWith('55') && apenasNumeros.length >= 12) {
+      return apenasNumeros;
+    }
+    
+    // Se é um número brasileiro sem código do país, adiciona 55
+    if (apenasNumeros.length >= 10) {
+      return '55' + apenasNumeros;
+    }
+    
+    throw new Error('Telefone inválido');
+  };
+
+  // Função para validar telefone
+  const validarTelefone = (telefone: string): boolean => {
+    try {
+      const telefoneFormatado = formatarTelefoneBrasil(telefone);
+      // Telefone brasileiro deve ter 13 dígitos (55 + DDD + número)
+      return telefoneFormatado.length >= 12 && telefoneFormatado.length <= 14;
+    } catch {
+      return false;
+    }
   };
 
   // Processar dados para criar resumo por fornecedor
@@ -99,19 +129,18 @@ const ResumoPedido = () => {
   }, [tabelaComparativa]);
 
   const gerarMensagemWhatsApp = (resumoFornecedor: ResumoFornecedor) => {
-    let mensagem = `Segue o pedido de compra com os itens selecionados:\n\n`;
+    let mensagem = `🛒 *Pedido de Compra*\n\n`;
 
-    resumoFornecedor.itens.forEach(item => {
+    resumoFornecedor.itens.forEach((item, index) => {
       const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
       
-      mensagem += `Produto: ${item.produto}\n`;
-      mensagem += `Tipo: ${item.tipo}\n`;
-      mensagem += `Quantidade: ${item.quantidade} ${unidadePlural}\n`;
-      mensagem += `Preço unitário: R$ ${item.preco.toFixed(2)}\n`;
-      mensagem += `Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
+      mensagem += `*${index + 1}.* ${item.produto} - ${item.tipo}\n`;
+      mensagem += `   ${item.quantidade} ${unidadePlural} × R$ ${item.preco.toFixed(2)}\n`;
+      mensagem += `   Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
     });
 
-    mensagem += `Total geral: R$ ${resumoFornecedor.total.toFixed(2)}`;
+    mensagem += `💰 *Total: R$ ${resumoFornecedor.total.toFixed(2)}*\n\n`;
+    mensagem += `Obrigado! 🙏`;
 
     return encodeURIComponent(mensagem);
   };
@@ -223,40 +252,58 @@ const ResumoPedido = () => {
 
   const abrirWhatsApp = async (resumoFornecedor: ResumoFornecedor) => {
     console.log('=== INÍCIO PROCESSO WHATSAPP ===');
-    console.log('Is histórico:', isHistorico);
+    setLoadingWhatsApp(resumoFornecedor.fornecedor);
     
-    if (!isHistorico) {
-      console.log('Criando pedido no banco...');
-      const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
-      if (!pedidoCriado) {
-        console.log('Falha ao criar pedido, interrompendo processo');
+    try {
+      const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
+      
+      if (!fornecedorData?.telefone) {
+        toast.error('Telefone do fornecedor não encontrado!');
         return;
       }
 
-      if (marcarComoEnviada) {
-        console.log('Marcando cotação como enviada...');
-        await marcarComoEnviada();
+      // Validar telefone antes de continuar
+      if (!validarTelefone(fornecedorData.telefone)) {
+        toast.error('Telefone do fornecedor está em formato inválido!');
+        return;
       }
-    }
 
-    const fornecedorData = fornecedores.find(f => f.nome === resumoFornecedor.fornecedor);
-    
-    if (!fornecedorData?.telefone) {
-      toast.error('Telefone do fornecedor não encontrado!');
-      return;
-    }
+      if (!isHistorico) {
+        console.log('Criando pedido no banco...');
+        const pedidoCriado = await criarPedidoNoBanco(resumoFornecedor);
+        if (!pedidoCriado) {
+          console.log('Falha ao criar pedido, interrompendo processo');
+          return;
+        }
 
-    const mensagem = gerarMensagemWhatsApp(resumoFornecedor);
-    const telefone = fornecedorData.telefone.replace(/\D/g, '');
-    const link = `https://api.whatsapp.com/send?phone=${telefone}&text=${mensagem}`;
-    
-    window.open(link, '_blank');
-    
-    if (!isHistorico) {
-      toast.success('Pedido salvo e enviado com sucesso!');
+        if (marcarComoEnviada) {
+          console.log('Marcando cotação como enviada...');
+          await marcarComoEnviada();
+        }
+      }
+
+      const telefoneFormatado = formatarTelefoneBrasil(fornecedorData.telefone);
+      const mensagem = gerarMensagemWhatsApp(resumoFornecedor);
+      
+      // Usar wa.me que é mais confiável
+      const link = `https://wa.me/${telefoneFormatado}?text=${mensagem}`;
+      
+      console.log('Abrindo WhatsApp com telefone:', telefoneFormatado);
+      window.open(link, '_blank');
+      
+      if (!isHistorico) {
+        toast.success('Pedido salvo e enviado com sucesso!');
+      } else {
+        toast.success('Mensagem do WhatsApp gerada!');
+      }
+      
+    } catch (error) {
+      console.error('Erro ao abrir WhatsApp:', error);
+      toast.error('Erro ao gerar mensagem do WhatsApp');
+    } finally {
+      setLoadingWhatsApp(null);
+      console.log('=== PROCESSO WHATSAPP CONCLUÍDO ===');
     }
-    
-    console.log('=== PROCESSO WHATSAPP CONCLUÍDO ===');
   };
 
   if (resumoFornecedores.length === 0) {
@@ -339,10 +386,20 @@ const ResumoPedido = () => {
                   {!isHistorico && (
                     <Button
                       onClick={() => abrirWhatsApp(resumoFornecedor)}
-                      className="bg-green-600 hover:bg-green-700"
+                      disabled={loadingWhatsApp === resumoFornecedor.fornecedor}
+                      className="bg-green-600 hover:bg-green-700 disabled:opacity-50"
                     >
-                      <MessageCircle className="w-4 h-4 mr-2" />
-                      Gerar pedido por WhatsApp
+                      {loadingWhatsApp === resumoFornecedor.fornecedor ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Gerando...
+                        </>
+                      ) : (
+                        <>
+                          <MessageCircle className="w-4 h-4 mr-2" />
+                          Gerar pedido por WhatsApp
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
