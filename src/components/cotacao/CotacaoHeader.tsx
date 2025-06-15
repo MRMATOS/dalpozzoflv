@@ -2,7 +2,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
+import SyncStatusIndicator from './SyncStatusIndicator';
+import { SyncStatus } from '@/hooks/useSyncStatus';
 
 interface Profile {
   nome?: string | null;
@@ -10,10 +12,17 @@ interface Profile {
 
 interface CotacaoHeaderProps {
   profile: Profile | null;
-  salvandoAutomaticamente: boolean;
+  syncStatus: SyncStatus;
+  formatLastSyncTime: () => string;
+  onRetrySync?: () => void;
 }
 
-const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({ profile, salvandoAutomaticamente }) => {
+const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({ 
+  profile, 
+  syncStatus, 
+  formatLastSyncTime, 
+  onRetrySync 
+}) => {
   const navigate = useNavigate();
 
   return (
@@ -29,12 +38,11 @@ const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({ profile, salvandoAutomati
               <h1 className="text-lg font-semibold text-gray-900">Nova Cotação</h1>
               <p className="text-sm text-gray-500">Sistema FLV</p>
             </div>
-            {salvandoAutomaticamente && (
-              <div className="flex items-center text-xs text-blue-600">
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                Salvando...
-              </div>
-            )}
+            <SyncStatusIndicator
+              syncStatus={syncStatus}
+              formatLastSyncTime={formatLastSyncTime}
+              onRetry={onRetrySync}
+            />
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -42,7 +43,8 @@ const Cotacao = () => {
     fornecedorSelecionado,
     mensagemAtual,
     cotacaoRestaurada,
-    salvandoAutomaticamente,
+    syncStatus,
+    isProcessing,
     setMensagemAtual,
     selecionarFornecedor,
     processarMensagem,
@@ -51,6 +53,8 @@ const Cotacao = () => {
     atualizarQuantidade,
     atualizarUnidadePedido,
     calcularPercentualSuprimento,
+    retrySync,
+    formatLastSyncTime,
   } = useCotacao({ fornecedores, produtosDB, requisicoes });
 
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
@@ -112,7 +116,12 @@ const Cotacao = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <CotacaoHeader profile={profile} salvandoAutomaticamente={salvandoAutomaticamente} />
+      <CotacaoHeader 
+        profile={profile} 
+        syncStatus={syncStatus}
+        formatLastSyncTime={formatLastSyncTime}
+        onRetrySync={retrySync}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="mb-8">
@@ -131,6 +140,7 @@ const Cotacao = () => {
               fornecedoresProcessados={fornecedoresProcessados}
               fornecedorSelecionado={fornecedorSelecionado}
               mensagemAtual={mensagemAtual}
+              isProcessing={isProcessing}
               onFornecedorSelect={selecionarFornecedor}
               onMensagemChange={setMensagemAtual}
               onProcessar={processarMensagem}

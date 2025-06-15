@@ -6,7 +6,6 @@ import { toast } from 'sonner';
 import { useComparisonTable } from './useComparisonTable';
 import ExtractionWorker from '@/workers/extraction.worker.ts?worker';
 
-// Tipos para as props do hook
 interface UseCotacaoProps {
   fornecedores: { id: string; nome: string }[];
   produtosDB: any[];
@@ -18,10 +17,12 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     salvarCotacao, 
     restaurarUltimaCotacao, 
     novaCotacao: limparCotacao,
+    retrySync,
     dadosCarregados,
     isLoadingCotacao,
     cotacaoRestaurada,
-    salvandoAutomaticamente
+    syncStatus,
+    formatLastSyncTime
   } = useCotacaoPersistence();
 
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
@@ -38,7 +39,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarUnidadePedido
   } = useComparisonTable({ produtosExtraidos, produtosDB });
 
-  // Função para remover produtos de um fornecedor (definida antes de selecionarFornecedor)
+  // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
     try {
       console.log('Removendo produtos do fornecedor:', nomeFornecedor);
@@ -66,9 +67,9 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa]);
 
-  // Auto-salvar
+  // Auto-salvar com debounce melhorado
   useEffect(() => {
-    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao) {
+    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao && !syncStatus.isSyncing) {
       const timeoutId = setTimeout(() => {
         salvarCotacao({
           produtosExtraidos,
@@ -78,7 +79,15 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       }, 2000);
       return () => clearTimeout(timeoutId);
     }
-  }, [produtosExtraidos, tabelaComparativa, salvarCotacao, dadosInicializados, isLoadingCotacao, fornecedoresProcessados]);
+  }, [
+    produtosExtraidos, 
+    tabelaComparativa, 
+    salvarCotacao, 
+    dadosInicializados, 
+    isLoadingCotacao, 
+    fornecedoresProcessados,
+    syncStatus.isSyncing
+  ]);
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
     try {
@@ -135,7 +144,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
         } else {
           toast.error('Nenhum produto foi encontrado na mensagem.');
         }
-      } else { // 'ERROR'
+      } else {
         toast.error(`Erro ao processar mensagem: ${payload as string}`);
       }
 
@@ -204,7 +213,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     fornecedorSelecionado,
     mensagemAtual,
     cotacaoRestaurada,
-    salvandoAutomaticamente,
+    syncStatus,
     isProcessing,
     setMensagemAtual,
     selecionarFornecedor,
@@ -214,5 +223,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarQuantidade,
     atualizarUnidadePedido,
     calcularPercentualSuprimento,
+    retrySync,
+    formatLastSyncTime
   };
 };
