@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
@@ -21,7 +22,8 @@ const FornecedorCell: React.FC<FornecedorCellProps> = ({
   onQuantidadeChange,
   onUnidadeChange
 }) => {
-  if (preco === null) {
+  // Verificar se preco é null, undefined ou não é um número válido
+  if (preco === null || preco === undefined || typeof preco !== 'number') {
     return (
       <td className="p-3 w-[180px] min-w-[180px] text-center">
         <div className="text-gray-400">-</div>
