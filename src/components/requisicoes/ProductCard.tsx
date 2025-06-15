@@ -48,49 +48,40 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) 
     <Card className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h3 className="font-medium text-gray-900">{product.produto}</h3>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-medium text-gray-900 truncate">{product.produto}</h3>
             <p className="text-sm text-gray-500">
               {product.unidade} • {mediaPorCaixa}kg por caixa
             </p>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 ml-4">
             <Button
               variant="outline"
               size="sm"
               onClick={decrementar}
               disabled={caixas === 0}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 flex-shrink-0"
             >
               <Minus className="h-4 w-4" />
             </Button>
             
-            <div className="flex flex-col items-center">
-              <Input
-                type="number"
-                value={caixas}
-                onChange={(e) => handleInputChange(e.target.value)}
-                className="w-16 text-center h-8"
-                min="0"
-              />
-              <span className="text-xs text-gray-500 mt-1">caixas</span>
-            </div>
+            <Input
+              type="number"
+              value={caixas}
+              onChange={(e) => handleInputChange(e.target.value)}
+              className="w-16 text-center h-8 flex-shrink-0"
+              min="0"
+            />
             
             <Button
               variant="outline"
               size="sm"
               onClick={incrementar}
-              className="h-8 w-8 p-0"
+              className="h-8 w-8 p-0 flex-shrink-0"
             >
               <Plus className="h-4 w-4" />
             </Button>
-            
-            {caixas > 0 && (
-              <div className="ml-3 text-sm text-gray-600">
-                = {(caixas * mediaPorCaixa).toFixed(1)}kg
-              </div>
-            )}
           </div>
         </div>
       </CardContent>

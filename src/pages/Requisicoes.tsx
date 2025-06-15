@@ -185,24 +185,20 @@ const Requisicoes = () => {
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Nova Requisição</h1>
+                <h1 className="text-lg font-semibold text-gray-900">Requisição</h1>
                 <p className="text-sm text-gray-500">{profile?.loja}</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate('/historico-requisicoes')}
               >
                 <Search className="h-4 w-4 mr-2" />
-                Ver Histórico
+                Histórico
               </Button>
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500">Requisitante</p>
-              </div>
             </div>
           </div>
         </div>
@@ -210,8 +206,8 @@ const Requisicoes = () => {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Summary */}
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Search and Send Controls */}
+        <div className="mb-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
@@ -222,29 +218,29 @@ const Requisicoes = () => {
             />
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600 text-right">
-              <div>{totalItems} produtos selecionados</div>
-              {totalItems > 0 && (
-                <div className="text-xs">
-                  {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg
-                </div>
-              )}
-            </div>
-            <Button 
-              onClick={handleSubmitRequisition}
-              disabled={totalItems === 0 || createRequisitionMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {createRequisitionMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Enviar Requisição
-            </Button>
-          </div>
+          <Button 
+            onClick={handleSubmitRequisition}
+            disabled={totalItems === 0 || createRequisitionMutation.isPending}
+            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+          >
+            {createRequisitionMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <Send className="h-4 w-4 mr-2" />
+            )}
+            Enviar
+          </Button>
         </div>
+
+        {/* Summary */}
+        {totalItems > 0 && (
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm text-blue-800">
+              <span className="font-medium">{totalItems} produtos selecionados</span>
+              <span className="ml-4">{totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</span>
+            </div>
+          </div>
+        )}
 
         {/* Products Grid */}
         <div className="space-y-3">
