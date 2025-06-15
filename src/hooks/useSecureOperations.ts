@@ -3,9 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { validateInput, sanitizeData } from '@/utils/inputValidation';
 import { useSecureAuth } from './useSecureAuth';
 
-// Hook para operações seguras com o banco de dados
+// Hook simplificado para operações com o banco de dados (sem RLS)
 export const useSecureOperations = () => {
-  const { user, hasPermission } = useSecureAuth();
+  const { user } = useSecureAuth();
 
   const secureInsert = async <T extends Record<string, any>>(
     table: string, 
@@ -13,9 +13,9 @@ export const useSecureOperations = () => {
     requiredRole?: string
   ): Promise<{ data: any; error: string | null }> => {
     try {
-      console.log(`=== SECURE INSERT EM ${table.toUpperCase()} ===`);
+      console.log(`=== INSERT SIMPLIFICADO EM ${table.toUpperCase()} ===`);
       
-      // Verificar autenticação
+      // Verificar autenticação básica
       if (!user) {
         console.error('Usuário não autenticado');
         return { data: null, error: 'Usuário não autenticado' };
@@ -23,17 +23,11 @@ export const useSecureOperations = () => {
 
       console.log('Usuário autenticado:', user.nome, 'ID:', user.id);
 
-      // Verificar permissão se necessário
-      if (requiredRole && !hasPermission(requiredRole)) {
-        console.error('Permissão insuficiente:', requiredRole);
-        return { data: null, error: 'Permissão insuficiente' };
-      }
-
       // Sanitizar dados
       const sanitizedData = sanitizeData.object(data);
       console.log('Dados sanitizados:', sanitizedData);
 
-      // Adicionar user_id automaticamente se necessário
+      // Adicionar user_id automaticamente se necessário e não estiver presente
       const dataWithUser = {
         ...sanitizedData,
         ...(sanitizedData.user_id === undefined && { user_id: user.id })
@@ -41,9 +35,9 @@ export const useSecureOperations = () => {
 
       console.log('Dados finais para inserção:', dataWithUser);
 
-      // Realizar inserção diretamente, sem verificação de sessão Supabase Auth
-      console.log(`Executando INSERT em ${table}...`);
-      const { data: result, error } = await (supabase as any)
+      // Inserção direta no Supabase (sem verificações RLS)
+      console.log(`Executando INSERT direto em ${table}...`);
+      const { data: result, error } = await supabase
         .from(table)
         .insert(dataWithUser)
         .select()
@@ -56,22 +50,6 @@ export const useSecureOperations = () => {
           hint: error.hint,
           code: error.code
         });
-        
-        // Tratamento específico para diferentes tipos de erro
-        if (error.message.includes('row-level security policy')) {
-          return { 
-            data: null, 
-            error: `Erro de permissão: não autorizado a inserir em ${table}` 
-          };
-        }
-        
-        if (error.message.includes('duplicate key value')) {
-          return { 
-            data: null, 
-            error: 'Registro duplicado. Verifique os dados e tente novamente.' 
-          };
-        }
-        
         return { data: null, error: error.message };
       }
 
@@ -93,9 +71,9 @@ export const useSecureOperations = () => {
     requiredRole?: string
   ): Promise<{ data: any; error: string | null }> => {
     try {
-      console.log(`=== SECURE UPDATE EM ${table.toUpperCase()} ===`);
+      console.log(`=== UPDATE SIMPLIFICADO EM ${table.toUpperCase()} ===`);
       
-      // Verificar autenticação
+      // Verificar autenticação básica
       if (!user) {
         console.error('Usuário não autenticado');
         return { data: null, error: 'Usuário não autenticado' };
@@ -107,18 +85,12 @@ export const useSecureOperations = () => {
       const validatedId = validateInput.uuid(id);
       console.log('ID validado:', validatedId);
 
-      // Verificar permissão se necessário
-      if (requiredRole && !hasPermission(requiredRole)) {
-        console.error('Permissão insuficiente:', requiredRole);
-        return { data: null, error: 'Permissão insuficiente' };
-      }
-
       // Sanitizar dados
       const sanitizedData = sanitizeData.object(data);
       console.log('Dados sanitizados para update:', sanitizedData);
 
-      console.log(`Executando UPDATE em ${table} para ID ${validatedId}...`);
-      const { data: result, error } = await (supabase as any)
+      console.log(`Executando UPDATE direto em ${table} para ID ${validatedId}...`);
+      const { data: result, error } = await supabase
         .from(table)
         .update(sanitizedData)
         .eq('id', validatedId)
@@ -147,9 +119,9 @@ export const useSecureOperations = () => {
     requiredRole: string = 'master'
   ): Promise<{ success: boolean; error: string | null }> => {
     try {
-      console.log(`=== SECURE DELETE EM ${table.toUpperCase()} ===`);
+      console.log(`=== DELETE SIMPLIFICADO EM ${table.toUpperCase()} ===`);
       
-      // Verificar autenticação
+      // Verificar autenticação básica
       if (!user) {
         return { success: false, error: 'Usuário não autenticado' };
       }
@@ -157,13 +129,8 @@ export const useSecureOperations = () => {
       // Validar ID
       const validatedId = validateInput.uuid(id);
 
-      // Verificar permissão
-      if (!hasPermission(requiredRole)) {
-        return { success: false, error: 'Permissão insuficiente para deletar' };
-      }
-
-      console.log(`Executando DELETE em ${table} para ID ${validatedId}...`);
-      const { error } = await (supabase as any)
+      console.log(`Executando DELETE direto em ${table} para ID ${validatedId}...`);
+      const { error } = await supabase
         .from(table)
         .delete()
         .eq('id', validatedId);

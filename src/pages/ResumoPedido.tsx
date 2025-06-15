@@ -7,7 +7,6 @@ import { ArrowLeft, MessageCircle, Package, Loader2 } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
-import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -38,7 +37,6 @@ const ResumoPedido = () => {
   const { fornecedores } = useFornecedores();
   const { user } = useAuth();
   const { marcarComoEnviada } = useCotacaoPersistence();
-  const { secureInsert } = useSecureOperations();
   const [loadingWhatsApp, setLoadingWhatsApp] = useState<string | null>(null);
   
   // Receber os dados da tabela comparativa
@@ -145,8 +143,9 @@ const ResumoPedido = () => {
     return encodeURIComponent(mensagem);
   };
 
+  // Versão simplificada da criação de pedido
   const criarPedidoNoBanco = async (resumoFornecedor: ResumoFornecedor) => {
-    console.log('=== INÍCIO CRIAÇÃO PEDIDO ===');
+    console.log('=== INÍCIO CRIAÇÃO PEDIDO SIMPLIFICADA ===');
     console.log('User atual:', user);
     console.log('Resumo fornecedor:', resumoFornecedor);
     
@@ -168,6 +167,7 @@ const ResumoPedido = () => {
 
       console.log('Fornecedor encontrado:', fornecedorData);
 
+      // Buscar produtos diretamente
       console.log('Buscando IDs dos produtos...');
       const nomesProdutos = resumoFornecedor.itens.map(item => item.produto);
       console.log('Nomes dos produtos:', nomesProdutos);
@@ -199,7 +199,8 @@ const ResumoPedido = () => {
         return false;
       }
 
-      console.log('Criando pedido com operação segura...');
+      // Criar pedido diretamente com Supabase
+      console.log('Criando pedido diretamente...');
       const dadosPedido = {
         user_id: user.id,
         fornecedor_id: fornecedorData.id,
@@ -209,16 +210,21 @@ const ResumoPedido = () => {
 
       console.log('Dados do pedido:', dadosPedido);
 
-      const { data: pedido, error: pedidoError } = await secureInsert('pedidos_compra', dadosPedido);
+      const { data: pedido, error: pedidoError } = await supabase
+        .from('pedidos_compra')
+        .insert(dadosPedido)
+        .select()
+        .single();
 
       if (pedidoError) {
         console.error('Erro ao criar pedido:', pedidoError);
-        toast.error('Erro ao criar pedido: ' + pedidoError);
+        toast.error('Erro ao criar pedido: ' + pedidoError.message);
         return false;
       }
 
       console.log('Pedido criado com sucesso:', pedido);
 
+      // Criar itens do pedido diretamente
       console.log('Criando itens do pedido...');
       const itens = resumoFornecedor.itens.map(item => ({
         pedido_id: pedido.id,
@@ -231,13 +237,14 @@ const ResumoPedido = () => {
 
       console.log('Itens a serem inseridos:', itens);
 
-      for (const item of itens) {
-        const { error: itemError } = await secureInsert('itens_pedido', item);
-        if (itemError) {
-          console.error('Erro ao inserir item:', itemError, item);
-          toast.error('Erro ao inserir item do pedido');
-          return false;
-        }
+      const { error: itensError } = await supabase
+        .from('itens_pedido')
+        .insert(itens);
+
+      if (itensError) {
+        console.error('Erro ao inserir itens:', itensError);
+        toast.error('Erro ao inserir itens do pedido: ' + itensError.message);
+        return false;
       }
 
       console.log('=== PEDIDO CRIADO COM SUCESSO ===');
