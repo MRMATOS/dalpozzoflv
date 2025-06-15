@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
@@ -10,6 +11,9 @@ interface CotacaoData {
   tabelaComparativa: ItemTabelaComparativa[];
   fornecedoresProcessados?: Set<string>; // Tornar opcional, pois não vem do DB
 }
+
+// Criando um tipo para os dados de restauração para evitar problemas de sintaxe com genéricos aninhados
+type RestauracaoData = Omit<CotacaoData, 'fornecedoresProcessados'>;
 
 export const useCotacaoTemporaria = () => {
   const { user, isAuthenticated } = useSecureAuth();
@@ -97,8 +101,8 @@ export const useCotacaoTemporaria = () => {
       // Omitimos fornecedoresProcessados antes de salvar
       const { fornecedoresProcessados, ...dadosParaSalvar } = dadosCotacao;
       const dadosParaSalvarJSON = {
-        produtos_extraidos: JSON.parse(JSON.stringify(dadosParaSalvar.produtosExtraidos)),
-        tabela_comparativa: JSON.parse(JSON.stringify(dadosParaSalvar.tabelaComparativa)),
+        produtos_extraidos: dadosParaSalvar.produtosExtraidos,
+        tabela_comparativa: dadosParaSalvar.tabelaComparativa,
         data: new Date().toISOString()
       };
 
@@ -121,8 +125,10 @@ export const useCotacaoTemporaria = () => {
           console.error('Erro ao criar cotação:', error);
           throw new Error(error);
         }
-        console.log('Nova cotação criada, ID:', data.id);
-        setCotacaoId(data.id);
+        if (data) {
+          console.log('Nova cotação criada, ID:', data.id);
+          setCotacaoId(data.id);
+        }
       }
     } catch (error) {
       console.error('Erro geral ao salvar cotação:', error);
@@ -132,7 +138,7 @@ export const useCotacaoTemporaria = () => {
   }, [user?.id, cotacaoId, salvandoAutomaticamente, secureInsert, secureUpdate, isAuthenticated]);
 
   // Restaurar última cotação enviada
-  const restaurarUltimaCotacao = useCallback(async (): Promise<Omit<CotacaoData, 'fornecedoresProcessados'>> | null> => {
+  const restaurarUltimaCotacao = useCallback(async (): Promise<RestauracaoData | null> => {
     if (!isAuthenticated || !user?.id) return null;
 
     try {
@@ -220,3 +226,4 @@ export const useCotacaoTemporaria = () => {
     dadosCarregados
   };
 };
+
