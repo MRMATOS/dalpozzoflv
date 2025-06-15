@@ -1,26 +1,9 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-interface ProdutoExtraido {
-  produto: string;
-  tipo: string;
-  preco: number;
-  fornecedor: string;
-  linhaOriginal: string;
-  aliasUsado: string;
-}
-
-interface ItemTabelaComparativa {
-  produto: string;
-  tipo: string;
-  fornecedores: { [fornecedor: string]: number | null };
-  quantidades: { [fornecedor: string]: number };
-  unidadePedido: { [fornecedor: string]: string };
-}
+import { ProdutoExtraido, ItemTabelaComparativa } from '@/utils/productExtraction/types';
 
 interface CotacaoData {
   produtosExtraidos: ProdutoExtraido[];
