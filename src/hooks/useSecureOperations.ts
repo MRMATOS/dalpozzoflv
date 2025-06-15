@@ -35,9 +35,9 @@ export const useSecureOperations = () => {
 
       console.log('Dados finais para inserção:', dataWithUser);
 
-      // Inserção direta no Supabase (sem verificações RLS)
+      // Inserção direta no Supabase (sem verificações RLS) - usando type assertion
       console.log(`Executando INSERT direto em ${table}...`);
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from(table)
         .insert(dataWithUser)
         .select()
@@ -90,7 +90,7 @@ export const useSecureOperations = () => {
       console.log('Dados sanitizados para update:', sanitizedData);
 
       console.log(`Executando UPDATE direto em ${table} para ID ${validatedId}...`);
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from(table)
         .update(sanitizedData)
         .eq('id', validatedId)
@@ -130,7 +130,7 @@ export const useSecureOperations = () => {
       const validatedId = validateInput.uuid(id);
 
       console.log(`Executando DELETE direto em ${table} para ID ${validatedId}...`);
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from(table)
         .delete()
         .eq('id', validatedId);

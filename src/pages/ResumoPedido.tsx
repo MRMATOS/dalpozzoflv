@@ -127,18 +127,18 @@ const ResumoPedido = () => {
   }, [tabelaComparativa]);
 
   const gerarMensagemWhatsApp = (resumoFornecedor: ResumoFornecedor) => {
-    let mensagem = `🛒 *Pedido de Compra*\n\n`;
+    let mensagem = `PEDIDO DE COMPRA\n\n`;
 
     resumoFornecedor.itens.forEach((item, index) => {
       const unidadePlural = pluralizarUnidade(item.unidade, item.quantidade);
       
-      mensagem += `*${index + 1}.* ${item.produto} - ${item.tipo}\n`;
-      mensagem += `   ${item.quantidade} ${unidadePlural} × R$ ${item.preco.toFixed(2)}\n`;
+      mensagem += `${index + 1}. ${item.produto} - ${item.tipo}\n`;
+      mensagem += `   ${item.quantidade} ${unidadePlural} x R$ ${item.preco.toFixed(2)}\n`;
       mensagem += `   Subtotal: R$ ${item.subtotal.toFixed(2)}\n\n`;
     });
 
-    mensagem += `💰 *Total: R$ ${resumoFornecedor.total.toFixed(2)}*\n\n`;
-    mensagem += `Obrigado! 🙏`;
+    mensagem += `TOTAL: R$ ${resumoFornecedor.total.toFixed(2)}\n\n`;
+    mensagem += `Obrigado!`;
 
     return encodeURIComponent(mensagem);
   };
