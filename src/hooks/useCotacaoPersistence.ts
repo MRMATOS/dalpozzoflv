@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useSecureAuth } from '@/hooks/useSecureAuth';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
@@ -15,7 +14,7 @@ interface CotacaoData {
 // Criando um tipo para os dados de restauração para evitar problemas de sintaxe com genéricos aninhados
 type RestauracaoData = Omit<CotacaoData, 'fornecedoresProcessados'>;
 
-export const useCotacaoTemporaria = () => {
+export const useCotacaoPersistence = () => {
   const { user, isAuthenticated } = useSecureAuth();
   const { secureInsert, secureUpdate } = useSecureOperations();
   const [cotacaoId, setCotacaoId] = useState<string | null>(null);
@@ -226,4 +225,3 @@ export const useCotacaoTemporaria = () => {
     dadosCarregados
   };
 };
-

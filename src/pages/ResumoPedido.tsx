@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, MessageCircle, Package } from 'lucide-react';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCotacaoTemporaria } from '@/hooks/useCotacaoTemporaria';
+import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -37,7 +37,7 @@ const ResumoPedido = () => {
   const location = useLocation();
   const { fornecedores } = useFornecedores();
   const { user } = useAuth();
-  const { marcarComoEnviada } = useCotacaoTemporaria();
+  const { marcarComoEnviada } = useCotacaoPersistence();
   const { secureInsert } = useSecureOperations();
   
   // Receber os dados da tabela comparativa
