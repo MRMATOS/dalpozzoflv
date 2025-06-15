@@ -749,6 +749,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_comprador_or_master: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_master_user: {
         Args: Record<PropertyKey, never>
         Returns: boolean

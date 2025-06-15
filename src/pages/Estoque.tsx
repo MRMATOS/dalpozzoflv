@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -25,6 +24,7 @@ const Estoque = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [buscaProduto, setBuscaProduto] = useState('');
 
   // Carregar produtos e estoque atual
   useEffect(() => {
@@ -84,6 +84,10 @@ const Estoque = () => {
       carregarProdutos();
     }
   }, [profile]);
+
+  const produtosFiltrados = produtos.filter(p =>
+    p.produto.toLowerCase().includes(buscaProduto.toLowerCase())
+  );
 
   // Atualizar quantidade de um produto
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
@@ -235,6 +239,18 @@ const Estoque = () => {
           </p>
         </div>
 
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar produto..."
+              value={buscaProduto}
+              onChange={(e) => setBuscaProduto(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
         {error && (
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -260,14 +276,18 @@ const Estoque = () => {
             </Button>
           </CardHeader>
           <CardContent>
-            {produtos.length === 0 ? (
+            {produtosFiltrados.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-500">Nenhum produto cadastrado</p>
+                <p className="text-gray-500">
+                  {buscaProduto
+                    ? 'Nenhum produto encontrado para sua busca.'
+                    : 'Nenhum produto cadastrado'}
+                </p>
               </div>
             ) : (
               <div className="space-y-4">
-                {produtos.map(produto => (
+                {produtosFiltrados.map(produto => (
                   <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{produto.produto}</h3>
