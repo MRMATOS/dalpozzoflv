@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Calculator, Loader2 } from 'lucide-react';
+import { Calculator, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
@@ -14,6 +12,9 @@ import { useCotacao } from '@/hooks/useCotacao';
 import FornecedorInput from '@/components/cotacao/FornecedorInput';
 import TabelaComparativa from '@/components/cotacao/TabelaComparativa';
 import CotacaoRestauradaMessage from '@/components/cotacao/CotacaoRestauradaMessage';
+import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
+import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
+import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -111,34 +112,7 @@ const Cotacao = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Nova Cotação</h1>
-                <p className="text-sm text-gray-500">Sistema FLV</p>
-              </div>
-              {salvandoAutomaticamente && (
-                <div className="flex items-center text-xs text-blue-600">
-                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  Salvando...
-                </div>
-              )}
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500">Comprador</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <CotacaoHeader profile={profile} salvandoAutomaticamente={salvandoAutomaticamente} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="mb-8">
@@ -183,45 +157,10 @@ const Cotacao = () => {
               />
             )}
             
-            {produtosExtraidos.length > 0 && (
-              <details className="mb-6">
-                <summary className="cursor-pointer text-lg font-semibold text-gray-700 mb-4">
-                  Produtos Extraídos ({produtosExtraidos.length}) - Clique para ver detalhes
-                </summary>
-                <div className="bg-gray-50 p-4 rounded-lg max-h-60 overflow-y-auto space-y-2">
-                  {produtosExtraidos.map((produto, index) => (
-                    <Card key={index} className="p-3">
-                      <div className="font-medium">{produto.fornecedor}</div>
-                      <div className="text-sm text-gray-600">
-                        <strong>Produto:</strong> {produto.produto} |
-                        <strong> Tipo:</strong> {produto.tipo} |
-                        <strong> Preço:</strong> R$ {produto.preco.toFixed(2)} |
-                        <strong> Alias:</strong> {produto.aliasUsado}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        Original: {produto.linhaOriginal}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </details>
-            )}
+            <ProdutosExtraidosDetails produtosExtraidos={produtosExtraidos} />
 
-            <Card className="bg-blue-50 border-l-4 border-blue-500">
-              <CardContent className="p-4">
-                <h3 className="font-semibold text-blue-800 mb-2">Como usar:</h3>
-                <ol className="text-blue-700 text-sm space-y-1">
-                  <li>1. Clique em um fornecedor para selecioná-lo (botão fica azul)</li>
-                  <li>2. Cole a mensagem do WhatsApp na área de texto</li>
-                  <li>3. Clique em "Processar Mensagem" (botão do fornecedor fica verde)</li>
-                  <li>4. Repita para outros fornecedores</li>
-                  <li>5. Use a busca para encontrar produtos rapidamente</li>
-                  <li>6. Insira as quantidades desejadas para cada produto</li>
-                  <li>7. Compare os totais por fornecedor na última linha</li>
-                  <li>8. Clique em "Ver Resumo" para gerar os pedidos</li>
-                </ol>
-              </CardContent>
-            </Card>
+            <GuiaUsoCotacao />
+            
           </CardContent>
         </Card>
       </main>
