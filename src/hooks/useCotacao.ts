@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { extrairProdutos } from '@/services/cotacao/extractionService';
 import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
-import { ProdutoExtraido, ItemTabelaComparativa } from '@/utils/productExtraction/types';
+import { ProdutoExtraido } from '@/utils/productExtraction/types';
 import { toast } from 'sonner';
 import { useComparisonTable } from './useComparisonTable';
+import ExtractionWorker from '@/workers/extraction.worker.ts?worker';
 
 // Tipos para as props do hook
 interface UseCotacaoProps {
@@ -28,6 +28,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
   const [mensagemAtual, setMensagemAtual] = useState('');
   const [dadosInicializados, setDadosInicializados] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const {
     tabelaComparativa,
@@ -90,21 +91,54 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       toast.error('Selecione um fornecedor e cole a mensagem');
       return;
     }
+    if (isProcessing) {
+      toast.info('Aguarde, processamento em andamento.');
+      return;
+    }
     const fornecedor = fornecedores.find(f => f.id === fornecedorSelecionado);
     if (!fornecedor) return;
 
-    const produtos = extrairProdutos(mensagemAtual, fornecedor.nome);
-    if (produtos.length > 0) {
-      const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
-      setProdutosExtraidos(novosExtraidos);
-      setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
-      setFornecedorSelecionado(null);
-      setMensagemAtual('');
-      toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
-    } else {
-      toast.error('Nenhum produto foi encontrado na mensagem.');
-    }
-  }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos]);
+    setIsProcessing(true);
+    toast.info('Processando mensagem... Isso pode levar alguns segundos.');
+
+    const worker = new ExtractionWorker();
+
+    worker.onmessage = (e: MessageEvent<{type: 'SUCCESS' | 'ERROR', payload: ProdutoExtraido[] | string}>) => {
+      const { type, payload } = e.data;
+      
+      if (type === 'SUCCESS') {
+        const produtos = payload as ProdutoExtraido[];
+        if (produtos.length > 0) {
+          const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
+          setProdutosExtraidos(novosExtraidos);
+          setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
+          setFornecedorSelecionado(null);
+          setMensagemAtual('');
+          toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
+        } else {
+          toast.error('Nenhum produto foi encontrado na mensagem.');
+        }
+      } else { // 'ERROR'
+        toast.error(`Erro ao processar mensagem: ${payload as string}`);
+      }
+
+      setIsProcessing(false);
+      worker.terminate();
+    };
+
+    worker.onerror = (err) => {
+        console.error('Erro no Web Worker:', err);
+        toast.error('Ocorreu um erro inesperado no processamento.');
+        setIsProcessing(false);
+        worker.terminate();
+    };
+
+    worker.postMessage({
+      mensagem: mensagemAtual,
+      nomeFornecedor: fornecedor.nome
+    });
+
+  }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos, isProcessing]);
   
   const handleRestaurarCotacao = async () => {
     const dadosRestaurados = await restaurarUltimaCotacao();
@@ -154,6 +188,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     mensagemAtual,
     cotacaoRestaurada,
     salvandoAutomaticamente,
+    isProcessing,
     setMensagemAtual,
     selecionarFornecedor,
     processarMensagem,
