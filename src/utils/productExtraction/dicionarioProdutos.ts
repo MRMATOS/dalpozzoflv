@@ -1,7 +1,7 @@
 export const dicionarioProdutos = {
   'abacaxi': {
     'havaí': ['havaí', 'havai', 'hawai'],
-    'pérola': ['pérola', 'perola','abacaxi pérola']
+    'pérola': ['pérola', 'perola']
   },
   'abacate': {
     'breda': ['breda'],
@@ -42,6 +42,7 @@ export const dicionarioProdutos = {
   'ameixa': {
     'nacional': ['ameixa nacional'],
     'importada calibre 60': ['ameixa importada calibre 60'],
+    'importada': ['ameixa importada','ameixa imp'],
     'importada calibre 65': ['ameixa importada calibre 65']
   },
   'atemoia': {
