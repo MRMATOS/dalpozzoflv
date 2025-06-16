@@ -37,7 +37,7 @@ export const dicionarioProdutos = {
   'alface': {
     'crespa': ['alface crespa'],
     'crespa kael': ['alface crespa kael'],
-    'americana': ['alface americana'],['americana'],
+    'americana': ['alface americana','americana'],
     'americana kael': ['alface americana kael']
   },
   'ameixa': {
