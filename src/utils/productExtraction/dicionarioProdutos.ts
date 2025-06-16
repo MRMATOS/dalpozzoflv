@@ -9,7 +9,7 @@ export const dicionarioProdutos = {
     'bola': ['bola']
   },
   'abóbora': {
-    'cabotiá': ['cabotiá', 'cabotia', 'cabotia graúdo'],
+    'cabotiá': ['cabotiá', 'cabotia', 'cabotia graúdo', 'cabutia'],
     'seca': ['seca', 'abóbora seca'],
     'pescoço': ['pescoço', 'abóbora pescoço'],
     'moranga': ['moranga', 'abóbora moranga'],
