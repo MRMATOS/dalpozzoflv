@@ -1,4 +1,3 @@
-
 export const dicionarioProdutos = {
   'abacaxi': {
     'havaí': ['havaí', 'havai', 'hawai'],
@@ -18,7 +17,7 @@ export const dicionarioProdutos = {
   'abobrinha': {
     'padrão': ['abobrinha', 'abobrinha padrão'],
     'verde': ['abobrinha verde'],
-    'lv': ['abobrinha lv'],
+    'lv': ['abobrinha lv', 'abobrinha leve', 'abobrinha lev'],
     'klaina': ['abobrinha klaina'],
     'colombense': ['abobrinha colombense']
   },
@@ -50,7 +49,7 @@ export const dicionarioProdutos = {
   },
   'banana': {
     'plástica': ['banana plástica'],
-    'katurra': ['banana katurra'],
+    'katurra': ['banana katurra', 'banana nanica'],
     'maçã': ['banana maçã'],
     'ouro': ['banana ouro'],
     'terra': ['banana terra'],
@@ -67,7 +66,8 @@ export const dicionarioProdutos = {
     'yame': ['batata yame'],
     'salsa bandeja': ['batata salsa', 'salsa bandeja'],
     'salsa kg': ['batata salsa kg', 'salsa kg'],
-    'salsa baroa': ['batata salsa baroa', 'batata baroa', 'mandioquinha']
+    'salsa baroa': ['batata salsa baroa', 'batata baroa', 'mandioquinha'],
+    'especial': ['batata especial']
   },
   'berinjela': {
     'padrão': ['berinjela', 'beringela'],
@@ -109,7 +109,7 @@ export const dicionarioProdutos = {
     'novo': ['gengibre novo']
   },
   'giló': {
-    'padrão': ['giló', 'gilo']
+    'padrão': ['giló', 'gilo', 'gilo']
   },
   'goiaba': {
     'graúda': ['goiaba graúda'],
@@ -148,14 +148,14 @@ export const dicionarioProdutos = {
   },
   'manga': {
     'espada': ['manga espada'],
-    'tomy': ['manga tomy'],
+    'tomy': ['manga tomy', 'fiorese', 'vale bonito', 'rio sul'],
     'tomy rio sul': ['manga tomy rio sul'],
     'tomy vale bonito': ['manga tomy vale bonito'],
     'palmer': ['manga palmer'],
     'palmer baía': ['manga palmer baía']
   },
   'maracujá': {
-    'padrão': ['maracujá'],
+    'padrão': ['maracujá', 'maracujá doce'],
     'graúdo': ['maracujá graúdo'],
     'papelão': ['maracujá papelão'],
     'plástica top': ['maracujá plástica top']
@@ -176,7 +176,7 @@ export const dicionarioProdutos = {
   },
   'melão': {
     'amarelo': ['melão amarelo'],
-    'amarelo graúdo': ['melão amarelo graúdo'],
+    'amarelo graúdo': ['melão amarelo graúdo', 'melão sapão', 'melão t6/7'],
     'melícia': ['melão melícia'],
     'cepi': ['melão cepi'],
     'rei': ['melão rei'],
@@ -200,7 +200,7 @@ export const dicionarioProdutos = {
   'pepino': {
     'salada': ['pepino salada'],
     'salada top': ['pepino salada top'],
-    'japonês': ['pepino japonês'],
+    'japonês': ['pepino japonês', 'pepino lev', 'pepino LeV'],
     'japonês klaina': ['pepino japonês klaina'],
     'conserva': ['pepino conserva']
   },
@@ -217,7 +217,7 @@ export const dicionarioProdutos = {
     'padrão': ['physalis']
   },
   'pimenta': {
-    'dedo-de-moça': ['pimenta dedo-de-moça'],
+    'dedo-de-moça': ['pimenta dedo-de-moça', 'pimenta dedo', 'dedo-de-moça', 'dedo de moça', 'dedo'],
     'cambuci': ['pimenta cambuci', 'cambuci'],
     'vermelha': ['pimenta vermelha']
   },
@@ -225,11 +225,11 @@ export const dicionarioProdutos = {
     'verde': ['pimentão verde'],
     'verde klaina': ['pimentão verde klaina'],
     'verde região': ['pimentão verde região'],
-    'verde graúdo': ['pimentão verde graúdo', 'pimentão verde médio'],
+    'verde graúdo': ['pimentão verde graúdo', 'pimentão verde médio', 'pimentão verde klaina', 'pimentão verde região', 'pimentão verde região produtor'],
     'vermelho': ['pimentão vermelho'],
-    'vermelho graúdo': ['pimentão vermelho graúdo'],
+    'vermelho graúdo': ['pimentão vermelho graúdo', 'pimentão vermelho região'],
     'amarelo': ['pimentão amarelo'],
-    'amarelo graúdo': ['pimentão amarelo graúdo', 'pimentão amarelo médio']
+    'amarelo graúdo': ['pimentão amarelo graúdo', 'pimentão amarelo médio', 'pimentão amarelo região']
   },
   'pitaya': {
     'padrão': ['pitaya']
@@ -264,7 +264,7 @@ export const dicionarioProdutos = {
     'longa vida graúdo': ['tomate longa vida graúdo'],
     'saladete': ['tomate saladete'],
     'saladete graúdo': ['tomate saladete graúdo'],
-    'cereja bdj': ['tomate cereja bandeja'],
+    'cereja bdj': ['tomate cereja bandeja', 'tomate cereja cavali', 'tomate cereja klaina', 'tomate cereja bdj', 'tomate cereja cx'],
     'cereja cx': ['tomate cereja caixa'],
     'cereja klaina': ['tomate cereja klaina']
   },
@@ -285,5 +285,26 @@ export const dicionarioProdutos = {
   },
   'verona': {
     'top': ['verona top']
+  },
+  'cenoura': {
+    'padrão': ['cenoura'],
+    'média': ['cenoura média'],
+    'boa': ['cenoura boa']
+  },
+  'cebola': {
+    'nacional': ['cebola nacional'],
+    'branca': ['cebola branca'],
+    'roxa': ['cebola roxa', 'cebola roxa importada', 'cebola roxa top']
+  },
+  'morango': {
+    'padrão': ['morango']
+  },
+  'cheiro verde': {
+    'padrão': ['cheiro verde']
+  },
+  'chuchu': {
+    'padrão': ['chuchu'],
+    'klaina': ['chuchu klaina'],
+    'morretense': ['chuchu morretense']
   }
 };
