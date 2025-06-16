@@ -141,9 +141,10 @@ export const dicionarioProdutos = {
   },
   'mamão': {
     'formosa': ['mamão formosa'],
-    'papaya t20': ['mamão papaya 20'],
-    'papaya t24': ['mamão papaya 24'],
-    'papaya top': ['mamão papaya top'],
+    'papaya t20': ['mamão papaya 20','mamão papaia 20'],
+    'papaya t24': ['mamão papaya 24','mamão papaia 24'],
+    'papaya top': ['mamão papaya top','mamão papaia top'],
+    'papaya': ['mamão papaya','mamao papaia','mamão papaya','mamão papaia','papaia','papaya'],
     'roça': ['mamão roça']
   },
   'manga': {
@@ -266,6 +267,7 @@ export const dicionarioProdutos = {
     'saladete graúdo': ['tomate saladete graúdo'],
     'cereja bdj': ['tomate cereja bandeja', 'tomate cereja cavali', 'tomate cereja klaina', 'tomate cereja bdj', 'tomate cereja cx'],
     'cereja cx': ['tomate cereja caixa'],
+    'cereja': ['tomate cereja','cereja','tomate-cereja'],
     'cereja klaina': ['tomate cereja klaina']
   },
   'uva': {
