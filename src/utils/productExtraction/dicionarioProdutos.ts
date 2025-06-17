@@ -28,9 +28,6 @@ export const dicionarioProdutos = {
   'agrião': {
     'padrão': ['agrião']
   },
-  'alho-poró': {
-    'padrão': ['alho poró', 'alho-poró']
-  },
   'alho': {
     'descascado': ['alho descascado'],
     'poró':['alho poro', 'alho-poro', 'alhoporó', 'alho-poró']
