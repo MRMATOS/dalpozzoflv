@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLojas } from './useLojas';
@@ -27,7 +26,7 @@ export const useEstoque = () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Buscando dados de estoque usando view produtos_com_pai...');
+      console.log('Buscando dados de estoque usando view produtos_com_pai com relacionamento explícito...');
       
       const { data, error } = await supabase
         .from('estoque_atual')
@@ -35,7 +34,7 @@ export const useEstoque = () => {
           produto_id,
           loja,
           quantidade,
-          produtos_com_pai!inner(
+          produtos_com_pai!estoque_atual_produto_id_produtos_com_pai_id_fkey(
             produto, 
             nome_variacao, 
             produto_pai_id, 
