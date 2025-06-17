@@ -209,11 +209,6 @@ const Estoque = () => {
                 <div>
                   <h3 className="font-medium text-gray-900">{produto.display_name}</h3>
                   <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
-                  {produto.produto_pai_nome && (
-                    <p className="text-xs text-blue-600">
-                      {produto.produto_pai_nome} → {produto.nome_variacao}
-                    </p>
-                  )}
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button variant="outline" size="sm" onClick={() => decrementarQuantidade(produto.id)}>
