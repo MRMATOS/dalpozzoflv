@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,9 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEstoque } from '@/hooks/useEstoque';
+import { useProdutosComPai } from '@/hooks/useProdutosComPai';
 
-interface Produto {
+interface EstoqueProduto {
   id: string;
   produto: string | null;
   nome_variacao: string | null;
@@ -18,7 +20,7 @@ interface Produto {
   ativo: boolean | null;
   quantidade_atual?: number;
   display_name?: string;
-  produto_pai?: { id: string; produto: string } | null;
+  produto_pai_nome?: string | null;
 }
 
 const Estoque = () => {
@@ -26,71 +28,41 @@ const Estoque = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { error: estoqueError, recarregarEstoque } = useEstoque();
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const { produtos: produtosComPai, loading: loadingProdutos } = useProdutosComPai();
+  const [produtos, setProdutos] = useState<EstoqueProduto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
 
   useEffect(() => {
-    const carregarProdutos = async () => {
+    const carregarEstoque = async () => {
+      if (!profile?.loja || loadingProdutos) return;
+
       try {
         setLoading(true);
         setError('');
 
-        const { data: produtosData, error: produtosError } = await supabase
-          .from('produtos')
-          .select(`
-            id, 
-            produto, 
-            nome_variacao,
-            produto_pai_id,
-            unidade, 
-            ativo,
-            produto_pai:produtos!produto_pai_id(id, produto)
-          `)
-          .eq('ativo', true);
-
-        console.log('Produtos carregados:', produtosData);
-
-        if (produtosError) throw produtosError;
-
         const { data: estoqueData, error: estoqueError } = await supabase
           .from('estoque_atual')
           .select('produto_id, quantidade')
-          .eq('loja', profile?.loja);
+          .eq('loja', profile.loja);
 
         if (estoqueError) throw estoqueError;
 
         const estoqueMap = new Map(estoqueData?.map(item => [item.produto_id, item.quantidade]));
 
-        const produtosComEstoque = produtosData?.map(produto => {
-          const displayName = produto.produto_pai_id && produto.produto_pai?.produto
-            ? `${produto.produto_pai.produto} ${produto.nome_variacao || ''}`.trim()
-            : produto.produto || produto.nome_variacao || `ID: ${produto.id.substring(0, 8)}`;
-
-          return {
-            ...produto,
-            quantidade_atual: estoqueMap.get(produto.id) || 0,
-            display_name: displayName
-          };
-        }) || [];
-
-        produtosComEstoque.sort((a, b) => {
-          const nomePaiA = a.produto_pai?.produto || a.produto || '';
-          const nomePaiB = b.produto_pai?.produto || b.produto || '';
-
-          const comparePai = nomePaiA.localeCompare(nomePaiB);
-          if (comparePai !== 0) return comparePai;
-
-          const ehVariacaoA = !!a.nome_variacao;
-          const ehVariacaoB = !!b.nome_variacao;
-
-          if (!ehVariacaoA && ehVariacaoB) return -1;
-          if (ehVariacaoA && !ehVariacaoB) return 1;
-
-          return (a.display_name || '').localeCompare(b.display_name || '');
-        });
+        const produtosComEstoque = produtosComPai.map(produto => ({
+          id: produto.id,
+          produto: produto.produto,
+          nome_variacao: produto.nome_variacao,
+          produto_pai_id: produto.produto_pai_id,
+          unidade: produto.unidade,
+          ativo: produto.ativo,
+          produto_pai_nome: produto.produto_pai_nome,
+          quantidade_atual: estoqueMap.get(produto.id) || 0,
+          display_name: produto.display_name
+        }));
 
         setProdutos(produtosComEstoque);
       } catch (error: any) {
@@ -100,8 +72,8 @@ const Estoque = () => {
       }
     };
 
-    if (profile?.loja) carregarProdutos();
-  }, [profile]);
+    carregarEstoque();
+  }, [profile, produtosComPai, loadingProdutos]);
 
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
     setProdutos(prev => prev.map(produto =>
@@ -150,11 +122,11 @@ const Estoque = () => {
       p.display_name?.toLowerCase().includes(termoBusca) ||
       p.produto?.toLowerCase().includes(termoBusca) ||
       p.nome_variacao?.toLowerCase().includes(termoBusca) ||
-      p.produto_pai?.produto?.toLowerCase().includes(termoBusca)
+      p.produto_pai_nome?.toLowerCase().includes(termoBusca)
     );
   });
 
-  if (loading) {
+  if (loading || loadingProdutos) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Package className="animate-spin w-8 h-8 text-blue-600" />
@@ -219,6 +191,11 @@ const Estoque = () => {
                 <div>
                   <h3 className="font-medium text-gray-900">{produto.display_name}</h3>
                   <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+                  {produto.produto_pai_nome && (
+                    <p className="text-xs text-blue-600">
+                      {produto.produto_pai_nome} → {produto.nome_variacao}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button variant="outline" size="sm" onClick={() => decrementarQuantidade(produto.id)}>

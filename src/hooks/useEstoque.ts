@@ -8,6 +8,7 @@ interface EstoqueProduto {
   produto_nome: string;
   nome_variacao?: string;
   produto_pai_id?: string;
+  produto_pai_nome?: string;
   unidade: string;
   media_por_caixa: number;
   estoques_por_loja: { [loja: string]: number };
@@ -26,7 +27,7 @@ export const useEstoque = () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Buscando dados de estoque...');
+      console.log('Buscando dados de estoque usando view produtos_com_pai...');
       
       const { data, error } = await supabase
         .from('estoque_atual')
@@ -34,9 +35,17 @@ export const useEstoque = () => {
           produto_id,
           loja,
           quantidade,
-          produtos!inner(produto, nome_variacao, produto_pai_id, unidade, media_por_caixa, ativo)
+          produtos_com_pai!inner(
+            produto, 
+            nome_variacao, 
+            produto_pai_id, 
+            produto_pai_nome,
+            unidade, 
+            media_por_caixa, 
+            ativo
+          )
         `)
-        .eq('produtos.ativo', true); // Apenas produtos ativos
+        .eq('produtos_com_pai.ativo', true);
 
       if (error) {
         console.error('Erro ao buscar estoque:', error);
@@ -44,24 +53,30 @@ export const useEstoque = () => {
         return;
       }
 
-      console.log('Dados de estoque brutos:', data);
+      console.log('Dados de estoque brutos com relacionamento resolvido:', data);
 
       // Agrupar por produto
       const estoquesAgrupados: { [produto_id: string]: EstoqueProduto } = {};
 
       data?.forEach(item => {
         const produtoId = item.produto_id;
-        const produto = item.produtos as any;
+        const produto = item.produtos_com_pai as any;
         
         if (!estoquesAgrupados[produtoId]) {
-          // Para variações, usar nome_variacao, para principais usar produto
-          const nomeDisplay = produto?.nome_variacao || produto?.produto || '';
+          // Para variações, usar nome_variacao + produto_pai_nome, para principais usar produto
+          let nomeDisplay = '';
+          if (produto?.produto_pai_nome && produto?.nome_variacao) {
+            nomeDisplay = `${produto.produto_pai_nome} ${produto.nome_variacao}`;
+          } else {
+            nomeDisplay = produto?.produto || produto?.nome_variacao || '';
+          }
           
           estoquesAgrupados[produtoId] = {
             produto_id: produtoId,
             produto_nome: nomeDisplay,
             nome_variacao: produto?.nome_variacao,
             produto_pai_id: produto?.produto_pai_id,
+            produto_pai_nome: produto?.produto_pai_nome,
             unidade: produto?.unidade || '',
             media_por_caixa: produto?.media_por_caixa || 20,
             ativo: produto?.ativo || false,
@@ -71,7 +86,6 @@ export const useEstoque = () => {
           };
         }
 
-        // Usar o nome da loja diretamente do banco (já padronizado)
         estoquesAgrupados[produtoId].estoques_por_loja[item.loja] = item.quantidade || 0;
         estoquesAgrupados[produtoId].total_estoque += item.quantidade || 0;
       });
@@ -84,7 +98,7 @@ export const useEstoque = () => {
       });
 
       const estoquesArray = Object.values(estoquesAgrupados);
-      console.log('Estoques processados:', estoquesArray);
+      console.log('Estoques processados com relacionamento pai resolvido:', estoquesArray);
       
       setEstoqueProdutos(estoquesArray);
     } catch (error) {
@@ -127,7 +141,6 @@ export const useEstoque = () => {
         },
         (payload) => {
           console.log('Mudança detectada em produtos:', payload);
-          // Quando um produto é alterado, recarregar o estoque para refletir as mudanças
           fetchEstoque();
         }
       )
@@ -142,9 +155,7 @@ export const useEstoque = () => {
   const obterEstoqueProduto = (produtoNome: string, tipo?: string) => {
     console.log('Buscando estoque para:', { produtoNome, tipo });
     
-    // Buscar produto por nome exato ou similaridade
     const estoque = estoqueProdutos.find(item => {
-      // Apenas considerar produtos ativos
       if (!item.ativo) return false;
       
       const nomeNorm = item.produto_nome.toLowerCase().trim();
@@ -176,7 +187,6 @@ export const useEstoque = () => {
       return 'Sem estoque informado';
     }
 
-    // Formatar estoques por loja usando os nomes corretos
     const estoquesFormatados = Object.entries(estoque.estoques_por_loja)
       .filter(([_, quantidade]) => quantidade > 0)
       .map(([loja, quantidade]) => `${loja}: ${quantidade} ${estoque.unidade}`)
