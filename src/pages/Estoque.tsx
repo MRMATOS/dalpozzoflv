@@ -51,6 +51,8 @@ const Estoque = () => {
           `)
           .eq('ativo', true);
 
+        console.log('Produtos carregados:', produtosData);
+
         if (produtosError) throw produtosError;
 
         const { data: estoqueData, error: estoqueError } = await supabase
