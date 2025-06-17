@@ -19,6 +19,7 @@ interface Produto {
   ativo: boolean | null;
   quantidade_atual?: number;
   display_name?: string;
+  produto_pai?: { produto: string } | null;
 }
 
 const Estoque = () => {
@@ -86,19 +87,22 @@ const Estoque = () => {
           const produtoPai = (produto as any).produto_pai;
           let displayName = '';
           
-          if (produto.nome_variacao) {
-            // É uma variação
-            const nomePai = produtoPai?.produto || 'Produto';
-            displayName = `${nomePai} - ${produto.nome_variacao}`;
-          } else {
+          if (produto.nome_variacao && produtoPai?.produto) {
+            // É uma variação - formato: "Produto Pai + Variação"
+            displayName = `${produtoPai.produto} ${produto.nome_variacao}`;
+          } else if (produto.produto) {
             // É um produto principal
-            displayName = produto.produto || 'Produto sem nome';
+            displayName = produto.produto;
+          } else {
+            // Fallback
+            displayName = 'Produto sem nome';
           }
 
           return {
             ...produto,
             quantidade_atual: estoqueMap.get(produto.id) || 0,
-            display_name: displayName
+            display_name: displayName,
+            produto_pai: produtoPai
           };
         }) || [];
 
@@ -170,11 +174,19 @@ const Estoque = () => {
     };
   }, [profile]);
 
-  const produtosFiltrados = produtos.filter(p =>
-    p.display_name?.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    p.produto?.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    p.nome_variacao?.toLowerCase().includes(buscaProduto.toLowerCase())
-  );
+  // Busca melhorada para considerar produto pai + variação
+  const produtosFiltrados = produtos.filter(p => {
+    const termoBusca = buscaProduto.toLowerCase();
+    const displayName = p.display_name?.toLowerCase() || '';
+    const produto = p.produto?.toLowerCase() || '';
+    const variacao = p.nome_variacao?.toLowerCase() || '';
+    const produtoPai = p.produto_pai?.produto?.toLowerCase() || '';
+    
+    return displayName.includes(termoBusca) ||
+           produto.includes(termoBusca) ||
+           variacao.includes(termoBusca) ||
+           produtoPai.includes(termoBusca);
+  });
 
   // Atualizar quantidade de um produto
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
@@ -373,11 +385,6 @@ const Estoque = () => {
                     </h3>
                     <p className="text-sm text-gray-500">
                       {produto.unidade || 'N/D'}
-                      {produto.nome_variacao && (
-                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                          Variação
-                        </span>
-                      )}
                     </p>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
