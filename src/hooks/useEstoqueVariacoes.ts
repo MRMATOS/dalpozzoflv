@@ -158,7 +158,7 @@ export const useEstoqueVariacoes = () => {
     
     if (!estoque || Object.keys(estoque.estoques_por_loja).length === 0) {
       return {
-        jsx: <div className="text-gray-400 text-sm">Sem estoque informado</div>,
+        jsx: React.createElement('div', { className: 'text-gray-400 text-sm' }, 'Sem estoque informado'),
         isVariacao: false,
         temEstoque: false
       };
@@ -171,26 +171,28 @@ export const useEstoqueVariacoes = () => {
 
     if (!estoquesFormatados) {
       return {
-        jsx: <div className="text-gray-400 text-sm">Estoque zerado</div>,
+        jsx: React.createElement('div', { className: 'text-gray-400 text-sm' }, 'Estoque zerado'),
         isVariacao: estoque.is_variacao,
         temEstoque: false
       };
     }
 
-    const jsx = (
-      <div className="text-sm space-y-1">
-        {Object.entries(estoque.estoques_por_loja)
-          .filter(([_, quantidade]) => quantidade > 0)
-          .map(([loja, quantidade]) => (
-          <div key={loja} className="text-gray-600">
-            {loja}: <span className="font-medium">{quantidade}</span> {estoque.unidade.toLowerCase()}
-          </div>
-        ))}
-        <div className={`font-semibold border-t pt-1 ${estoque.is_variacao ? 'text-green-700' : 'text-gray-800'}`}>
-          Total: {estoque.total_estoque} {estoque.unidade.toLowerCase()}
-          {estoque.is_variacao && <span className="text-xs text-green-600 ml-1">(variação)</span>}
-        </div>
-      </div>
+    const jsx = React.createElement('div', { className: 'text-sm space-y-1' }, 
+      ...Object.entries(estoque.estoques_por_loja)
+        .filter(([_, quantidade]) => quantidade > 0)
+        .map(([loja, quantidade]) => 
+          React.createElement('div', { key: loja, className: 'text-gray-600' }, 
+            `${loja}: `,
+            React.createElement('span', { className: 'font-medium' }, quantidade),
+            ` ${estoque.unidade.toLowerCase()}`
+          )
+        ),
+      React.createElement('div', { 
+        className: `font-semibold border-t pt-1 ${estoque.is_variacao ? 'text-green-700' : 'text-gray-800'}` 
+      }, 
+        `Total: ${estoque.total_estoque} ${estoque.unidade.toLowerCase()}`,
+        estoque.is_variacao && React.createElement('span', { className: 'text-xs text-green-600 ml-1' }, '(variação)')
+      )
     );
 
     return {
