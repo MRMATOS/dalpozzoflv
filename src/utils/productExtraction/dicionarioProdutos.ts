@@ -30,7 +30,7 @@ export const dicionarioProdutos = {
   },
   'alho': {
     'descascado': ['alho descascado'],
-    'poró':['alho poro', 'alho-poro', 'alhoporó', 'alho-poró']
+    'poró':['alho poró', 'alho-poro', 'alhoporó', 'alho-poró']
   },
   'alface': {
     'crespa': ['alface crespa'],
