@@ -32,7 +32,8 @@ export const dicionarioProdutos = {
     'padrão': ['alho poró', 'alho-poró']
   },
   'alho': {
-    'descascado': ['alho descascado']
+    'descascado': ['alho descascado'],
+    'poró':['alho poro', 'alho-poro', 'alhoporó', 'alho-poró']
   },
   'alface': {
     'crespa': ['alface crespa'],
