@@ -13,9 +13,12 @@ import { useEstoque } from '@/hooks/useEstoque';
 interface Produto {
   id: string;
   produto: string | null;
+  nome_variacao: string | null;
+  produto_pai_id: string | null;
   unidade: string | null;
   ativo: boolean | null;
   quantidade_atual?: number;
+  display_name?: string;
 }
 
 const Estoque = () => {
@@ -29,7 +32,7 @@ const Estoque = () => {
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
 
-  // Carregar produtos e estoque atual
+  // Carregar produtos e estoque atual com estrutura de variações
   useEffect(() => {
     const carregarProdutos = async () => {
       try {
@@ -37,12 +40,20 @@ const Estoque = () => {
         setError('');
         console.log('Carregando produtos para a loja:', profile?.loja);
 
-        // Buscar apenas produtos ativos
+        // Buscar produtos ativos com informações de produto pai
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
-          .select('id, produto, unidade, ativo')
+          .select(`
+            id, 
+            produto, 
+            nome_variacao,
+            produto_pai_id,
+            unidade, 
+            ativo,
+            produto_pai:produtos(produto)
+          `)
           .eq('ativo', true)
-          .order('produto');
+          .order('produto, nome_variacao');
 
         if (produtosError) {
           console.error('Erro ao carregar produtos:', produtosError);
@@ -70,11 +81,26 @@ const Estoque = () => {
           estoqueMap.set(item.produto_id, item.quantidade);
         });
 
-        // Combinar produtos com estoque atual
-        const produtosComEstoque = produtosData?.map(produto => ({
-          ...produto,
-          quantidade_atual: estoqueMap.get(produto.id) || 0
-        })) || [];
+        // Processar produtos com nomenclatura correta
+        const produtosComEstoque = produtosData?.map(produto => {
+          const produtoPai = (produto as any).produto_pai;
+          let displayName = '';
+          
+          if (produto.nome_variacao) {
+            // É uma variação
+            const nomePai = produtoPai?.produto || 'Produto';
+            displayName = `${nomePai} - ${produto.nome_variacao}`;
+          } else {
+            // É um produto principal
+            displayName = produto.produto || 'Produto sem nome';
+          }
+
+          return {
+            ...produto,
+            quantidade_atual: estoqueMap.get(produto.id) || 0,
+            display_name: displayName
+          };
+        }) || [];
 
         setProdutos(produtosComEstoque);
         console.log('Produtos com estoque carregados:', produtosComEstoque);
@@ -92,7 +118,7 @@ const Estoque = () => {
     }
   }, [profile]);
 
-  // Listener para mudanças em produtos em tempo real
+  // Listener para mudanças em produtos e estoque em tempo real
   useEffect(() => {
     const produtosChannel = supabase
       .channel('produtos-estoque-sync')
@@ -105,9 +131,34 @@ const Estoque = () => {
         },
         (payload) => {
           console.log('Produto alterado, recarregando lista:', payload);
-          // Recarregar produtos quando houver mudanças
-          if (profile?.loja) {
-            window.location.reload(); // Força um reload para garantir sincronização
+          // Recarregar quando houver mudanças em produtos
+          window.location.reload();
+        }
+      )
+      .subscribe();
+
+    const estoqueChannel = supabase
+      .channel('estoque-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'estoque_atual',
+          filter: `loja=eq.${profile?.loja}`
+        },
+        (payload) => {
+          console.log('Estoque alterado:', payload);
+          // Atualizar apenas se for para esta loja
+          if (payload.new && (payload.new as any).loja === profile?.loja) {
+            const produtoId = (payload.new as any).produto_id;
+            const novaQuantidade = (payload.new as any).quantidade;
+            
+            setProdutos(prev => prev.map(produto => 
+              produto.id === produtoId 
+                ? { ...produto, quantidade_atual: novaQuantidade }
+                : produto
+            ));
           }
         }
       )
@@ -115,11 +166,14 @@ const Estoque = () => {
 
     return () => {
       supabase.removeChannel(produtosChannel);
+      supabase.removeChannel(estoqueChannel);
     };
   }, [profile]);
 
   const produtosFiltrados = produtos.filter(p =>
-    p.produto?.toLowerCase().includes(buscaProduto.toLowerCase())
+    p.display_name?.toLowerCase().includes(buscaProduto.toLowerCase()) ||
+    p.produto?.toLowerCase().includes(buscaProduto.toLowerCase()) ||
+    p.nome_variacao?.toLowerCase().includes(buscaProduto.toLowerCase())
   );
 
   // Atualizar quantidade de um produto
@@ -167,7 +221,6 @@ const Estoque = () => {
       setSaving(true);
       console.log(`Iniciando salvamento de estoque para a loja: ${profile.loja}`);
 
-      // Preparar dados para upsert
       const dadosEstoque = produtos.map(produto => ({
         produto_id: produto.id,
         loja: profile.loja,
@@ -177,7 +230,6 @@ const Estoque = () => {
 
       console.log(`Preparando para salvar ${dadosEstoque.length} registros de estoque.`);
 
-      // Fazer upsert (insert ou update)
       const { error } = await supabase
         .from('estoque_atual')
         .upsert(dadosEstoque, {
@@ -200,8 +252,6 @@ const Estoque = () => {
       });
 
       console.log('Estoque salvo com sucesso para a loja:', profile.loja);
-      
-      // Recarregar dados do hook useEstoque
       recarregarEstoque();
     } catch (catchedError) {
       console.error('Erro geral (catch) ao salvar estoque:', catchedError);
@@ -318,8 +368,17 @@ const Estoque = () => {
               {produtosFiltrados.map(produto => (
                 <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">{produto.produto || 'Produto sem nome'}</h3>
-                    <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+                    <h3 className="font-medium text-gray-900">
+                      {produto.display_name || 'Produto sem nome'}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {produto.unidade || 'N/D'}
+                      {produto.nome_variacao && (
+                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                          Variação
+                        </span>
+                      )}
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     <Button

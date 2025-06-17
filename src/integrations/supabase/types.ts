@@ -726,6 +726,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_produto_dependencies: {
+        Args: { produto_uuid: string }
+        Returns: {
+          has_estoque: boolean
+          has_requisicoes: boolean
+          has_cotacoes: boolean
+          estoque_total: number
+          message: string
+        }[]
+      }
+      clear_produto_estoque: {
+        Args: { produto_uuid: string }
+        Returns: boolean
+      }
       get_user_loja: {
         Args: Record<PropertyKey, never>
         Returns: string
