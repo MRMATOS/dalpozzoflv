@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,7 @@ interface Produto {
   ativo: boolean | null;
   quantidade_atual?: number;
   display_name?: string;
-  produto_pai?: { produto: string } | null;
+  produto_pai?: { id: string; produto: string } | null;
 }
 
 const Estoque = () => {
@@ -33,7 +34,7 @@ const Estoque = () => {
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
 
-  // Carregar produtos e estoque atual com query melhorada
+  // Carregar produtos e estoque atual com query corrigida
   useEffect(() => {
     const carregarProdutos = async () => {
       try {
@@ -41,7 +42,7 @@ const Estoque = () => {
         setError('');
         console.log('Carregando produtos para a loja:', profile?.loja);
 
-        // Query melhorada para garantir que produto_pai seja sempre carregado
+        // Query corrigida para trazer id e produto do produto pai
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
           .select(`
@@ -51,10 +52,9 @@ const Estoque = () => {
             produto_pai_id,
             unidade, 
             ativo,
-            produto_pai:produtos!produto_pai_id(produto)
+            produto_pai:produtos!produto_pai_id(id, produto)
           `)
           .eq('ativo', true)
-          .order('produto_pai_id', { nullsFirst: true })
           .order('produto')
           .order('nome_variacao');
 
@@ -84,98 +84,58 @@ const Estoque = () => {
           estoqueMap.set(item.produto_id, item.quantidade);
         });
 
-        // Processar produtos com lógica de nomenclatura
+        // Processar produtos com lógica de nomenclatura corrigida
         const produtosComEstoque = produtosData?.map(produto => {
-          const produtoPai = (produto as any).produto_pai;
-          let displayName = '';
+          const produtoPai = produto.produto_pai;
           
-          // Lógica exata conforme solicitado pelo usuário
-          if (produto.nome_variacao && produto.produto_pai_id && produtoPai?.produto) {
-            // É uma variação - formato: "Produto Pai Variação" (sem traço)
-            displayName = `${produtoPai.produto} ${produto.nome_variacao}`;
-            console.log(`Variação processada: ${displayName}`, { produto, produtoPai });
-          } else if (produto.produto && !produto.produto_pai_id) {
-            // É um produto principal/pai
-            displayName = produto.produto;
-            console.log(`Produto pai processado: ${displayName}`, produto);
-          } else if (produto.nome_variacao && !produtoPai?.produto) {
-            // Variação sem produto pai encontrado - usar só a variação
-            displayName = produto.nome_variacao;
-            console.warn('Variação sem produto pai:', produto);
-          } else if (produto.produto) {
-            // Fallback para produto
-            displayName = produto.produto;
-          } else {
-            // Último fallback - não deveria acontecer
-            displayName = `ID: ${produto.id.substring(0, 8)}`;
-            console.error('Produto sem nome detectado:', produto);
-          }
+          // Lógica simplificada e correta para display_name
+          const displayName = produto.produto_pai_id && produtoPai?.produto
+            ? `${produtoPai.produto} ${produto.nome_variacao || ''}`.trim()
+            : produto.produto || produto.nome_variacao || `ID: ${produto.id.substring(0, 8)}`;
+
+          console.log('Produto processado:', {
+            id: produto.id,
+            produto: produto.produto,
+            nome_variacao: produto.nome_variacao,
+            produto_pai_id: produto.produto_pai_id,
+            produto_pai: produtoPai,
+            display_name: displayName
+          });
 
           return {
             ...produto,
             quantidade_atual: estoqueMap.get(produto.id) || 0,
-            display_name: displayName,
-            produto_pai: produtoPai
+            display_name: displayName
           };
         }) || [];
 
-        // Ordenação simplificada conforme solicitado
+        // Ordenação correta: agrupado por produto pai, pai primeiro, depois variações
         produtosComEstoque.sort((a, b) => {
-          const aEhVariacao = !!(a.nome_variacao && a.produto_pai_id);
-          const bEhVariacao = !!(b.nome_variacao && b.produto_pai_id);
+          // Identificar o nome do produto pai para cada item
+          const nomePaiA = a.produto_pai?.produto || a.produto || '';
+          const nomePaiB = b.produto_pai?.produto || b.produto || '';
           
-          // Se ambos são produtos pai, ordenar alfabeticamente
-          if (!aEhVariacao && !bEhVariacao) {
-            return (a.display_name || '').localeCompare(b.display_name || '');
-          }
+          // Primeiro comparar por produto pai (alfabético)
+          const comparePai = nomePaiA.localeCompare(nomePaiB);
+          if (comparePai !== 0) return comparePai;
           
-          // Se um é pai e outro variação
-          if (!aEhVariacao && bEhVariacao) {
-            const produtoPaiB = b.produto_pai?.produto || '';
-            const produtoA = a.produto || '';
-            
-            // Se a variação B pertence ao produto pai A, A vem primeiro
-            if (produtoPaiB === produtoA) {
-              return -1;
-            }
-            // Senão, ordenar alfabeticamente
-            return produtoA.localeCompare(produtoPaiB);
-          }
+          // Se são do mesmo produto pai, produto pai vem antes das variações
+          const ehVariacaoA = !!a.nome_variacao;
+          const ehVariacaoB = !!b.nome_variacao;
           
-          // Se um é variação e outro pai
-          if (aEhVariacao && !bEhVariacao) {
-            const produtoPaiA = a.produto_pai?.produto || '';
-            const produtoB = b.produto || '';
-            
-            // Se a variação A pertence ao produto pai B, B vem primeiro
-            if (produtoPaiA === produtoB) {
-              return 1;
-            }
-            // Senão, ordenar alfabeticamente
-            return produtoPaiA.localeCompare(produtoB);
-          }
+          if (!ehVariacaoA && ehVariacaoB) return -1; // Produto pai vem primeiro
+          if (ehVariacaoA && !ehVariacaoB) return 1;  // Variação vem depois
           
-          // Se ambos são variações, ordenar pelos produtos pai e depois pelas variações
-          if (aEhVariacao && bEhVariacao) {
-            const produtoPaiA = a.produto_pai?.produto || '';
-            const produtoPaiB = b.produto_pai?.produto || '';
-            
-            if (produtoPaiA !== produtoPaiB) {
-              return produtoPaiA.localeCompare(produtoPaiB);
-            }
-            
-            // Mesmo produto pai, ordenar pelas variações
-            const variacaoA = a.nome_variacao || '';
-            const variacaoB = b.nome_variacao || '';
-            return variacaoA.localeCompare(variacaoB);
-          }
-          
-          // Fallback
+          // Se ambos são variações ou ambos são produtos pai, ordem alfabética
           return (a.display_name || '').localeCompare(b.display_name || '');
         });
 
+        console.log('Produtos ordenados:', produtosComEstoque.map(p => ({
+          display_name: p.display_name,
+          eh_variacao: !!p.nome_variacao
+        })));
+
         setProdutos(produtosComEstoque);
-        console.log('Produtos processados e ordenados:', produtosComEstoque);
       } catch (error) {
         console.error('Erro geral ao carregar dados:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
