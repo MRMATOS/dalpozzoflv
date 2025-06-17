@@ -21,6 +21,7 @@ interface Produto {
   display_name?: string;
   produto_pai?: { produto: string } | null;
   is_variation?: boolean;
+  is_parent?: boolean;
 }
 
 const Estoque = () => {
@@ -34,7 +35,7 @@ const Estoque = () => {
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
 
-  // Carregar produtos e estoque atual com estrutura corrigida
+  // Carregar produtos e estoque atual com query melhorada
   useEffect(() => {
     const carregarProdutos = async () => {
       try {
@@ -42,7 +43,7 @@ const Estoque = () => {
         setError('');
         console.log('Carregando produtos para a loja:', profile?.loja);
 
-        // Buscar todos os produtos ativos (pai e variações) com informações de produto pai
+        // Query melhorada para garantir que produto_pai seja sempre carregado
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
           .select(`
@@ -52,7 +53,7 @@ const Estoque = () => {
             produto_pai_id,
             unidade, 
             ativo,
-            produto_pai:produtos(produto)
+            produto_pai:produtos!produto_pai_id(produto)
           `)
           .eq('ativo', true)
           .order('produto_pai_id', { nullsFirst: true })
@@ -85,22 +86,34 @@ const Estoque = () => {
           estoqueMap.set(item.produto_id, item.quantidade);
         });
 
-        // Processar produtos com nomenclatura correta
+        // Processar produtos com lógica de nomenclatura corrigida
         const produtosComEstoque = produtosData?.map(produto => {
           const produtoPai = (produto as any).produto_pai;
           let displayName = '';
           let isVariation = false;
+          let isParent = false;
           
-          if (produto.nome_variacao && produtoPai?.produto) {
-            // É uma variação - formato: "Produto Pai Variação"
-            displayName = `${produtoPai.produto} ${produto.nome_variacao}`;
+          // Lógica corrigida para evitar "Produto sem nome"
+          if (produto.nome_variacao && produto.produto_pai_id && produtoPai?.produto) {
+            // É uma variação - formato: "Produto Pai - Variação"
+            displayName = `${produtoPai.produto} - ${produto.nome_variacao}`;
             isVariation = true;
+          } else if (produto.produto && !produto.produto_pai_id) {
+            // É um produto principal/pai
+            displayName = produto.produto;
+            isParent = true;
+          } else if (produto.nome_variacao && !produtoPai?.produto) {
+            // Variação sem produto pai encontrado - usar só a variação
+            displayName = produto.nome_variacao;
+            isVariation = true;
+            console.warn('Variação sem produto pai:', produto);
           } else if (produto.produto) {
-            // É um produto principal
+            // Fallback para produto
             displayName = produto.produto;
           } else {
-            // Fallback - não deveria acontecer com a estrutura corrigida
-            displayName = 'Produto sem nome';
+            // Último fallback - não deveria acontecer
+            displayName = `ID: ${produto.id.substring(0, 8)}`;
+            console.error('Produto sem nome detectado:', produto);
           }
 
           return {
@@ -108,12 +121,23 @@ const Estoque = () => {
             quantidade_atual: estoqueMap.get(produto.id) || 0,
             display_name: displayName,
             produto_pai: produtoPai,
-            is_variation: isVariation
+            is_variation: isVariation,
+            is_parent: isParent
           };
         }) || [];
 
+        // Ordenar: produtos pai primeiro, depois variações
+        produtosComEstoque.sort((a, b) => {
+          // Primeiro por tipo (pai antes de variação)
+          if (a.is_parent && !b.is_parent) return -1;
+          if (!a.is_parent && b.is_parent) return 1;
+          
+          // Depois por nome
+          return (a.display_name || '').localeCompare(b.display_name || '');
+        });
+
         setProdutos(produtosComEstoque);
-        console.log('Produtos com estoque carregados:', produtosComEstoque);
+        console.log('Produtos processados e ordenados:', produtosComEstoque);
       } catch (error) {
         console.error('Erro geral ao carregar dados:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -180,7 +204,7 @@ const Estoque = () => {
     };
   }, [profile]);
 
-  // Busca aprimorada para funcionar com a estrutura corrigida
+  // Busca melhorada que funciona com a nova estrutura
   const produtosFiltrados = produtos.filter(p => {
     const termoBusca = buscaProduto.toLowerCase();
     const displayName = p.display_name?.toLowerCase() || '';
@@ -386,11 +410,16 @@ const Estoque = () => {
               {produtosFiltrados.map(produto => (
                 <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {produto.display_name || 'Produto sem nome'}
+                    <h3 className="font-medium text-gray-900 flex items-center">
+                      {produto.display_name}
                       {produto.is_variation && (
                         <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
                           Variação
+                        </span>
+                      )}
+                      {produto.is_parent && (
+                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                          Principal
                         </span>
                       )}
                     </h3>
