@@ -280,7 +280,7 @@ export const dicionarioProdutos = {
     'saladete graúdo': ['tomate saladete graúdo'],
     'cereja bdj': ['tomate cereja bandeja', 'tomate cereja cavali', 'tomate cereja klaina', 'tomate cereja bdj', 'tomate cereja cx'],
     'cereja cx': ['tomate cereja caixa'],
-    'cereja klaina': ['tomate cereja klaina'],
+    'cereja klaina': ['tomate cereja klaina','cereja klaina'],
     'cereja': ['tomate cereja']
   },
   'uva': {
