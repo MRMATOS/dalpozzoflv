@@ -93,10 +93,10 @@ const Estoque = () => {
           let isVariation = false;
           let isParent = false;
           
-          // Lógica corrigida para evitar "Produto sem nome"
+          // Lógica corrigida conforme solicitado
           if (produto.nome_variacao && produto.produto_pai_id && produtoPai?.produto) {
-            // É uma variação - formato: "Produto Pai - Variação"
-            displayName = `${produtoPai.produto} - ${produto.nome_variacao}`;
+            // É uma variação - formato: "Produto Pai Variação" (sem traço)
+            displayName = `${produtoPai.produto} ${produto.nome_variacao}`;
             isVariation = true;
           } else if (produto.produto && !produto.produto_pai_id) {
             // É um produto principal/pai
@@ -126,13 +126,55 @@ const Estoque = () => {
           };
         }) || [];
 
-        // Ordenar: produtos pai primeiro, depois variações
+        // Ordenar: produtos pai primeiro, depois suas variações agrupadas
         produtosComEstoque.sort((a, b) => {
-          // Primeiro por tipo (pai antes de variação)
-          if (a.is_parent && !b.is_parent) return -1;
-          if (!a.is_parent && b.is_parent) return 1;
+          // Se ambos são produtos pai, ordenar alfabeticamente
+          if (a.is_parent && b.is_parent) {
+            return (a.display_name || '').localeCompare(b.display_name || '');
+          }
           
-          // Depois por nome
+          // Se um é pai e outro variação, verificar se a variação pertence ao pai
+          if (a.is_parent && b.is_variation) {
+            const produtoPaiB = b.produto_pai?.produto || '';
+            const produtoA = a.produto || '';
+            
+            // Se a variação B pertence ao produto pai A, A vem primeiro
+            if (produtoPaiB === produtoA) {
+              return -1;
+            }
+            // Senão, ordenar alfabeticamente pelos nomes dos produtos pai
+            return produtoA.localeCompare(produtoPaiB);
+          }
+          
+          // Se um é variação e outro pai, verificar se a variação pertence ao pai
+          if (a.is_variation && b.is_parent) {
+            const produtoPaiA = a.produto_pai?.produto || '';
+            const produtoB = b.produto || '';
+            
+            // Se a variação A pertence ao produto pai B, B vem primeiro
+            if (produtoPaiA === produtoB) {
+              return 1;
+            }
+            // Senão, ordenar alfabeticamente pelos nomes dos produtos pai
+            return produtoPaiA.localeCompare(produtoB);
+          }
+          
+          // Se ambos são variações, ordenar pelos produtos pai e depois pelas variações
+          if (a.is_variation && b.is_variation) {
+            const produtoPaiA = a.produto_pai?.produto || '';
+            const produtoPaiB = b.produto_pai?.produto || '';
+            
+            if (produtoPaiA !== produtoPaiB) {
+              return produtoPaiA.localeCompare(produtoPaiB);
+            }
+            
+            // Mesmo produto pai, ordenar pelas variações
+            const variacaoA = a.nome_variacao || '';
+            const variacaoB = b.nome_variacao || '';
+            return variacaoA.localeCompare(variacaoB);
+          }
+          
+          // Fallback: ordenar por display_name
           return (a.display_name || '').localeCompare(b.display_name || '');
         });
 
