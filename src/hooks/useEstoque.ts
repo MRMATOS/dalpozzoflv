@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useLojas } from './useLojas';
@@ -26,67 +27,88 @@ export const useEstoque = () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Buscando dados de estoque usando view produtos_com_pai com relacionamento explícito...');
+      console.log('Buscando dados de estoque usando duas queries separadas...');
       
-      const { data, error } = await supabase
+      // Query 1: Buscar dados de estoque_atual
+      const { data: estoqueData, error: estoqueError } = await supabase
         .from('estoque_atual')
-        .select(`
-          produto_id,
-          loja,
-          quantidade,
-          produtos_com_pai!estoque_atual_produto_id_produtos_com_pai_id_fkey(
-            produto, 
-            nome_variacao, 
-            produto_pai_id, 
-            produto_pai_nome,
-            unidade, 
-            media_por_caixa, 
-            ativo
-          )
-        `)
-        .eq('produtos_com_pai.ativo', true);
+        .select('produto_id, loja, quantidade');
 
-      if (error) {
-        console.error('Erro ao buscar estoque:', error);
-        setError(`Erro ao carregar estoque: ${error.message}`);
+      if (estoqueError) {
+        console.error('Erro ao buscar estoque_atual:', estoqueError);
+        setError(`Erro ao carregar estoque: ${estoqueError.message}`);
         return;
       }
 
-      console.log('Dados de estoque brutos com relacionamento resolvido:', data);
+      console.log('Dados de estoque_atual:', estoqueData);
 
-      // Agrupar por produto
+      // Obter lista única de produto_ids do estoque
+      const produtoIds = [...new Set(estoqueData?.map(item => item.produto_id) || [])];
+      
+      if (produtoIds.length === 0) {
+        console.log('Nenhum produto encontrado no estoque');
+        setEstoqueProdutos([]);
+        return;
+      }
+
+      // Query 2: Buscar dados de produtos_com_pai para os produtos encontrados
+      const { data: produtosData, error: produtosError } = await supabase
+        .from('produtos_com_pai')
+        .select(`
+          id,
+          produto, 
+          nome_variacao, 
+          produto_pai_id, 
+          produto_pai_nome,
+          unidade, 
+          media_por_caixa, 
+          ativo
+        `)
+        .in('id', produtoIds)
+        .eq('ativo', true);
+
+      if (produtosError) {
+        console.error('Erro ao buscar produtos_com_pai:', produtosError);
+        setError(`Erro ao carregar produtos: ${produtosError.message}`);
+        return;
+      }
+
+      console.log('Dados de produtos_com_pai:', produtosData);
+
+      // Join manual no JavaScript
       const estoquesAgrupados: { [produto_id: string]: EstoqueProduto } = {};
 
-      data?.forEach(item => {
-        const produtoId = item.produto_id;
-        const produto = item.produtos_com_pai as any;
-        
-        if (!estoquesAgrupados[produtoId]) {
-          // Para variações, usar nome_variacao + produto_pai_nome, para principais usar produto
-          let nomeDisplay = '';
-          if (produto?.produto_pai_nome && produto?.nome_variacao) {
-            nomeDisplay = `${produto.produto_pai_nome} ${produto.nome_variacao}`;
-          } else {
-            nomeDisplay = produto?.produto || produto?.nome_variacao || '';
-          }
-          
-          estoquesAgrupados[produtoId] = {
-            produto_id: produtoId,
-            produto_nome: nomeDisplay,
-            nome_variacao: produto?.nome_variacao,
-            produto_pai_id: produto?.produto_pai_id,
-            produto_pai_nome: produto?.produto_pai_nome,
-            unidade: produto?.unidade || '',
-            media_por_caixa: produto?.media_por_caixa || 20,
-            ativo: produto?.ativo || false,
-            estoques_por_loja: {},
-            total_estoque: 0,
-            total_kg: 0
-          };
+      // Primeiro, criar a estrutura base com dados dos produtos
+      produtosData?.forEach(produto => {
+        // Para variações, usar nome_variacao + produto_pai_nome, para principais usar produto
+        let nomeDisplay = '';
+        if (produto.produto_pai_nome && produto.nome_variacao) {
+          nomeDisplay = `${produto.produto_pai_nome} ${produto.nome_variacao}`;
+        } else {
+          nomeDisplay = produto.produto || produto.nome_variacao || '';
         }
+        
+        estoquesAgrupados[produto.id] = {
+          produto_id: produto.id,
+          produto_nome: nomeDisplay,
+          nome_variacao: produto.nome_variacao,
+          produto_pai_id: produto.produto_pai_id,
+          produto_pai_nome: produto.produto_pai_nome,
+          unidade: produto.unidade || '',
+          media_por_caixa: produto.media_por_caixa || 20,
+          ativo: produto.ativo || false,
+          estoques_por_loja: {},
+          total_estoque: 0,
+          total_kg: 0
+        };
+      });
 
-        estoquesAgrupados[produtoId].estoques_por_loja[item.loja] = item.quantidade || 0;
-        estoquesAgrupados[produtoId].total_estoque += item.quantidade || 0;
+      // Depois, adicionar os dados de estoque
+      estoqueData?.forEach(item => {
+        if (estoquesAgrupados[item.produto_id]) {
+          estoquesAgrupados[item.produto_id].estoques_por_loja[item.loja] = item.quantidade || 0;
+          estoquesAgrupados[item.produto_id].total_estoque += item.quantidade || 0;
+        }
       });
 
       // Calcular total em kg para produtos em caixas
@@ -97,7 +119,7 @@ export const useEstoque = () => {
       });
 
       const estoquesArray = Object.values(estoquesAgrupados);
-      console.log('Estoques processados com relacionamento pai resolvido:', estoquesArray);
+      console.log('Estoques processados com join manual:', estoquesArray);
       
       setEstoqueProdutos(estoquesArray);
     } catch (error) {
