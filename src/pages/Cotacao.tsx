@@ -7,7 +7,7 @@ import { Calculator, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
-import { useEstoque } from '@/hooks/useEstoque';
+import { useEstoqueVariacoes } from '@/hooks/useEstoqueVariacoes';
 import { supabase } from '@/integrations/supabase/client';
 import { useCotacao } from '@/hooks/useCotacao';
 import FornecedorInput from '@/components/cotacao/FornecedorInput';
@@ -22,7 +22,7 @@ const Cotacao = () => {
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const { requisicoes, lojasComRequisicoes } = useRequisicoes();
-  const { obterEstoqueProduto } = useEstoque();
+  const { obterEstoquesDisplayInteligente } = useEstoqueVariacoes();
   
   const [produtosDB, setProdutosDB] = useState<any[]>([]);
   
@@ -60,24 +60,8 @@ const Cotacao = () => {
   const temDados = produtosExtraidos.length > 0 || tabelaComparativa.length > 0;
 
   const obterEstoquesDisplay = (produto: string, tipo: string) => {
-    const estoque = obterEstoqueProduto(produto, tipo);
-    if (!estoque || Object.keys(estoque.estoques_por_loja).length === 0) {
-      return <div className="text-gray-400 text-sm">Sem estoque</div>;
-    }
-    const lojas = Object.entries(estoque.estoques_por_loja);
-    const unidadeEstoque = estoque.unidade;
-    return (
-      <div className="text-sm space-y-1">
-        {lojas.map(([loja, quantidade]) => (
-          <div key={loja} className="text-gray-600">
-            {loja}: <span className="font-medium">{quantidade}</span> {unidadeEstoque.toLowerCase()}
-          </div>
-        ))}
-        <div className="font-semibold text-gray-800 border-t pt-1">
-          Total: {estoque.total_estoque} {unidadeEstoque.toLowerCase()}
-        </div>
-      </div>
-    );
+    const resultado = obterEstoquesDisplayInteligente(produto, tipo);
+    return resultado.jsx;
   };
 
   const calcularTotalFornecedor = (fornecedor: string) => {
