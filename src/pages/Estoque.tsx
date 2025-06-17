@@ -1,13 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useEstoque } from '@/hooks/useEstoque';
 
@@ -24,7 +22,7 @@ interface Produto {
 }
 
 const Estoque = () => {
-  const { profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { error: estoqueError, recarregarEstoque } = useEstoque();
@@ -34,15 +32,12 @@ const Estoque = () => {
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
 
-  // Carregar produtos e estoque atual com query corrigida
   useEffect(() => {
     const carregarProdutos = async () => {
       try {
         setLoading(true);
         setError('');
-        console.log('Carregando produtos para a loja:', profile?.loja);
 
-        // Query corrigida para trazer id e produto do produto pai
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
           .select(`
@@ -54,53 +49,23 @@ const Estoque = () => {
             ativo,
             produto_pai:produtos!produto_pai_id(id, produto)
           `)
-          .eq('ativo', true)
-          .order('produto')
-          .order('nome_variacao');
+          .eq('ativo', true);
 
-        if (produtosError) {
-          console.error('Erro ao carregar produtos:', produtosError);
-          setError(`Erro ao carregar produtos: ${produtosError.message}`);
-          return;
-        }
+        if (produtosError) throw produtosError;
 
-        console.log('Produtos carregados:', produtosData);
-
-        // Buscar estoque atual da loja
         const { data: estoqueData, error: estoqueError } = await supabase
           .from('estoque_atual')
           .select('produto_id, quantidade')
           .eq('loja', profile?.loja);
 
-        if (estoqueError) {
-          console.error('Erro ao carregar estoque:', estoqueError);
-          setError(`Erro ao carregar estoque atual: ${estoqueError.message}`);
-          return;
-        }
+        if (estoqueError) throw estoqueError;
 
-        // Mapear estoque por produto_id
-        const estoqueMap = new Map();
-        estoqueData?.forEach(item => {
-          estoqueMap.set(item.produto_id, item.quantidade);
-        });
+        const estoqueMap = new Map(estoqueData?.map(item => [item.produto_id, item.quantidade]));
 
-        // Processar produtos com lógica de nomenclatura corrigida
         const produtosComEstoque = produtosData?.map(produto => {
-          const produtoPai = produto.produto_pai;
-          
-          // Lógica simplificada e correta para display_name
-          const displayName = produto.produto_pai_id && produtoPai?.produto
-            ? `${produtoPai.produto} ${produto.nome_variacao || ''}`.trim()
+          const displayName = produto.produto_pai_id && produto.produto_pai?.produto
+            ? `${produto.produto_pai.produto} ${produto.nome_variacao || ''}`.trim()
             : produto.produto || produto.nome_variacao || `ID: ${produto.id.substring(0, 8)}`;
-
-          console.log('Produto processado:', {
-            id: produto.id,
-            produto: produto.produto,
-            nome_variacao: produto.nome_variacao,
-            produto_pai_id: produto.produto_pai_id,
-            produto_pai: produtoPai,
-            display_name: displayName
-          });
 
           return {
             ...produto,
@@ -109,158 +74,52 @@ const Estoque = () => {
           };
         }) || [];
 
-        // Ordenação correta: agrupado por produto pai, pai primeiro, depois variações
         produtosComEstoque.sort((a, b) => {
-          // Identificar o nome do produto pai para cada item
           const nomePaiA = a.produto_pai?.produto || a.produto || '';
           const nomePaiB = b.produto_pai?.produto || b.produto || '';
-          
-          // Primeiro comparar por produto pai (alfabético)
+
           const comparePai = nomePaiA.localeCompare(nomePaiB);
           if (comparePai !== 0) return comparePai;
-          
-          // Se são do mesmo produto pai, produto pai vem antes das variações
+
           const ehVariacaoA = !!a.nome_variacao;
           const ehVariacaoB = !!b.nome_variacao;
-          
-          if (!ehVariacaoA && ehVariacaoB) return -1; // Produto pai vem primeiro
-          if (ehVariacaoA && !ehVariacaoB) return 1;  // Variação vem depois
-          
-          // Se ambos são variações ou ambos são produtos pai, ordem alfabética
+
+          if (!ehVariacaoA && ehVariacaoB) return -1;
+          if (ehVariacaoA && !ehVariacaoB) return 1;
+
           return (a.display_name || '').localeCompare(b.display_name || '');
         });
 
-        console.log('Produtos ordenados:', produtosComEstoque.map(p => ({
-          display_name: p.display_name,
-          eh_variacao: !!p.nome_variacao
-        })));
-
         setProdutos(produtosComEstoque);
-      } catch (error) {
-        console.error('Erro geral ao carregar dados:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-        setError(`Erro interno: ${errorMessage}`);
+      } catch (error: any) {
+        setError(`Erro: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
 
-    if (profile?.loja) {
-      carregarProdutos();
-    }
+    if (profile?.loja) carregarProdutos();
   }, [profile]);
 
-  // Listener para mudanças em produtos e estoque em tempo real
-  useEffect(() => {
-    const produtosChannel = supabase
-      .channel('produtos-estoque-sync')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'produtos'
-        },
-        (payload) => {
-          console.log('Produto alterado, recarregando lista:', payload);
-          // Recarregar quando houver mudanças em produtos
-          window.location.reload();
-        }
-      )
-      .subscribe();
-
-    const estoqueChannel = supabase
-      .channel('estoque-sync')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'estoque_atual',
-          filter: `loja=eq.${profile?.loja}`
-        },
-        (payload) => {
-          console.log('Estoque alterado:', payload);
-          // Atualizar apenas se for para esta loja
-          if (payload.new && (payload.new as any).loja === profile?.loja) {
-            const produtoId = (payload.new as any).produto_id;
-            const novaQuantidade = (payload.new as any).quantidade;
-            
-            setProdutos(prev => prev.map(produto => 
-              produto.id === produtoId 
-                ? { ...produto, quantidade_atual: novaQuantidade }
-                : produto
-            ));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(produtosChannel);
-      supabase.removeChannel(estoqueChannel);
-    };
-  }, [profile]);
-
-  // Busca funciona com a nova estrutura
-  const produtosFiltrados = produtos.filter(p => {
-    const termoBusca = buscaProduto.toLowerCase();
-    const displayName = p.display_name?.toLowerCase() || '';
-    const produto = p.produto?.toLowerCase() || '';
-    const variacao = p.nome_variacao?.toLowerCase() || '';
-    const produtoPai = p.produto_pai?.produto?.toLowerCase() || '';
-    
-    return displayName.includes(termoBusca) ||
-           produto.includes(termoBusca) ||
-           variacao.includes(termoBusca) ||
-           produtoPai.includes(termoBusca);
-  });
-
-  // Atualizar quantidade de um produto
   const atualizarQuantidade = (produtoId: string, quantidade: number) => {
-    setProdutos(prev => prev.map(produto => 
-      produto.id === produtoId ? {
-        ...produto,
-        quantidade_atual: Math.max(0, quantidade)
-      } : produto
+    setProdutos(prev => prev.map(produto =>
+      produto.id === produtoId ? { ...produto, quantidade_atual: Math.max(0, quantidade) } : produto
     ));
   };
 
-  // Incrementar quantidade
   const incrementarQuantidade = (produtoId: string) => {
-    setProdutos(prev => prev.map(produto => 
-      produto.id === produtoId ? {
-        ...produto,
-        quantidade_atual: (produto.quantidade_atual || 0) + 1
-      } : produto
-    ));
+    atualizarQuantidade(produtoId, (produtos.find(p => p.id === produtoId)?.quantidade_atual || 0) + 1);
   };
 
-  // Decrementar quantidade
   const decrementarQuantidade = (produtoId: string) => {
-    setProdutos(prev => prev.map(produto => 
-      produto.id === produtoId ? {
-        ...produto,
-        quantidade_atual: Math.max(0, (produto.quantidade_atual || 0) - 1)
-      } : produto
-    ));
+    atualizarQuantidade(produtoId, Math.max(0, (produtos.find(p => p.id === produtoId)?.quantidade_atual || 0) - 1));
   };
 
-  // Salvar estoque
   const salvarEstoque = async () => {
-    if (!profile?.loja) {
-      toast({
-        title: "Erro de Perfil",
-        description: "Informação da loja não encontrada no seu perfil. Não é possível salvar.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!profile?.loja) return;
 
     try {
       setSaving(true);
-      console.log(`Iniciando salvamento de estoque para a loja: ${profile.loja}`);
-
       const dadosEstoque = produtos.map(produto => ({
         produto_id: produto.id,
         loja: profile.loja,
@@ -268,193 +127,117 @@ const Estoque = () => {
         atualizado_em: new Date().toISOString()
       }));
 
-      console.log(`Preparando para salvar ${dadosEstoque.length} registros de estoque.`);
-
       const { error } = await supabase
         .from('estoque_atual')
-        .upsert(dadosEstoque, {
-          onConflict: 'produto_id,loja'
-        });
+        .upsert(dadosEstoque, { onConflict: 'produto_id,loja' });
 
-      if (error) {
-        console.error('Erro detalhado do Supabase ao salvar estoque:', error);
-        toast({
-          title: "Erro ao salvar",
-          description: `Não foi possível salvar o estoque: ${error.message}`,
-          variant: "destructive"
-        });
-        return;
-      }
+      if (error) throw error;
 
-      toast({
-        title: "Estoque salvo!",
-        description: "O estoque foi atualizado com sucesso!"
-      });
-
-      console.log('Estoque salvo com sucesso para a loja:', profile.loja);
+      toast({ title: 'Estoque salvo!', description: 'O estoque foi atualizado com sucesso!' });
       recarregarEstoque();
-    } catch (catchedError) {
-      console.error('Erro geral (catch) ao salvar estoque:', catchedError);
-      const errorMessage = catchedError instanceof Error ? catchedError.message : "Erro desconhecido";
-      toast({
-        title: "Erro interno",
-        description: `Ocorreu um erro inesperado: ${errorMessage}`,
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
   };
 
+  const produtosFiltrados = produtos.filter(p => {
+    const termoBusca = buscaProduto.toLowerCase();
+    return (
+      p.display_name?.toLowerCase().includes(termoBusca) ||
+      p.produto?.toLowerCase().includes(termoBusca) ||
+      p.nome_variacao?.toLowerCase().includes(termoBusca) ||
+      p.produto_pai?.produto?.toLowerCase().includes(termoBusca)
+    );
+  });
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Package className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p>Carregando produtos...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Package className="animate-spin w-8 h-8 text-blue-600" />
+        <p className="ml-4">Carregando produtos...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header - Fixed */}
-      <header className="bg-white shadow-sm border-b flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Voltar</span>
-              </Button>
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
-                <Package className="text-white text-sm" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Estoque</h1>
-                <p className="text-sm text-gray-500">{profile?.loja}</p>
-              </div>
-            </div>
+    <div className="min-h-screen flex flex-col">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+              <ArrowLeft className="w-4 h-4" />
+              Voltar
+            </Button>
+            <h1 className="text-lg font-semibold">Estoque - {profile?.loja}</h1>
           </div>
         </div>
       </header>
 
-      {/* Fixed Controls Section */}
-      <div className="bg-white border-b flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Buscar produto..."
-                value={buscaProduto}
-                onChange={(e) => setBuscaProduto(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+      <div className="bg-white border-b p-4">
+        <div className="flex justify-between items-center">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Buscar produto..."
+              value={buscaProduto}
+              onChange={(e) => setBuscaProduto(e.target.value)}
+              className="pl-10"
+            />
           </div>
-
-          {(error || estoqueError) && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error || estoqueError}</AlertDescription>
-            </Alert>
-          )}
-
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold text-gray-900">Produtos</h2>
-            <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => window.location.reload()}
-                className="flex items-center space-x-2"
-              >
-                <RefreshCw className="w-4 h-4" />
-                <span>Atualizar</span>
-              </Button>
-              <Button
-                onClick={salvarEstoque}
-                disabled={saving}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Salvando...' : 'Salvar'}
-              </Button>
-            </div>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              <RefreshCw className="w-4 h-4" /> Atualizar
+            </Button>
+            <Button onClick={salvarEstoque} disabled={saving} className="bg-green-600 hover:bg-green-700">
+              <Save className="w-4 h-4" /> {saving ? 'Salvando...' : 'Salvar'}
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Scrollable Products Section */}
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          {produtosFiltrados.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-500">
-                {buscaProduto
-                  ? 'Nenhum produto encontrado para sua busca.'
-                  : 'Nenhum produto cadastrado'}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {produtosFiltrados.map(produto => (
-                <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
-                  <div className="flex-1">
-                    <h3 className="font-medium text-gray-900">
-                      {produto.display_name}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {produto.unidade || 'N/D'}
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => decrementarQuantidade(produto.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                      onChange={(e) => {
-                        const valor = e.target.value;
-                        if (valor === '') {
-                          atualizarQuantidade(produto.id, 0);
-                        } else {
-                          atualizarQuantidade(produto.id, parseFloat(valor) || 0);
-                        }
-                      }}
-                      placeholder="0"
-                      className="w-20 text-center"
-                    />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => incrementarQuantidade(produto.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
+      {(error || estoqueError) && (
+        <Alert variant="destructive" className="m-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error || estoqueError}</AlertDescription>
+        </Alert>
+      )}
+
+      <main className="flex-1 overflow-auto p-4">
+        {produtosFiltrados.length === 0 ? (
+          <div className="text-center py-8">
+            <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500">Nenhum produto encontrado.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {produtosFiltrados.map(produto => (
+              <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
+                <div>
+                  <h3 className="font-medium text-gray-900">{produto.display_name}</h3>
+                  <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+                <div className="flex items-center space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => decrementarQuantidade(produto.id)}>
+                    <Minus className="w-4 h-4" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                    onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
+                    className="w-20 text-center"
+                  />
+                  <Button variant="outline" size="sm" onClick={() => incrementarQuantidade(produto.id)}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
     </div>
   );
 };
