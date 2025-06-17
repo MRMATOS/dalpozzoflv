@@ -64,6 +64,24 @@ const Estoque = () => {
           display_name: produto.display_name
         }));
 
+        produtosComEstoque.sort((a, b) => {
+          const nomePaiA = a.produto_pai_nome || a.produto || '';
+          const nomePaiB = b.produto_pai_nome || b.produto || '';
+
+          const comparePai = nomePaiA.localeCompare(nomePaiB);
+          if (comparePai !== 0) return comparePai;
+
+          const ehVariacaoA = !!a.nome_variacao;
+          const ehVariacaoB = !!b.nome_variacao;
+
+          if (!ehVariacaoA && ehVariacaoB) return -1;
+          if (ehVariacaoA && !ehVariacaoB) return 1;
+
+          const nomeA = a.display_name || '';
+          const nomeB = b.display_name || '';
+          return nomeA.localeCompare(nomeB);
+        });
+
         setProdutos(produtosComEstoque);
       } catch (error: any) {
         setError(`Erro: ${error.message}`);
