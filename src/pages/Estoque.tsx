@@ -3,16 +3,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus, Search } from 'lucide-react';
+import { ArrowLeft, Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
+import { useEstoque } from '@/hooks/useEstoque';
 
 interface Produto {
   id: string;
   produto: string | null;
   unidade: string | null;
+  ativo: boolean | null;
   quantidade_atual?: number;
 }
 
@@ -20,6 +22,7 @@ const Estoque = () => {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { error: estoqueError, recarregarEstoque } = useEstoque();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -31,20 +34,23 @@ const Estoque = () => {
     const carregarProdutos = async () => {
       try {
         setLoading(true);
+        setError('');
         console.log('Carregando produtos para a loja:', profile?.loja);
 
-        // Buscar produtos ativos
+        // Buscar apenas produtos ativos
         const { data: produtosData, error: produtosError } = await supabase
           .from('produtos')
-          .select('id, produto, unidade')
+          .select('id, produto, unidade, ativo')
           .eq('ativo', true)
           .order('produto');
 
         if (produtosError) {
           console.error('Erro ao carregar produtos:', produtosError);
-          setError('Erro ao carregar produtos');
+          setError(`Erro ao carregar produtos: ${produtosError.message}`);
           return;
         }
+
+        console.log('Produtos carregados:', produtosData);
 
         // Buscar estoque atual da loja
         const { data: estoqueData, error: estoqueError } = await supabase
@@ -54,7 +60,7 @@ const Estoque = () => {
 
         if (estoqueError) {
           console.error('Erro ao carregar estoque:', estoqueError);
-          setError('Erro ao carregar estoque atual');
+          setError(`Erro ao carregar estoque atual: ${estoqueError.message}`);
           return;
         }
 
@@ -71,10 +77,11 @@ const Estoque = () => {
         })) || [];
 
         setProdutos(produtosComEstoque);
-        console.log('Produtos carregados:', produtosComEstoque);
+        console.log('Produtos com estoque carregados:', produtosComEstoque);
       } catch (error) {
-        console.error('Erro geral:', error);
-        setError('Erro interno ao carregar dados');
+        console.error('Erro geral ao carregar dados:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        setError(`Erro interno: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -83,6 +90,32 @@ const Estoque = () => {
     if (profile?.loja) {
       carregarProdutos();
     }
+  }, [profile]);
+
+  // Listener para mudanças em produtos em tempo real
+  useEffect(() => {
+    const produtosChannel = supabase
+      .channel('produtos-estoque-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'produtos'
+        },
+        (payload) => {
+          console.log('Produto alterado, recarregando lista:', payload);
+          // Recarregar produtos quando houver mudanças
+          if (profile?.loja) {
+            window.location.reload(); // Força um reload para garantir sincronização
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(produtosChannel);
+    };
   }, [profile]);
 
   const produtosFiltrados = produtos.filter(p =>
@@ -143,7 +176,6 @@ const Estoque = () => {
       }));
 
       console.log(`Preparando para salvar ${dadosEstoque.length} registros de estoque.`);
-      console.log('Dados para salvar (amostra):', dadosEstoque.slice(0, 5));
 
       // Fazer upsert (insert ou update)
       const { error } = await supabase
@@ -156,7 +188,7 @@ const Estoque = () => {
         console.error('Erro detalhado do Supabase ao salvar estoque:', error);
         toast({
           title: "Erro ao salvar",
-          description: `Não foi possível salvar o estoque: ${error.message}. Verifique o console para mais detalhes.`,
+          description: `Não foi possível salvar o estoque: ${error.message}`,
           variant: "destructive"
         });
         return;
@@ -168,6 +200,9 @@ const Estoque = () => {
       });
 
       console.log('Estoque salvo com sucesso para a loja:', profile.loja);
+      
+      // Recarregar dados do hook useEstoque
+      recarregarEstoque();
     } catch (catchedError) {
       console.error('Erro geral (catch) ao salvar estoque:', catchedError);
       const errorMessage = catchedError instanceof Error ? catchedError.message : "Erro desconhecido";
@@ -235,23 +270,33 @@ const Estoque = () => {
             </div>
           </div>
 
-          {error && (
+          {(error || estoqueError) && (
             <Alert variant="destructive" className="mb-4">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{error || estoqueError}</AlertDescription>
             </Alert>
           )}
 
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-semibold text-gray-900">Produtos</h2>
-            <Button
-              onClick={salvarEstoque}
-              disabled={saving}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {saving ? 'Salvando...' : 'Salvar'}
-            </Button>
+            <div className="flex space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="flex items-center space-x-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Atualizar</span>
+              </Button>
+              <Button
+                onClick={salvarEstoque}
+                disabled={saving}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Salvando...' : 'Salvar'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
