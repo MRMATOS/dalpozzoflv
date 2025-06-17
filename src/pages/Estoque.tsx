@@ -20,8 +20,6 @@ interface Produto {
   quantidade_atual?: number;
   display_name?: string;
   produto_pai?: { produto: string } | null;
-  is_variation?: boolean;
-  is_parent?: boolean;
 }
 
 const Estoque = () => {
@@ -86,26 +84,23 @@ const Estoque = () => {
           estoqueMap.set(item.produto_id, item.quantidade);
         });
 
-        // Processar produtos com lógica de nomenclatura corrigida
+        // Processar produtos com lógica de nomenclatura
         const produtosComEstoque = produtosData?.map(produto => {
           const produtoPai = (produto as any).produto_pai;
           let displayName = '';
-          let isVariation = false;
-          let isParent = false;
           
-          // Lógica corrigida conforme solicitado
+          // Lógica exata conforme solicitado pelo usuário
           if (produto.nome_variacao && produto.produto_pai_id && produtoPai?.produto) {
             // É uma variação - formato: "Produto Pai Variação" (sem traço)
             displayName = `${produtoPai.produto} ${produto.nome_variacao}`;
-            isVariation = true;
+            console.log(`Variação processada: ${displayName}`, { produto, produtoPai });
           } else if (produto.produto && !produto.produto_pai_id) {
             // É um produto principal/pai
             displayName = produto.produto;
-            isParent = true;
+            console.log(`Produto pai processado: ${displayName}`, produto);
           } else if (produto.nome_variacao && !produtoPai?.produto) {
             // Variação sem produto pai encontrado - usar só a variação
             displayName = produto.nome_variacao;
-            isVariation = true;
             console.warn('Variação sem produto pai:', produto);
           } else if (produto.produto) {
             // Fallback para produto
@@ -120,21 +115,22 @@ const Estoque = () => {
             ...produto,
             quantidade_atual: estoqueMap.get(produto.id) || 0,
             display_name: displayName,
-            produto_pai: produtoPai,
-            is_variation: isVariation,
-            is_parent: isParent
+            produto_pai: produtoPai
           };
         }) || [];
 
-        // Ordenar: produtos pai primeiro, depois suas variações agrupadas
+        // Ordenação simplificada conforme solicitado
         produtosComEstoque.sort((a, b) => {
+          const aEhVariacao = !!(a.nome_variacao && a.produto_pai_id);
+          const bEhVariacao = !!(b.nome_variacao && b.produto_pai_id);
+          
           // Se ambos são produtos pai, ordenar alfabeticamente
-          if (a.is_parent && b.is_parent) {
+          if (!aEhVariacao && !bEhVariacao) {
             return (a.display_name || '').localeCompare(b.display_name || '');
           }
           
-          // Se um é pai e outro variação, verificar se a variação pertence ao pai
-          if (a.is_parent && b.is_variation) {
+          // Se um é pai e outro variação
+          if (!aEhVariacao && bEhVariacao) {
             const produtoPaiB = b.produto_pai?.produto || '';
             const produtoA = a.produto || '';
             
@@ -142,12 +138,12 @@ const Estoque = () => {
             if (produtoPaiB === produtoA) {
               return -1;
             }
-            // Senão, ordenar alfabeticamente pelos nomes dos produtos pai
+            // Senão, ordenar alfabeticamente
             return produtoA.localeCompare(produtoPaiB);
           }
           
-          // Se um é variação e outro pai, verificar se a variação pertence ao pai
-          if (a.is_variation && b.is_parent) {
+          // Se um é variação e outro pai
+          if (aEhVariacao && !bEhVariacao) {
             const produtoPaiA = a.produto_pai?.produto || '';
             const produtoB = b.produto || '';
             
@@ -155,12 +151,12 @@ const Estoque = () => {
             if (produtoPaiA === produtoB) {
               return 1;
             }
-            // Senão, ordenar alfabeticamente pelos nomes dos produtos pai
+            // Senão, ordenar alfabeticamente
             return produtoPaiA.localeCompare(produtoB);
           }
           
           // Se ambos são variações, ordenar pelos produtos pai e depois pelas variações
-          if (a.is_variation && b.is_variation) {
+          if (aEhVariacao && bEhVariacao) {
             const produtoPaiA = a.produto_pai?.produto || '';
             const produtoPaiB = b.produto_pai?.produto || '';
             
@@ -174,7 +170,7 @@ const Estoque = () => {
             return variacaoA.localeCompare(variacaoB);
           }
           
-          // Fallback: ordenar por display_name
+          // Fallback
           return (a.display_name || '').localeCompare(b.display_name || '');
         });
 
@@ -246,7 +242,7 @@ const Estoque = () => {
     };
   }, [profile]);
 
-  // Busca melhorada que funciona com a nova estrutura
+  // Busca funciona com a nova estrutura
   const produtosFiltrados = produtos.filter(p => {
     const termoBusca = buscaProduto.toLowerCase();
     const displayName = p.display_name?.toLowerCase() || '';
@@ -452,18 +448,8 @@ const Estoque = () => {
               {produtosFiltrados.map(produto => (
                 <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
                   <div className="flex-1">
-                    <h3 className="font-medium text-gray-900 flex items-center">
+                    <h3 className="font-medium text-gray-900">
                       {produto.display_name}
-                      {produto.is_variation && (
-                        <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                          Variação
-                        </span>
-                      )}
-                      {produto.is_parent && (
-                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
-                          Principal
-                        </span>
-                      )}
                     </h3>
                     <p className="text-sm text-gray-500">
                       {produto.unidade || 'N/D'}
