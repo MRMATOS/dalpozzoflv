@@ -75,8 +75,8 @@ const Requisicoes = () => {
         produto_id: item.productId,
         quantidade: item.caixas,
         quantidade_calculada: item.quilos,
-        escala: null, // Não usamos mais escalas
-        multiplicador: null // Não usamos mais multiplicadores
+        escala: null,
+        multiplicador: null
       }));
 
       console.log('Inserindo itens da requisição:', itensRequisicao);
@@ -171,8 +171,8 @@ const Requisicoes = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Header - Fixed */}
-      <header className="bg-white shadow-sm border-b flex-shrink-0">
+      {/* Header Fixo */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -204,10 +204,10 @@ const Requisicoes = () => {
         </div>
       </header>
 
-      {/* Fixed Controls Section */}
-      <div className="bg-white border-b flex-shrink-0">
+      {/* Controles Fixos */}
+      <div className="bg-white border-b sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Search and Send Controls - Same Line */}
+          {/* Busca e Envio */}
           <div className="mb-4 flex gap-3 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -222,7 +222,7 @@ const Requisicoes = () => {
             <Button 
               onClick={handleSubmitRequisition}
               disabled={totalItems === 0 || createRequisitionMutation.isPending}
-              className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+              className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
             >
               {createRequisitionMutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -233,7 +233,7 @@ const Requisicoes = () => {
             </Button>
           </div>
 
-          {/* Summary - Fixed */}
+          {/* Resumo */}
           {totalItems > 0 && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
@@ -245,7 +245,7 @@ const Requisicoes = () => {
         </div>
       </div>
 
-      {/* Scrollable Products Section */}
+      {/* Lista de Produtos - Scrollável */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="space-y-3">

@@ -154,8 +154,9 @@ const Estoque = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Header Fixo */}
+      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
@@ -164,12 +165,21 @@ const Estoque = () => {
             </Button>
             <h1 className="text-lg font-semibold">Estoque - {profile?.loja}</h1>
           </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => window.location.reload()}
+            className="p-2"
+          >
+            <RefreshCw className="w-5 h-5" />
+          </Button>
         </div>
       </header>
 
-      <div className="bg-white border-b p-4">
-        <div className="flex justify-between items-center">
-          <div className="relative">
+      {/* Controles Fixos */}
+      <div className="bg-white border-b p-4 sticky top-16 z-40">
+        <div className="flex gap-3 items-center">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Buscar produto..."
@@ -178,24 +188,26 @@ const Estoque = () => {
               className="pl-10"
             />
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => window.location.reload()}>
-              <RefreshCw className="w-4 h-4" /> Atualizar
-            </Button>
-            <Button onClick={salvarEstoque} disabled={saving} className="bg-green-600 hover:bg-green-700">
-              <Save className="w-4 h-4" /> {saving ? 'Salvando...' : 'Salvar'}
-            </Button>
-          </div>
+          <Button 
+            onClick={salvarEstoque} 
+            disabled={saving} 
+            className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+          >
+            <Save className="w-4 h-4 mr-2" />
+            {saving ? 'Salvando...' : 'Salvar'}
+          </Button>
         </div>
       </div>
 
+      {/* Alertas */}
       {(error || estoqueError) && (
-        <Alert variant="destructive" className="m-4">
+        <Alert variant="destructive" className="mx-4 mt-4">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error || estoqueError}</AlertDescription>
         </Alert>
       )}
 
+      {/* Lista de Produtos - Scrollável */}
       <main className="flex-1 overflow-auto p-4">
         {produtosFiltrados.length === 0 ? (
           <div className="text-center py-8">
@@ -203,27 +215,39 @@ const Estoque = () => {
             <p className="text-gray-500">Nenhum produto encontrado.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {produtosFiltrados.map(produto => (
-              <div key={produto.id} className="flex items-center justify-between p-4 border rounded-lg bg-white">
-                <div>
-                  <h3 className="font-medium text-gray-900">{produto.display_name}</h3>
-                  <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => decrementarQuantidade(produto.id)}>
-                    <Minus className="w-4 h-4" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                    onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
-                    className="w-20 text-center"
-                  />
-                  <Button variant="outline" size="sm" onClick={() => incrementarQuantidade(produto.id)}>
-                    <Plus className="w-4 h-4" />
-                  </Button>
+              <div key={produto.id} className="bg-white rounded-lg border p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-medium text-gray-900 truncate">{produto.display_name}</h3>
+                    <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+                  </div>
+                  <div className="flex items-center space-x-2 ml-4">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => decrementarQuantidade(produto.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                      onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
+                      className="w-16 text-center h-8"
+                    />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => incrementarQuantidade(produto.id)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

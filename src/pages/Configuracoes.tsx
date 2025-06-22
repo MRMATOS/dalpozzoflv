@@ -11,42 +11,26 @@ import FornecedoresTab from '@/components/configuracoes/FornecedoresTab';
 import LojasTab from '@/components/configuracoes/LojasTab';
 
 const Configuracoes = () => {
-  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Header Simplificado */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/dashboard')}
-                className="flex items-center space-x-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Voltar</span>
-              </Button>
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm font-bold">FLV</span>
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Configurações</h1>
-                <p className="text-sm text-gray-500">Super Dal Pozzo</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
-              </div>
-              <Button variant="outline" onClick={signOut} size="sm">
-                Sair
-              </Button>
+          <div className="flex items-center h-16">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Voltar</span>
+            </Button>
+            <div className="ml-4">
+              <h1 className="text-lg font-semibold text-gray-900">Configurações</h1>
+              <p className="text-sm text-gray-500">Super Dal Pozzo</p>
             </div>
           </div>
         </div>
