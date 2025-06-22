@@ -235,8 +235,7 @@ export const dicionarioProdutos = {
     'vermelha': ['pimenta vermelha']
   },
   'pimentão': {
-    'verde': ['pimentão verde'],
-    'verde klaina': ['pimentão verde klaina'],
+    'verde': ['pimentão verde','pimentão verde klaina','pimentão verde região','pimentão verde região produtor'],
     'verde região': ['pimentão verde região', 'pimentão verde região produtor', 'pimentão verde região fresco produtor'],
     'verde graúdo': ['pimentão verde graúdo', 'pimentão verde médio', 'pimentão verde klaina graúdo', 'pimentão verde médio/graúdo'],
     'vermelho': ['pimentão vermelho'],
@@ -245,7 +244,8 @@ export const dicionarioProdutos = {
     'amarelo graúdo': ['pimentão amarelo graúdo', 'pimentão amarelo médio', 'pimentão amarelo região', 'pimentão amarelo graúdo klaina', 'pimentão amarelo medio/graudo']
   },
   'pitaya': {
-    'padrão': ['pitaya']
+    'padrão kg': ['pitaya'],
+    'padrão 500gr': ['pitaya 500gr']
   },
   'ponkan': {
     'cerro': ['ponkan cerro'],
@@ -256,7 +256,7 @@ export const dicionarioProdutos = {
     'padrão': ['quiabo']
   },
   'rabanete': {
-    'padrão': ['rabanete', 'rabanete padrão'],
+    'kg': ['rabanete', 'rabanete padrão'],
     'maço': ['rabanete maço', 'rabanete mç']
   },
   'repolho': {
@@ -264,12 +264,11 @@ export const dicionarioProdutos = {
     'roxo': ['repolho roxo']
   },
   'tâmara': {
-    'padrão': ['tâmara', 'tamara']
+    'padrão': ['tâmara', 'tamara', 'tamara 200g']
   },
   'tangerina': {
     'olé': ['tangerina olé', 'olé'],
     'murcote': ['murcote', 'morgote', 'murgote', 'murgote graúda'],
-    'ponkan': ['ponkan'],
     'mixixrica': ['mixixrica']
   },
   'tomate': {
@@ -280,26 +279,36 @@ export const dicionarioProdutos = {
     'saladete graúdo': ['tomate saladete graúdo'],
     'cereja bdj': ['tomate cereja bandeja', 'tomate cereja cavali', 'tomate cereja klaina', 'tomate cereja bdj', 'tomate cereja cx'],
     'cereja cx': ['tomate cereja caixa'],
+    'cereja grape': ['tomate grape'],
+    'cereja sweet grape': ['tomate sweet grape','tomate sweet'],
     'cereja klaina': ['tomate cereja klaina','cereja klaina'],
     'cereja': ['tomate cereja']
   },
   'uva': {
+    'benitaka': ['uva benitaka','benitaka'],
     'rosa': ['uva rosa'],
+    'rosada': ['uva rosada'],
+    'melodia': ['uva melodia'],
+    'nubia': ['uva nubia'],
+    'isis': ['uva isis'],
     'rubi': ['uva rubi'],
     'brasil': ['uva brasil'],
     'itália': ['uva itália', 'uva italia'],
+    'thompson': ['thompson'],
     'thompson vale': ['uva thompson vale', 'uva thompson doçura do vale', 'uva thompson bemdoce', 'uva tompsom bemdoce'],
     'thompson campo': ['uva thompson campo', 'uva thompson uvas do campo'],
     'thompson verde': ['uva thompson verde'],
     'vitória campo': ['uva vitória campo', 'uva vitória uvas do campo'],
     'vitória rei': ['uva vitória rei'],
+    'vitória ouro': ['uva vitória ouro'],
     'vitória': ['uva vitória', 'uva vitória bem doce']
   },
   'vagem': {
-    'branca': ['vagem branca', 'vagem']
+    'vagem': ['vagem'],
+    'branca': ['vagem branca']
   },
   'verona': {
-    'top': ['verona top']
+    'verona': ['verona top','verona']
   },
   'cenoura': {
     'padrão': ['cenoura'],
@@ -308,19 +317,24 @@ export const dicionarioProdutos = {
     'top': ['cenoura top']
   },
   'cebola': {
+    'padrão': ['cebola'],
+    'graúda': ['cebola grauda'],
+    'rede 1kg': ['cebola rede 1kg', 'cebola rede kg'],
+    'rede 2kg': ['cebola rede 2kg', 'cebola 2kg'],
     'nacional': ['cebola nacional'],
     'branca': ['cebola branca'],
-    'roxa': ['cebola roxa', 'cebola roxa importada', 'cebola roxa top']
+    'roxa': ['cebola roxa', 'cebola roxa importada', 'cebola roxa top', 'cebola roxa kg']
   },
   'morango': {
-    'padrão': ['morango']
+    'padrão': ['morango'],
+    'bandeja 250gr': ['morango bandeja 250gr','morango bdj 250gr'],
+    'bandeja 500gr': ['morango bandeja 500gr','morango bdj 500gr'],
+    'extra 200gr': ['morango extra 200gr']
   },
   'cheiro verde': {
-    'padrão': ['cheiro verde']
+    'padrão': ['cheiro verde','cheiro-verde']
   },
   'chuchu': {
-    'padrão': ['chuchu'],
-    'klaina': ['chuchu klaina'],
-    'morretense': ['chuchu morretense']
+    'padrão': ['chuchu','klaina,morretense']
   }
 };
