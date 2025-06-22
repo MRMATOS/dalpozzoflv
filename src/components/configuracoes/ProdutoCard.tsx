@@ -63,7 +63,7 @@ const ProdutoCard = ({
 
   const handleSave = () => {
     const updates: any = {
-      produto: editValues.produto,
+      produto: produto.produto,
       unidade: editValues.unidade,
       ativo: editValues.ativo,
       media_por_caixa: mostrarMediaPorCaixa(editValues.unidade) ? editValues.media_por_caixa : null
@@ -78,182 +78,185 @@ const ProdutoCard = ({
   };
 
   const isEditing = editingProduct === produto.id;
+  const isProdutoPrincipal = !produto.produto_pai_id;
 
   return (
-    <Card className="mb-3">
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start space-x-3 flex-1">
-            {/* Expand Button para produtos principais com variações */}
-            {!produto.produto_pai_id && produto.variacoes && produto.variacoes.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleExpanded}
-                className="p-1 h-8 w-8 mt-1"
-              >
-                {isExpanded ? 
-                  <ChevronDown className="h-4 w-4" /> : 
-                  <ChevronRight className="h-4 w-4" />
-                }
-              </Button>
-            )}
+    <div>
+      <Card className={`mb-3 ${!isProdutoPrincipal ? 'bg-gray-50 border-gray-200' : ''}`}>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-start space-x-3 flex-1">
+              {/* Expand Button para produtos principais com variações */}
+              {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggleExpanded}
+                  className="p-1 h-8 w-8 mt-1"
+                >
+                  {isExpanded ? 
+                    <ChevronDown className="h-4 w-4" /> : 
+                    <ChevronRight className="h-4 w-4" />
+                  }
+                </Button>
+              )}
 
-            <div className="flex-1 space-y-3">
-              {/* Nome do produto */}
-              <div>
-                {isEditing ? (
-                  <Input
-                    value={produto.produto_pai_id ? editValues.nome_variacao : editValues.produto}
-                    onChange={(e) => setEditValues(prev => ({
-                      ...prev,
-                      [produto.produto_pai_id ? 'nome_variacao' : 'produto']: e.target.value
-                    }))}
-                    className="font-medium"
-                  />
-                ) : (
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">
-                      {produto.produto_pai_id ? produto.nome_variacao : produto.produto}
-                    </h3>
-                    {!produto.produto_pai_id && produto.variacoes && produto.variacoes.length > 0 && (
-                      <p className="text-sm text-gray-500">
-                        {produto.variacoes.length} variação(ões)
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Unidade e Média */}
-              <div className="flex flex-wrap gap-3">
-                <div className="flex-1 min-w-32">
-                  <label className="text-xs text-gray-500 block mb-1">Unidade</label>
+              <div className="flex-1 space-y-3">
+                {/* Nome do produto */}
+                <div>
                   {isEditing ? (
-                    <Select
-                      value={editValues.unidade}
-                      onValueChange={(value) => setEditValues(prev => ({
+                    <Input
+                      value={produto.produto_pai_id ? editValues.nome_variacao : editValues.produto}
+                      onChange={(e) => setEditValues(prev => ({
                         ...prev,
-                        unidade: value,
-                        media_por_caixa: value.toLowerCase() === 'caixa' ? (prev.media_por_caixa || 20) : 1
+                        [produto.produto_pai_id ? 'nome_variacao' : 'produto']: e.target.value
                       }))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unidades.map((unidade) => (
-                          <SelectItem key={unidade} value={unidade}>
-                            {unidade}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="font-medium"
+                    />
                   ) : (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      {produto.unidade || 'Não definido'}
-                    </Badge>
+                    <div>
+                      <h3 className={`font-semibold ${isProdutoPrincipal ? 'text-lg text-gray-900' : 'text-sm text-gray-600'}`}>
+                        {produto.produto_pai_id ? produto.nome_variacao : produto.produto}
+                      </h3>
+                      {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && (
+                        <p className="text-xs text-gray-400">
+                          {produto.variacoes.length} variação(ões)
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {mostrarMediaPorCaixa(isEditing ? editValues.unidade : produto.unidade) && (
+                {/* Unidade e Média */}
+                <div className="flex flex-wrap gap-3">
                   <div className="flex-1 min-w-32">
-                    <label className="text-xs text-gray-500 block mb-1">Média (kg)</label>
+                    <label className={`text-xs ${isProdutoPrincipal ? 'text-gray-500' : 'text-gray-400'} block mb-1`}>Unidade</label>
                     {isEditing ? (
-                      <Input
-                        type="number"
-                        value={editValues.media_por_caixa}
-                        onChange={(e) => setEditValues(prev => ({
+                      <Select
+                        value={editValues.unidade}
+                        onValueChange={(value) => setEditValues(prev => ({
                           ...prev,
-                          media_por_caixa: parseFloat(e.target.value) || 0
+                          unidade: value,
+                          media_por_caixa: value.toLowerCase() === 'caixa' ? (prev.media_por_caixa || 20) : 1
                         }))}
-                        className="h-8"
-                      />
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {unidades.map((unidade) => (
+                            <SelectItem key={unidade} value={unidade}>
+                              {unidade}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
-                      <Badge variant="outline" className="bg-green-50 text-green-700">
-                        {produto.media_por_caixa || 20} kg
+                      <Badge variant="outline" className={`${isProdutoPrincipal ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-600'} text-xs`}>
+                        {produto.unidade || 'Não definido'}
                       </Badge>
                     )}
                   </div>
-                )}
-              </div>
 
-              {/* Status */}
-              <div className="flex items-center space-x-2">
-                <label className="text-xs text-gray-500">Status:</label>
-                {isEditing ? (
-                  <Switch
-                    checked={editValues.ativo}
-                    onCheckedChange={(checked) => setEditValues(prev => ({ ...prev, ativo: checked }))}
-                  />
-                ) : (
-                  <Badge variant={produto.ativo ? "default" : "secondary"} className={produto.ativo ? "bg-green-600" : ""}>
-                    {produto.ativo ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                )}
+                  {mostrarMediaPorCaixa(isEditing ? editValues.unidade : produto.unidade) && (
+                    <div className="flex-1 min-w-32">
+                      <label className={`text-xs ${isProdutoPrincipal ? 'text-gray-500' : 'text-gray-400'} block mb-1`}>Média (kg)</label>
+                      {isEditing ? (
+                        <Input
+                          type="number"
+                          value={editValues.media_por_caixa}
+                          onChange={(e) => setEditValues(prev => ({
+                            ...prev,
+                            media_por_caixa: parseFloat(e.target.value) || 0
+                          }))}
+                          className="h-8"
+                        />
+                      ) : (
+                        <Badge variant="outline" className={`${isProdutoPrincipal ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'} text-xs`}>
+                          {produto.media_por_caixa || 20} kg
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Status */}
+                <div className="flex items-center space-x-2">
+                  <label className={`text-xs ${isProdutoPrincipal ? 'text-gray-500' : 'text-gray-400'}`}>Status:</label>
+                  {isEditing ? (
+                    <Switch
+                      checked={editValues.ativo}
+                      onCheckedChange={(checked) => setEditValues(prev => ({ ...prev, ativo: checked }))}
+                    />
+                  ) : (
+                    <Badge variant={produto.ativo ? "default" : "secondary"} className={`text-xs ${produto.ativo ? (isProdutoPrincipal ? "bg-green-600" : "bg-green-500") : ""}`}>
+                      {produto.ativo ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div className="flex flex-col space-y-2 ml-4">
-            {isEditing ? (
-              <>
-                <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 h-8">
-                  <Save className="w-4 h-4" />
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setEditingProduct(null)} className="h-8">
-                  <X className="w-4 h-4" />
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" onClick={() => {
-                  setEditValues({
-                    produto: produto.produto,
-                    nome_variacao: produto.nome_variacao || '',
-                    unidade: produto.unidade || 'Kg',
-                    media_por_caixa: produto.media_por_caixa || 20,
-                    ativo: produto.ativo
-                  });
-                  setEditingProduct(produto.id);
-                }} className="h-8">
-                  <Edit className="w-4 h-4" />
-                </Button>
-                {!produto.produto_pai_id && (
-                  <Button variant="outline" size="sm" onClick={() => onAddVariation(produto.id)} className="h-8 bg-blue-50 hover:bg-blue-100">
-                    <Plus className="w-4 h-4" />
+            {/* Actions */}
+            <div className="flex flex-col space-y-2 ml-4">
+              {isEditing ? (
+                <>
+                  <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 h-8">
+                    <Save className="w-4 h-4" />
                   </Button>
-                )}
-                <Button variant="outline" size="sm" onClick={() => onDelete(produto)} className="h-8 text-red-600 hover:text-red-700">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </>
-            )}
+                  <Button variant="outline" size="sm" onClick={() => setEditingProduct(null)} className="h-8">
+                    <X className="w-4 h-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setEditValues({
+                      produto: produto.produto,
+                      nome_variacao: produto.nome_variacao || '',
+                      unidade: produto.unidade || 'Kg',
+                      media_por_caixa: produto.media_por_caixa || 20,
+                      ativo: produto.ativo
+                    });
+                    setEditingProduct(produto.id);
+                  }} className="h-8">
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  {isProdutoPrincipal && (
+                    <Button variant="outline" size="sm" onClick={() => onAddVariation(produto.id)} className="h-8 bg-blue-50 hover:bg-blue-100">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => onDelete(produto)} className="h-8 text-red-600 hover:text-red-700">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Variações (se expandido) */}
-        {isExpanded && produto.variacoes && produto.variacoes.length > 0 && (
-          <div className="mt-4 pl-6 border-l-2 border-gray-100 space-y-3">
-            {produto.variacoes.map((variacao) => (
-              <ProdutoCard
-                key={variacao.id}
-                produto={variacao}
-                isExpanded={false}
-                onToggleExpanded={() => {}}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onUpdate={onUpdate}
-                editingProduct={editingProduct}
-                setEditingProduct={setEditingProduct}
-                onAddVariation={onAddVariation}
-              />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+      {/* Variações (sempre visíveis se existirem) */}
+      {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && (
+        <div className="ml-6 mb-4 space-y-2">
+          {produto.variacoes.map((variacao) => (
+            <ProdutoCard
+              key={variacao.id}
+              produto={variacao}
+              isExpanded={false}
+              onToggleExpanded={() => {}}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onUpdate={onUpdate}
+              editingProduct={editingProduct}
+              setEditingProduct={setEditingProduct}
+              onAddVariation={onAddVariation}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 
