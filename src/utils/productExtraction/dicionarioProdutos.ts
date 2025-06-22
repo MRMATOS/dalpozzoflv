@@ -300,7 +300,7 @@ export const dicionarioProdutos = {
     'vitória': ['uva vitória', 'uva vitória bem doce']
   },
   'vagem': {
-    'vagem': ['vagem'],
+    'padrão': ['vagem'],
     'branca': ['vagem branca']
   },
   'verona': {
