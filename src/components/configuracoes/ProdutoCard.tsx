@@ -52,13 +52,13 @@ const ProdutoCard = ({
   const [editValues, setEditValues] = useState({
     produto: produto.produto,
     nome_variacao: produto.nome_variacao || '',
-    unidade: produto.unidade,
+    unidade: produto.unidade || 'Kg',
     media_por_caixa: produto.media_por_caixa || 20,
     ativo: produto.ativo
   });
 
-  const mostrarMediaPorCaixa = (unidade: string) => {
-    return unidade.toLowerCase() === 'caixa';
+  const mostrarMediaPorCaixa = (unidade: string | null | undefined) => {
+    return unidade && unidade.toLowerCase() === 'caixa';
   };
 
   const handleSave = () => {
@@ -151,7 +151,7 @@ const ProdutoCard = ({
                     </Select>
                   ) : (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                      {produto.unidade}
+                      {produto.unidade || 'Não definido'}
                     </Badge>
                   )}
                 </div>
@@ -212,7 +212,7 @@ const ProdutoCard = ({
                   setEditValues({
                     produto: produto.produto,
                     nome_variacao: produto.nome_variacao || '',
-                    unidade: produto.unidade,
+                    unidade: produto.unidade || 'Kg',
                     media_por_caixa: produto.media_por_caixa || 20,
                     ativo: produto.ativo
                   });
