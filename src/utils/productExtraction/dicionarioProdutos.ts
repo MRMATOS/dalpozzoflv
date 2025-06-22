@@ -235,13 +235,9 @@ export const dicionarioProdutos = {
     'vermelha': ['pimenta vermelha']
   },
   'pimentão': {
-    'verde': ['pimentão verde','pimentão verde klaina','pimentão verde região','pimentão verde região produtor'],
-    'verde região': ['pimentão verde região', 'pimentão verde região produtor', 'pimentão verde região fresco produtor'],
-    'verde graúdo': ['pimentão verde graúdo', 'pimentão verde médio', 'pimentão verde klaina graúdo', 'pimentão verde médio/graúdo'],
-    'vermelho': ['pimentão vermelho'],
-    'vermelho graúdo': ['pimentão vermelho graúdo', 'pimentão vermelho região', 'pimentão vermelho médio/graudo'],
-    'amarelo': ['pimentão amarelo'],
-    'amarelo graúdo': ['pimentão amarelo graúdo', 'pimentão amarelo médio', 'pimentão amarelo região', 'pimentão amarelo graúdo klaina', 'pimentão amarelo medio/graudo']
+    'verde': ['pimentão verde','pimentão verde klaina','pimentão verde região','pimentão verde região produtor', 'pimentão verde graúdo', 'pimentão verde médio', 'pimentão verde klaina graúdo', 'pimentão verde médio/graúdo'],
+    'vermelho': ['pimentão vermelho', 'pimentão vermelho graúdo', 'pimentão vermelho região', 'pimentão vermelho médio/graudo'],
+    'amarelo': ['pimentão amarelo', 'pimentão amarelo graúdo', 'pimentão amarelo médio', 'pimentão amarelo região', 'pimentão amarelo graúdo klaina', 'pimentão amarelo medio/graudo']
   },
   'pitaya': {
     'padrão kg': ['pitaya'],
