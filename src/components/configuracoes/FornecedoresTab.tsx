@@ -5,9 +5,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Save } from 'lucide-react';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
+import FornecedorCard from './FornecedorCard';
 
 const FornecedoresTab = () => {
   const queryClient = useQueryClient();
@@ -17,6 +18,17 @@ const FornecedoresTab = () => {
   });
   const [showNewFornecedor, setShowNewFornecedor] = useState(false);
   const [editingFornecedor, setEditingFornecedor] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    fornecedor: any;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    fornecedor: null,
+    title: '',
+    description: ''
+  });
 
   const { data: fornecedores, isLoading } = useQuery({
     queryKey: ['fornecedores'],
@@ -84,11 +96,28 @@ const FornecedoresTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       toast.success('Fornecedor excluído com sucesso!');
+      setDeleteDialog({ open: false, fornecedor: null, title: '', description: '' });
     },
     onError: (error) => {
       toast.error('Erro ao excluir fornecedor: ' + error.message);
+      setDeleteDialog({ open: false, fornecedor: null, title: '', description: '' });
     },
   });
+
+  const handleDeleteClick = (fornecedor: any) => {
+    setDeleteDialog({
+      open: true,
+      fornecedor,
+      title: 'Confirmar exclusão',
+      description: `Tem certeza que deseja excluir o fornecedor "${fornecedor.nome}"? Esta ação não pode ser desfeita.`
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDialog.fornecedor) {
+      deleteFornecedorMutation.mutate(deleteDialog.fornecedor.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -99,118 +128,72 @@ const FornecedoresTab = () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Fornecedores</CardTitle>
-        <Button onClick={() => setShowNewFornecedor(true)} disabled={showNewFornecedor}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Fornecedor
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {showNewFornecedor && (
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="font-semibold mb-4">Novo Fornecedor</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input
-                placeholder="Nome do fornecedor"
-                value={newFornecedor.nome}
-                onChange={(e) => setNewFornecedor({ ...newFornecedor, nome: e.target.value })}
-              />
-              <Input
-                placeholder="Telefone (WhatsApp)"
-                value={newFornecedor.telefone}
-                onChange={(e) => setNewFornecedor({ ...newFornecedor, telefone: e.target.value })}
-              />
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => createFornecedorMutation.mutate(newFornecedor)}
-                  disabled={!newFornecedor.nome.trim() || createFornecedorMutation.isPending}
-                >
-                  {createFornecedorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Salvar
-                </Button>
-                <Button variant="outline" onClick={() => setShowNewFornecedor(false)}>
-                  Cancelar
-                </Button>
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base md:text-lg">Fornecedores</CardTitle>
+          <Button onClick={() => setShowNewFornecedor(true)} disabled={showNewFornecedor} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Novo
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showNewFornecedor && (
+            <div className="mb-6 p-4 border rounded-lg bg-blue-50">
+              <h3 className="font-semibold mb-4">Novo Fornecedor</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="Nome do fornecedor"
+                  value={newFornecedor.nome}
+                  onChange={(e) => setNewFornecedor({ ...newFornecedor, nome: e.target.value })}
+                />
+                <Input
+                  placeholder="Telefone (WhatsApp)"
+                  value={newFornecedor.telefone}
+                  onChange={(e) => setNewFornecedor({ ...newFornecedor, telefone: e.target.value })}
+                />
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => createFornecedorMutation.mutate(newFornecedor)}
+                    disabled={!newFornecedor.nome.trim() || createFornecedorMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {createFornecedorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Salvar
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowNewFornecedor(false)}>
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Telefone</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+          <div className="space-y-3">
             {fornecedores?.map((fornecedor) => (
-              <TableRow key={fornecedor.id}>
-                <TableCell>
-                  {editingFornecedor === fornecedor.id ? (
-                    <Input
-                      defaultValue={fornecedor.nome}
-                      onBlur={(e) => {
-                        if (e.target.value !== fornecedor.nome) {
-                          updateFornecedorMutation.mutate({
-                            id: fornecedor.id,
-                            updates: { nome: e.target.value }
-                          });
-                        }
-                      }}
-                    />
-                  ) : (
-                    fornecedor.nome
-                  )}
-                </TableCell>
-                <TableCell>
-                  {editingFornecedor === fornecedor.id ? (
-                    <Input
-                      defaultValue={fornecedor.telefone || ''}
-                      onBlur={(e) => {
-                        if (e.target.value !== fornecedor.telefone) {
-                          updateFornecedorMutation.mutate({
-                            id: fornecedor.id,
-                            updates: { telefone: e.target.value }
-                          });
-                        }
-                      }}
-                    />
-                  ) : (
-                    fornecedor.telefone || '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingFornecedor(editingFornecedor === fornecedor.id ? null : fornecedor.id)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm('Tem certeza que deseja excluir este fornecedor?')) {
-                          deleteFornecedorMutation.mutate(fornecedor.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <FornecedorCard
+                key={fornecedor.id}
+                fornecedor={fornecedor}
+                onEdit={(fornecedor) => setEditingFornecedor(fornecedor.id)}
+                onDelete={handleDeleteClick}
+                onUpdate={(id, updates) => updateFornecedorMutation.mutate({ id, updates })}
+                editingFornecedor={editingFornecedor}
+                setEditingFornecedor={setEditingFornecedor}
+              />
             ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+        onConfirm={handleConfirmDelete}
+        title={deleteDialog.title}
+        description={deleteDialog.description}
+        isLoading={deleteFornecedorMutation.isPending}
+      />
+    </>
   );
 };
 

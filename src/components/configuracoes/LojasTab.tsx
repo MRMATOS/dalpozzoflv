@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Save } from 'lucide-react';
+import DeleteConfirmDialog from './DeleteConfirmDialog';
+import LojaCard from './LojaCard';
 
 const LojasTab = () => {
   const queryClient = useQueryClient();
@@ -19,6 +19,17 @@ const LojasTab = () => {
   });
   const [showNewLoja, setShowNewLoja] = useState(false);
   const [editingLoja, setEditingLoja] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    open: boolean;
+    loja: any;
+    title: string;
+    description: string;
+  }>({
+    open: false,
+    loja: null,
+    title: '',
+    description: ''
+  });
 
   const { data: lojas, isLoading } = useQuery({
     queryKey: ['lojas'],
@@ -86,11 +97,28 @@ const LojasTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
       toast.success('Loja excluída com sucesso!');
+      setDeleteDialog({ open: false, loja: null, title: '', description: '' });
     },
     onError: (error) => {
       toast.error('Erro ao excluir loja: ' + error.message);
+      setDeleteDialog({ open: false, loja: null, title: '', description: '' });
     },
   });
+
+  const handleDeleteClick = (loja: any) => {
+    setDeleteDialog({
+      open: true,
+      loja,
+      title: 'Confirmar exclusão',
+      description: `Tem certeza que deseja excluir a loja "${loja.nome}"? Esta ação não pode ser desfeita.`
+    });
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteDialog.loja) {
+      deleteLojaMutation.mutate(deleteDialog.loja.id);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -101,126 +129,74 @@ const LojasTab = () => {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Lojas</CardTitle>
-        <Button onClick={() => setShowNewLoja(true)} disabled={showNewLoja}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Loja
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {showNewLoja && (
-          <div className="mb-6 p-4 border rounded-lg bg-gray-50">
-            <h3 className="font-semibold mb-4">Nova Loja</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Input
-                placeholder="Nome da loja"
-                value={newLoja.nome}
-                onChange={(e) => setNewLoja({ ...newLoja, nome: e.target.value })}
-              />
-              <div className="flex items-center space-x-2">
-                <Switch
-                  checked={newLoja.ativo}
-                  onCheckedChange={(checked) => setNewLoja({ ...newLoja, ativo: checked })}
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base md:text-lg">Lojas</CardTitle>
+          <Button onClick={() => setShowNewLoja(true)} disabled={showNewLoja} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Nova
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {showNewLoja && (
+            <div className="mb-6 p-4 border rounded-lg bg-blue-50">
+              <h3 className="font-semibold mb-4">Nova Loja</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  placeholder="Nome da loja"
+                  value={newLoja.nome}
+                  onChange={(e) => setNewLoja({ ...newLoja, nome: e.target.value })}
                 />
-                <span className="text-sm">Ativa</span>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => createLojaMutation.mutate(newLoja)}
-                  disabled={!newLoja.nome.trim() || createLojaMutation.isPending}
-                >
-                  {createLojaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Salvar
-                </Button>
-                <Button variant="outline" onClick={() => setShowNewLoja(false)}>
-                  Cancelar
-                </Button>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newLoja.ativo}
+                    onCheckedChange={(checked) => setNewLoja({ ...newLoja, ativo: checked })}
+                  />
+                  <span className="text-sm">Ativa</span>
+                </div>
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => createLojaMutation.mutate(newLoja)}
+                    disabled={!newLoja.nome.trim() || createLojaMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {createLojaMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Salvar
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowNewLoja(false)}>
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Criada em</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+          <div className="space-y-3">
             {lojas?.map((loja) => (
-              <TableRow key={loja.id}>
-                <TableCell>
-                  {editingLoja === loja.id ? (
-                    <Input
-                      defaultValue={loja.nome}
-                      onBlur={(e) => {
-                        if (e.target.value !== loja.nome) {
-                          updateLojaMutation.mutate({
-                            id: loja.id,
-                            updates: { nome: e.target.value }
-                          });
-                        }
-                      }}
-                    />
-                  ) : (
-                    loja.nome
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={loja.ativo}
-                      onCheckedChange={(checked) => {
-                        updateLojaMutation.mutate({
-                          id: loja.id,
-                          updates: { ativo: checked }
-                        });
-                      }}
-                    />
-                    <Badge variant={loja.ativo ? "default" : "secondary"}>
-                      {loja.ativo ? 'Ativa' : 'Inativa'}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {loja.criado_em 
-                    ? new Date(loja.criado_em).toLocaleDateString('pt-BR') 
-                    : '-'
-                  }
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditingLoja(editingLoja === loja.id ? null : loja.id)}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (confirm('Tem certeza que deseja excluir esta loja?')) {
-                          deleteLojaMutation.mutate(loja.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <LojaCard
+                key={loja.id}
+                loja={loja}
+                onEdit={(loja) => setEditingLoja(loja.id)}
+                onDelete={handleDeleteClick}
+                onUpdate={(id, updates) => updateLojaMutation.mutate({ id, updates })}
+                editingLoja={editingLoja}
+                setEditingLoja={setEditingLoja}
+              />
             ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      <DeleteConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
+        onConfirm={handleConfirmDelete}
+        title={deleteDialog.title}
+        description={deleteDialog.description}
+        isLoading={deleteLojaMutation.isPending}
+      />
+    </>
   );
 };
 
