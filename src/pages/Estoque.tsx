@@ -4,7 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw, ArrowLeft, Truck, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +23,14 @@ interface EstoqueProduto {
   quantidade_atual?: number;
   display_name?: string;
   produto_pai_nome?: string | null;
+  transferencias_pendentes?: TransferenciaPendente[];
+}
+
+interface TransferenciaPendente {
+  id: string;
+  quantidade_transferida: number;
+  loja_origem: string;
+  criado_em: string;
 }
 
 const Estoque = () => {
@@ -43,6 +53,7 @@ const Estoque = () => {
         setLoading(true);
         setError('');
 
+        // Buscar estoque atual
         const { data: estoqueData, error: estoqueError } = await supabase
           .from('estoque_atual')
           .select('produto_id, quantidade')
@@ -50,7 +61,36 @@ const Estoque = () => {
 
         if (estoqueError) throw estoqueError;
 
+        // Buscar transferências pendentes para esta loja
+        const { data: transferenciasData, error: transferenciasError } = await supabase
+          .from('transferencias')
+          .select(`
+            id,
+            produto_id,
+            quantidade_transferida,
+            loja_origem,
+            criado_em
+          `)
+          .eq('loja_destino', profile.loja)
+          .eq('status', 'separado');
+
+        if (transferenciasError) throw transferenciasError;
+
         const estoqueMap = new Map(estoqueData?.map(item => [item.produto_id, item.quantidade]));
+        
+        // Agrupar transferências por produto
+        const transferenciasMap = new Map<string, TransferenciaPendente[]>();
+        transferenciasData?.forEach(transfer => {
+          if (!transferenciasMap.has(transfer.produto_id)) {
+            transferenciasMap.set(transfer.produto_id, []);
+          }
+          transferenciasMap.get(transfer.produto_id)!.push({
+            id: transfer.id,
+            quantidade_transferida: transfer.quantidade_transferida || 0,
+            loja_origem: transfer.loja_origem,
+            criado_em: transfer.criado_em
+          });
+        });
 
         const produtosComEstoque = produtosComPai.map(produto => ({
           id: produto.id,
@@ -61,7 +101,8 @@ const Estoque = () => {
           ativo: produto.ativo,
           produto_pai_nome: produto.produto_pai_nome,
           quantidade_atual: estoqueMap.get(produto.id) || 0,
-          display_name: produto.display_name
+          display_name: produto.display_name,
+          transferencias_pendentes: transferenciasMap.get(produto.id) || []
         }));
 
         produtosComEstoque.sort((a, b) => {
@@ -105,6 +146,74 @@ const Estoque = () => {
 
   const decrementarQuantidade = (produtoId: string) => {
     atualizarQuantidade(produtoId, Math.max(0, (produtos.find(p => p.id === produtoId)?.quantidade_atual || 0) - 1));
+  };
+
+  const confirmarTransferencia = async (transferencia: TransferenciaPendente, produtoId: string) => {
+    try {
+      console.log('Confirmando transferência:', transferencia);
+
+      // Atualizar status da transferência para 'recebido'
+      const { error: transferError } = await supabase
+        .from('transferencias')
+        .update({ 
+          status: 'recebido',
+          confirmado_em: new Date().toISOString(),
+          confirmado_por: profile?.id
+        })
+        .eq('id', transferencia.id);
+
+      if (transferError) throw transferError;
+
+      // Buscar estoque atual
+      const { data: estoqueAtual, error: estoqueError } = await supabase
+        .from('estoque_atual')
+        .select('quantidade')
+        .eq('produto_id', produtoId)
+        .eq('loja', profile?.loja)
+        .single();
+
+      if (estoqueError && estoqueError.code !== 'PGRST116') throw estoqueError;
+
+      const quantidadeAtual = estoqueAtual?.quantidade || 0;
+      const novaQuantidade = quantidadeAtual + transferencia.quantidade_transferida;
+
+      // Atualizar estoque local
+      const { error: updateError } = await supabase
+        .from('estoque_atual')
+        .upsert({
+          produto_id: produtoId,
+          loja: profile?.loja,
+          quantidade: novaQuantidade,
+          atualizado_em: new Date().toISOString()
+        }, { onConflict: 'produto_id,loja' });
+
+      if (updateError) throw updateError;
+
+      // Atualizar estado local
+      setProdutos(prev => prev.map(produto => {
+        if (produto.id === produtoId) {
+          return {
+            ...produto,
+            quantidade_atual: novaQuantidade,
+            transferencias_pendentes: produto.transferencias_pendentes?.filter(t => t.id !== transferencia.id)
+          };
+        }
+        return produto;
+      }));
+
+      toast({ 
+        title: 'Transferência confirmada!', 
+        description: `${transferencia.quantidade_transferida} unidades adicionadas ao estoque` 
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao confirmar transferência:', error);
+      toast({ 
+        title: 'Erro', 
+        description: `Erro ao confirmar transferência: ${error.message}`, 
+        variant: 'destructive' 
+      });
+    }
   };
 
   const salvarEstoque = async () => {
@@ -217,39 +326,86 @@ const Estoque = () => {
         ) : (
           <div className="space-y-3">
             {produtosFiltrados.map(produto => (
-              <div key={produto.id} className="bg-white rounded-lg border p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{produto.display_name}</h3>
-                    <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+              <Card key={produto.id} className="shadow-sm">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 truncate">{produto.display_name}</h3>
+                      <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => decrementarQuantidade(produto.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </Button>
+                      <Input
+                        type="number"
+                        min="0"
+                        value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                        onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
+                        className="w-16 text-center h-8"
+                      />
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => incrementarQuantidade(produto.id)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => decrementarQuantidade(produto.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </Button>
-                    <Input
-                      type="number"
-                      min="0"
-                      value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                      onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
-                      className="w-16 text-center h-8"
-                    />
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => incrementarQuantidade(produto.id)}
-                      className="h-8 w-8 p-0"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+
+                  {/* Seção de Transferências Pendentes */}
+                  {produto.transferencias_pendentes && produto.transferencias_pendentes.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="flex items-center mb-3">
+                        <Truck className="h-4 w-4 text-blue-600 mr-2" />
+                        <h4 className="text-sm font-medium text-gray-700">Transferências Pendentes</h4>
+                        <Badge variant="secondary" className="ml-2 text-xs">
+                          {produto.transferencias_pendentes.length}
+                        </Badge>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {produto.transferencias_pendentes.map(transferencia => (
+                          <div key={transferencia.id} className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm font-medium text-blue-900">
+                                  {transferencia.quantidade_transferida} {produto.unidade?.toLowerCase()}
+                                </span>
+                                <span className="text-xs text-blue-600">
+                                  de {transferencia.loja_origem}
+                                </span>
+                              </div>
+                              <p className="text-xs text-blue-600 mt-1">
+                                {new Date(transferencia.criado_em).toLocaleDateString('pt-BR')} às{' '}
+                                {new Date(transferencia.criado_em).toLocaleTimeString('pt-BR', { 
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              onClick={() => confirmarTransferencia(transferencia, produto.id)}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Confirmar
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
