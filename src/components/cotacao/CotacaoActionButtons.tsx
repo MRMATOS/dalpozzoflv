@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, FileText } from 'lucide-react';
+import { Clock, FileText, RotateCcw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CotacaoActionButtonsProps {
@@ -33,6 +33,24 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
           </TooltipTrigger>
           <TooltipContent>
             <p>Restaurar última cotação</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNovaCotacao}
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Nova cotação (limpar tudo)</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
