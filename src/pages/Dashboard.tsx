@@ -1,470 +1,91 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   ShoppingCart, 
-  ClipboardList, 
   Package, 
-  Users, 
-  BarChart3, 
-  AlertTriangle,
-  Plus,
-  Eye,
-  RefreshCw,
+  Calculator, 
+  History, 
   Settings,
-  History,
-  Warehouse
-} from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+  Truck,
+  BarChart3,
+  Users,
+  Store
+} from "lucide-react";
 
 const Dashboard = () => {
-  const { profile, signOut, hasRole } = useAuth();
   const navigate = useNavigate();
+  const { profile, hasRole } = useAuth();
 
-  const getDashboardContent = () => {
-    if (hasRole('transferencia')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Transferências Pendentes</CardTitle>
-              <Package className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">15</div>
-              <p className="text-xs text-muted-foreground">Aguardando processamento</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-yellow-600 hover:bg-yellow-700"
-                onClick={() => navigate('/transferencias')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Transferências
-              </Button>
-            </CardContent>
-          </Card>
+  const cards = [
+    // Estoque
+    hasRole('estoque') && {
+      title: "Estoque",
+      description: "Gerenciar estoque de produtos",
+      icon: Package,
+      color: "bg-blue-500",
+      onClick: () => navigate("/estoque")
+    },
+    
+    // Requisições
+    hasRole('requisitante') && {
+      title: "Requisições",
+      description: "Criar e gerenciar requisições",
+      icon: ShoppingCart,
+      color: "bg-green-500",
+      onClick: () => navigate("/requisicoes")
+    },
 
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Requisições Recebidas</CardTitle>
-              <ClipboardList className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">8</div>
-              <p className="text-xs text-muted-foreground">Hoje</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-blue-600 hover:bg-blue-700"
-                onClick={() => navigate('/transferencias')}
-              >
-                <ClipboardList className="w-4 h-4 mr-2" />
-                Processar
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Estoque Home</CardTitle>
-              <Warehouse className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">Controle</div>
-              <p className="text-xs text-muted-foreground">Gerenciar estoque central</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-green-600 hover:bg-green-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Ver Estoque
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Transferências Hoje</CardTitle>
-              <RefreshCw className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">23</div>
-              <p className="text-xs text-muted-foreground">Processadas</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-purple-600 hover:bg-purple-700"
-                onClick={() => navigate('/transferencias')}
-              >
-                <History className="w-4 h-4 mr-2" />
-                Histórico
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    if (hasRole('comprador')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Requisições Pendentes</CardTitle>
-              <ClipboardList className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">12</div>
-              <p className="text-xs text-muted-foreground">+3 desde ontem</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-orange-600 hover:bg-orange-700"
-                onClick={() => navigate('/requisicoes')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Todas
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nova Cotação</CardTitle>
-              <BarChart3 className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">Criar</div>
-              <p className="text-xs text-muted-foreground">Comparar preços dos fornecedores</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-blue-600 hover:bg-blue-700"
-                onClick={() => navigate('/cotacao')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Cotação
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Últimos Pedidos</CardTitle>
-              <ShoppingCart className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">8</div>
-              <p className="text-xs text-muted-foreground">Esta semana</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-green-600 hover:bg-green-700"
-                onClick={() => navigate('/resumo-pedido')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Histórico
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
-              <Warehouse className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">Atualizar</div>
-              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-purple-600 hover:bg-purple-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Ir para Estoque
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    if (hasRole('requisitante')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nova Requisição</CardTitle>
-              <Plus className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">Criar</div>
-              <p className="text-xs text-muted-foreground">Fazer nova requisição de produtos</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-green-600 hover:bg-green-700"
-                onClick={() => navigate('/requisicoes')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Requisição
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Minhas Requisições</CardTitle>
-              <ClipboardList className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">5</div>
-              <p className="text-xs text-muted-foreground">3 pendentes, 2 atendidas</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-blue-600 hover:bg-blue-700"
-                onClick={() => navigate('/requisicoes')}
-              >
-                <History className="w-4 h-4 mr-2" />
-                Ver Histórico
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Status da Loja</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">OK</div>
-              <p className="text-xs text-muted-foreground">Estoque: {profile?.loja}</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-yellow-600 hover:bg-yellow-700"
-                onClick={() => window.location.reload()}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
-              <Warehouse className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">Atualizar</div>
-              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-orange-600 hover:bg-orange-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Ir para Estoque
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    if (hasRole('estoque')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
-              <Warehouse className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">Atualizar</div>
-              <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-green-600 hover:bg-green-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Ir para Estoque
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Alertas de Estoque</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">7</div>
-              <p className="text-xs text-muted-foreground">Produtos com estoque baixo</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-red-600 hover:bg-red-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Alertas
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Atualizar Estoque</CardTitle>
-              <Package className="h-4 w-4 text-blue-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">Ação</div>
-              <p className="text-xs text-muted-foreground">Registrar entrada/saída</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-blue-600 hover:bg-blue-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Atualizar
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Produtos Críticos</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm font-bold text-orange-600">Alface</div>
-              <p className="text-xs text-muted-foreground">Precisa reposição urgente</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-orange-600 hover:bg-orange-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Todos
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    if (hasRole('master')) {
-      return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nova Cotação</CardTitle>
-              <BarChart3 className="h-4 w-4 text-purple-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">Criar</div>
-              <p className="text-xs text-muted-foreground">Comparar preços dos fornecedores</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-purple-600 hover:bg-purple-700"
-                onClick={() => navigate('/cotacao')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Cotação
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Requisições Hoje</CardTitle>
-              <ClipboardList className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">18</div>
-              <p className="text-xs text-muted-foreground">12 pendentes</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-green-600 hover:bg-green-700"
-                onClick={() => navigate('/requisicoes')}
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                Ver Todas
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Sistema</CardTitle>
-              <Settings className="h-4 w-4 text-gray-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-600">Config</div>
-              <p className="text-xs text-muted-foreground">Produtos, usuários, fornecedores</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-gray-600 hover:bg-gray-700"
-                onClick={() => navigate('/configuracoes')}
-              >
-                <Settings className="w-4 h-4 mr-2" />
-                Configurar
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
-              <Warehouse className="h-4 w-4 text-indigo-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-indigo-600">Geral</div>
-              <p className="text-xs text-muted-foreground">Gerenciar estoque de todas as lojas</p>
-              <Button 
-                size="sm" 
-                className="mt-3 bg-indigo-600 hover:bg-indigo-700"
-                onClick={() => navigate('/estoque')}
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Ir para Estoque
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    // Fallback para usuários sem tipo específico - mostra o card de estoque
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Controle de Estoque</CardTitle>
-            <Warehouse className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">Atualizar</div>
-            <p className="text-xs text-muted-foreground">Gerenciar quantidades disponíveis</p>
-            <Button 
-              size="sm" 
-              className="mt-3 bg-green-600 hover:bg-green-700"
-              onClick={() => navigate('/estoque')}
-            >
-              <Warehouse className="w-4 h-4 mr-2" />
-              Ir para Estoque
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tipo de usuário não reconhecido</CardTitle>
-            <CardDescription>
-              Entre em contato com o administrador do sistema.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  };
+    // Transferências
+    (hasRole('transferencia') || hasRole('requisitante')) && {
+      title: "Transferências",
+      description: hasRole('transferencia') 
+        ? "Gerenciar transferências entre lojas" 
+        : "Confirmar recebimento de produtos",
+      icon: Truck,
+      color: "bg-yellow-500",
+      onClick: () => navigate("/transferencias")
+    },
+    
+    // Cotação
+    hasRole('comprador') && {
+      title: "Cotação",
+      description: "Comparar preços e criar pedidos",
+      icon: Calculator,
+      color: "bg-purple-500",
+      onClick: () => navigate("/cotacao")
+    },
+    
+    // Histórico de Requisições
+    (hasRole('comprador') || hasRole('requisitante')) && {
+      title: "Histórico de Requisições",
+      description: "Visualizar requisições anteriores",
+      icon: History,
+      color: "bg-orange-500",
+      onClick: () => navigate("/historico-requisicoes")
+    },
+    
+    // Histórico de Pedidos
+    hasRole('comprador') && {
+      title: "Histórico de Pedidos",
+      description: "Visualizar pedidos de compra",
+      icon: BarChart3,
+      color: "bg-indigo-500",
+      onClick: () => navigate("/historico-pedidos")
+    },
+    
+    // Configurações
+    hasRole('master') && {
+      title: "Configurações",
+      description: "Gerenciar sistema e usuários",
+      icon: Settings,
+      color: "bg-gray-500",
+      onClick: () => navigate("/configuracoes")
+    },
+  ].filter(Boolean);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -472,23 +93,49 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center">
-                <span className="text-white text-sm font-bold">FLV</span>
-              </div>
+              <Store className="h-8 w-8 text-blue-600" />
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Sistema FLV</h1>
-                <p className="text-sm text-gray-500">Super Dal Pozzo</p>
+                <h1 className="text-lg font-semibold text-gray-900">
+                  Supermercado Dalpozzo - FLV
+                </h1>
+                <p className="text-sm text-gray-500">Sistema de Compras</p>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500 capitalize">{profile?.tipo} - {profile?.loja}</p>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="text-xs">
+                    {profile?.loja}
+                  </Badge>
+                  {hasRole('master') && (
+                    <Badge variant="default" className="text-xs bg-red-600">
+                      Master
+                    </Badge>
+                  )}
+                  {hasRole('comprador') && (
+                    <Badge variant="default" className="text-xs bg-purple-600">
+                      Comprador
+                    </Badge>
+                  )}
+                  {hasRole('estoque') && (
+                    <Badge variant="default" className="text-xs bg-blue-600">
+                      Estoque
+                    </Badge>
+                  )}
+                  {hasRole('requisitante') && (
+                    <Badge variant="default" className="text-xs bg-green-600">
+                      Requisitante
+                    </Badge>
+                  )}
+                  {hasRole('transferencia') && (
+                    <Badge variant="default" className="text-xs bg-yellow-600">
+                      Transferência
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <Button variant="outline" onClick={signOut} size="sm">
-                Sair
-              </Button>
             </div>
           </div>
         </div>
@@ -496,15 +143,57 @@ const Dashboard = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Bem-vindo, {profile?.nome}!
-          </h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h2>
           <p className="text-gray-600">
-            Aqui está um resumo das suas atividades {hasRole('master') ? 'do sistema' : `da ${profile?.loja}`}.
+            Bem-vindo ao sistema de compras FLV. Escolha uma das opções abaixo para começar.
           </p>
         </div>
 
-        {getDashboardContent()}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {cards.map((card: any, index) => {
+            const IconComponent = card.icon;
+            return (
+              <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-lg ${card.color}`}>
+                      <IconComponent className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{card.title}</CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="mb-4 text-sm">
+                    {card.description}
+                  </CardDescription>
+                  <Button 
+                    onClick={card.onClick} 
+                    className="w-full"
+                    variant="outline"
+                  >
+                    Acessar
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {cards.length === 0 && (
+          <Card className="text-center py-8">
+            <CardContent>
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-500">
+                Nenhuma funcionalidade disponível para seu perfil.
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                Entre em contato com o administrador para verificar suas permissões.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
