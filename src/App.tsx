@@ -53,7 +53,7 @@ function App() {
               <Route 
                 path="/estoque" 
                 element={
-                  <ProtectedRoute allowedTypes={['estoque', 'cd']}>
+                  <ProtectedRoute allowedTypes={['estoque', 'cd', 'comprador']}>
                     <Estoque />
                   </ProtectedRoute>
                 } 
@@ -61,7 +61,7 @@ function App() {
               <Route 
                 path="/requisicoes" 
                 element={
-                  <ProtectedRoute allowedTypes={['requisitante']}>
+                  <ProtectedRoute allowedTypes={['requisitante', 'estoque']}>
                     <Requisicoes />
                   </ProtectedRoute>
                 } 
