@@ -35,11 +35,36 @@ const TransferenciasCD = () => {
   const [modalConfirmacao, setModalConfirmacao] = useState<{ aberto: boolean; loja?: string }>({ aberto: false });
   const [historicoModal, setHistoricoModal] = useState<{ aberto: boolean; transferenceId?: string }>({ aberto: false });
 
+  // Buscar a loja CD dinamicamente
+  const { data: cdLoja } = useQuery({
+    queryKey: ['cd-loja'],
+    queryFn: async () => {
+      console.log('Buscando loja CD...');
+      
+      const { data, error } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('is_cd', true)
+        .eq('ativo', true)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar loja CD:', error);
+        throw error;
+      }
+
+      console.log('Loja CD encontrada:', data?.nome);
+      return data?.nome || 'CD';
+    },
+  });
+
   // Buscar todos os produtos requisitados agrupados
   const { data: produtosRequisitados, isLoading } = useQuery({
-    queryKey: ['produtos-requisitados-cd'],
+    queryKey: ['produtos-requisitados-cd', cdLoja],
     queryFn: async () => {
-      console.log('Buscando produtos requisitados para CD...');
+      if (!cdLoja) return {};
+      
+      console.log('Buscando produtos requisitados para CD...', cdLoja);
       
       const { data: requisicoes, error } = await supabase
         .from('requisicoes')
@@ -55,7 +80,7 @@ const TransferenciasCD = () => {
           )
         `)
         .eq('status', 'pendente')
-        .neq('loja', 'Home')
+        .neq('loja', cdLoja)
         .order('loja', { ascending: true });
 
       if (error) {
@@ -63,16 +88,18 @@ const TransferenciasCD = () => {
         throw error;
       }
 
-      // Buscar estoque do CD
+      // Buscar estoque do CD usando o nome correto da loja
       const { data: estoque, error: estoqueError } = await supabase
         .from('estoque_atual')
         .select('produto_id, quantidade')
-        .eq('loja', 'Home');
+        .eq('loja', cdLoja);
 
       if (estoqueError) {
         console.error('Erro ao buscar estoque CD:', estoqueError);
         throw estoqueError;
       }
+
+      console.log('Estoque do CD encontrado:', estoque);
 
       const estoqueMap: Record<string, number> = {};
       estoque?.forEach(item => {
@@ -88,13 +115,16 @@ const TransferenciasCD = () => {
         }
 
         (req.itens_requisicao as any[]).forEach(item => {
+          const estoqueAtual = estoqueMap[item.produto_id] || 0;
+          console.log(`Produto ${item.produtos?.produto}: estoque CD = ${estoqueAtual}`);
+          
           const produto: ProdutoRequisitado = {
             produto_id: item.produto_id,
             produto_nome: item.produtos?.produto || '',
             loja: req.loja,
             quantidade_requisitada: item.quantidade || 0,
             quantidade_calculada: item.quantidade_calculada || 0,
-            estoque_cd: estoqueMap[item.produto_id] || 0,
+            estoque_cd: estoqueAtual,
             quantidade_separar: item.quantidade_calculada || 0,
             confirmado: false,
             requisicao_id: req.id
@@ -107,17 +137,20 @@ const TransferenciasCD = () => {
       console.log('Produtos processados por loja:', produtosPorLoja);
       return produtosPorLoja;
     },
+    enabled: !!cdLoja,
   });
 
   // Mutation para processar separação
   const processarSeparacaoMutation = useMutation({
     mutationFn: async ({ loja, produtos }: { loja: string; produtos: ProdutoRequisitado[] }) => {
+      if (!cdLoja) throw new Error('Loja CD não encontrada');
+      
       console.log('Processando separação para loja:', loja, produtos);
 
       const transferenciasParaCriar = produtos.map(produto => ({
         requisicao_id: produto.requisicao_id,
         produto_id: produto.produto_id,
-        loja_origem: 'Home',
+        loja_origem: cdLoja,
         loja_destino: loja,
         quantidade_requisitada: produto.quantidade_calculada,
         quantidade_transferida: produto.quantidade_separar,
@@ -146,7 +179,7 @@ const TransferenciasCD = () => {
             atualizado_em: new Date().toISOString()
           })
           .eq('produto_id', produto.produto_id)
-          .eq('loja', 'Home');
+          .eq('loja', cdLoja);
 
         if (estoqueError) {
           console.error('Erro ao atualizar estoque:', estoqueError);
@@ -235,7 +268,7 @@ const TransferenciasCD = () => {
     });
   };
 
-  if (isLoading) {
+  if (isLoading || !cdLoja) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
