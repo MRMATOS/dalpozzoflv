@@ -111,10 +111,10 @@ const Cotacao = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
               <Calculator className="text-green-600" />
-              Sistema de Cotação de Produtos
+              Cotação de produtos
             </CardTitle>
             <p className="text-gray-600">
-              Cole as mensagens dos fornecedores do WhatsApp para comparar preços automaticamente
+              Selecione um fornecedor e cole a mensagem que ele enviou no campo abaixo.
             </p>
           </CardHeader>
           <CardContent>

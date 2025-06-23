@@ -34,21 +34,11 @@ const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({
               <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar
             </Button>
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Nova Cotação</h1>
-              <p className="text-sm text-gray-500">Sistema FLV</p>
-            </div>
             <SyncStatusIndicator
               syncStatus={syncStatus}
               formatLastSyncTime={formatLastSyncTime}
               onRetry={onRetrySync}
             />
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-              <p className="text-xs text-gray-500">Comprador</p>
-            </div>
           </div>
         </div>
       </div>

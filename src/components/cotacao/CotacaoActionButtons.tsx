@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, Plus, FileText } from 'lucide-react';
+import { Clock, FileText } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CotacaoActionButtonsProps {
@@ -17,16 +17,6 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
   onVerResumo,
   temDados
 }) => {
-  const handleNovaCotacao = () => {
-    if (temDados) {
-      if (window.confirm('Tem certeza que deseja criar uma nova cotação? Os dados atuais serão perdidos.')) {
-        onNovaCotacao();
-      }
-    } else {
-      onNovaCotacao();
-    }
-  };
-
   return (
     <div className="flex items-center space-x-3">
       <TooltipProvider>
@@ -43,24 +33,6 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
           </TooltipTrigger>
           <TooltipContent>
             <p>Restaurar última cotação</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNovaCotacao}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Nova cotação</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
