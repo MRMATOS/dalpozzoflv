@@ -12,6 +12,17 @@ import LojasTab from '@/components/configuracoes/LojasTab';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
+  const { hasRole } = useAuth();
+
+  // Definir abas baseadas no perfil do usuário
+  const isMaster = hasRole('master');
+  const isComprador = hasRole('comprador');
+
+  // Para compradores: apenas produtos e fornecedores
+  // Para master: todas as abas
+  const availableTabs = isMaster 
+    ? ['produtos', 'usuarios', 'fornecedores', 'lojas']
+    : ['produtos', 'fornecedores'];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -39,28 +50,44 @@ const Configuracoes = () => {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="produtos" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="produtos">Produtos</TabsTrigger>
-            <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-            <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
-            <TabsTrigger value="lojas">Lojas</TabsTrigger>
+          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-4' : 'grid-cols-2'}`}>
+            {availableTabs.includes('produtos') && (
+              <TabsTrigger value="produtos">Produtos</TabsTrigger>
+            )}
+            {availableTabs.includes('usuarios') && (
+              <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+            )}
+            {availableTabs.includes('fornecedores') && (
+              <TabsTrigger value="fornecedores">Fornecedores</TabsTrigger>
+            )}
+            {availableTabs.includes('lojas') && (
+              <TabsTrigger value="lojas">Lojas</TabsTrigger>
+            )}
           </TabsList>
           
-          <TabsContent value="produtos" className="mt-6">
-            <ProdutosTab />
-          </TabsContent>
+          {availableTabs.includes('produtos') && (
+            <TabsContent value="produtos" className="mt-6">
+              <ProdutosTab />
+            </TabsContent>
+          )}
           
-          <TabsContent value="usuarios" className="mt-6">
-            <UsuariosTab />
-          </TabsContent>
+          {availableTabs.includes('usuarios') && (
+            <TabsContent value="usuarios" className="mt-6">
+              <UsuariosTab />
+            </TabsContent>
+          )}
           
-          <TabsContent value="fornecedores" className="mt-6">
-            <FornecedoresTab />
-          </TabsContent>
+          {availableTabs.includes('fornecedores') && (
+            <TabsContent value="fornecedores" className="mt-6">
+              <FornecedoresTab />
+            </TabsContent>
+          )}
           
-          <TabsContent value="lojas" className="mt-6">
-            <LojasTab />
-          </TabsContent>
+          {availableTabs.includes('lojas') && (
+            <TabsContent value="lojas" className="mt-6">
+              <LojasTab />
+            </TabsContent>
+          )}
         </Tabs>
       </main>
     </div>

@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2 } from "lucide-react";
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
@@ -64,10 +65,10 @@ const Dashboard = () => {
     color: "bg-indigo-500",
     onClick: () => navigate("/historico-pedidos")
   },
-  // Configurações - disponível apenas para usuários 'master'
-  hasRole('master') && {
+  // Configurações - disponível para usuários 'comprador' ou 'master'
+  (hasRole('comprador') || hasRole('master')) && {
     title: "Configurações",
-    description: "Gerenciar sistema e usuários",
+    description: "Gerenciar produtos e fornecedores",
     icon: Settings,
     color: "bg-gray-500",
     onClick: () => navigate("/configuracoes")
