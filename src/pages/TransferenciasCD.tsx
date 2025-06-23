@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, Package, CheckCircle, AlertTriangle, Truck, ArrowLeft, Scale, History } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import HistoricoTransferencia from '@/components/transferencias/HistoricoTransferencia';
 
 interface ProdutoRequisitado {
@@ -30,6 +31,7 @@ const TransferenciasCD = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   
   const [produtosSeparacao, setProdutosSeparacao] = useState<Record<string, ProdutoRequisitado>>({});
   const [modalConfirmacao, setModalConfirmacao] = useState<{ aberto: boolean; loja?: string }>({ aberto: false });
@@ -268,6 +270,126 @@ const TransferenciasCD = () => {
     });
   };
 
+  const renderMobileCard = (produto: ProdutoRequisitado) => {
+    const key = `${produto.loja}-${produto.produto_id}`;
+    const produtoAtual = inicializarProduto(produto);
+    const temEstoque = produto.estoque_cd >= produto.quantidade_calculada;
+    
+    return (
+      <Card key={key} className={`mb-4 ${!temEstoque ? 'border-red-200' : ''}`}>
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            <div className="flex justify-between items-start">
+              <h4 className="font-medium text-sm text-gray-900 flex-1 pr-2">
+                {produto.produto_nome}
+              </h4>
+              {!temEstoque && (
+                <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+              )}
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-500 block">Requisitado</span>
+                <div className="flex items-center font-medium">
+                  <Scale className="h-3 w-3 mr-1" />
+                  {produto.quantidade_calculada} kg
+                </div>
+              </div>
+              <div>
+                <span className="text-gray-500 block">Estoque CD</span>
+                <div className="font-medium">
+                  {produto.estoque_cd} kg
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <div>
+                <span className="text-gray-500 text-sm block mb-1">Quantidade a Separar</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max={produto.estoque_cd}
+                  value={produtoAtual.quantidade_separar}
+                  onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  checked={produtoAtual.confirmado}
+                  onCheckedChange={(checked) => handleConfirmadoChange(key, checked as boolean)}
+                  disabled={!temEstoque || produtoAtual.quantidade_separar <= 0}
+                />
+                <span className="text-sm">Confirmar separação</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderDesktopTable = (produtos: ProdutoRequisitado[]) => (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Produto</TableHead>
+          <TableHead>Requisitado (Kg)</TableHead>
+          <TableHead>Estoque CD</TableHead>
+          <TableHead>Quantidade a Separar</TableHead>
+          <TableHead>Confirmar</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {produtos.map((produto) => {
+          const key = `${produto.loja}-${produto.produto_id}`;
+          const produtoAtual = inicializarProduto(produto);
+          const temEstoque = produto.estoque_cd >= produto.quantidade_calculada;
+          
+          return (
+            <TableRow key={key}>
+              <TableCell className="font-medium">{produto.produto_nome}</TableCell>
+              <TableCell>
+                <div className="flex items-center">
+                  <Scale className="h-4 w-4 mr-1" />
+                  {produto.quantidade_calculada}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center space-x-2">
+                  <span>{produto.estoque_cd}</span>
+                  {!temEstoque && (
+                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                  )}
+                </div>
+              </TableCell>
+              <TableCell>
+                <Input
+                  type="number"
+                  min="0"
+                  max={produto.estoque_cd}
+                  value={produtoAtual.quantidade_separar}
+                  onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
+                  className="w-24"
+                />
+              </TableCell>
+              <TableCell>
+                <Checkbox
+                  checked={produtoAtual.confirmado}
+                  onCheckedChange={(checked) => handleConfirmadoChange(key, checked as boolean)}
+                  disabled={!temEstoque || produtoAtual.quantidade_separar <= 0}
+                />
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+
   if (isLoading || !cdLoja) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -280,7 +402,7 @@ const TransferenciasCD = () => {
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className={`flex ${isMobile ? 'flex-col space-y-4 py-4' : 'justify-between items-center h-16'}`}>
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
@@ -291,16 +413,18 @@ const TransferenciasCD = () => {
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Gestão de Transferências - CD</h1>
-                <p className="text-sm text-gray-500">Separação e transferência de produtos</p>
+                <h1 className={`${isMobile ? 'text-lg' : 'text-lg'} font-semibold text-gray-900`}>
+                  Gestão de Transferências - CD
+                </h1>
               </div>
             </div>
             <Button
               variant="outline"
               onClick={() => setHistoricoModal({ aberto: true })}
+              size={isMobile ? "sm" : "default"}
             >
               <History className="h-4 w-4 mr-2" />
-              Ver Histórico
+              Histórico
             </Button>
           </div>
         </div>
@@ -311,16 +435,17 @@ const TransferenciasCD = () => {
           Object.entries(produtosRequisitados).map(([loja, produtos]) => (
             <Card key={loja} className="mb-6">
               <CardHeader>
-                <div className="flex justify-between items-center">
+                <div className={`flex ${isMobile ? 'flex-col space-y-3' : 'justify-between items-center'}`}>
                   <CardTitle className="flex items-center">
                     <Package className="h-5 w-5 mr-2" />
                     {loja}
                   </CardTitle>
-                  <div className="flex items-center space-x-2">
+                  <div className={`flex items-center ${isMobile ? 'justify-between' : 'space-x-2'}`}>
                     <Badge variant="outline">{produtos.length} produtos</Badge>
                     <Button
                       onClick={() => confirmarSeparacaoLoja(loja)}
                       disabled={processarSeparacaoMutation.isPending}
+                      size={isMobile ? "sm" : "default"}
                     >
                       <Truck className="h-4 w-4 mr-2" />
                       Confirmar Separação
@@ -329,61 +454,13 @@ const TransferenciasCD = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Produto</TableHead>
-                      <TableHead>Requisitado (Kg)</TableHead>
-                      <TableHead>Estoque CD</TableHead>
-                      <TableHead>Quantidade a Separar</TableHead>
-                      <TableHead>Confirmar</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {produtos.map((produto) => {
-                      const key = `${produto.loja}-${produto.produto_id}`;
-                      const produtoAtual = inicializarProduto(produto);
-                      const temEstoque = produto.estoque_cd >= produto.quantidade_calculada;
-                      
-                      return (
-                        <TableRow key={key}>
-                          <TableCell className="font-medium">{produto.produto_nome}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <Scale className="h-4 w-4 mr-1" />
-                              {produto.quantidade_calculada}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <span>{produto.estoque_cd}</span>
-                              {!temEstoque && (
-                                <AlertTriangle className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              max={produto.estoque_cd}
-                              value={produtoAtual.quantidade_separar}
-                              onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
-                              className="w-24"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Checkbox
-                              checked={produtoAtual.confirmado}
-                              onCheckedChange={(checked) => handleConfirmadoChange(key, checked as boolean)}
-                              disabled={!temEstoque || produtoAtual.quantidade_separar <= 0}
-                            />
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                {isMobile ? (
+                  <div className="space-y-4">
+                    {produtos.map(renderMobileCard)}
+                  </div>
+                ) : (
+                  renderDesktopTable(produtos)
+                )}
               </CardContent>
             </Card>
           ))
