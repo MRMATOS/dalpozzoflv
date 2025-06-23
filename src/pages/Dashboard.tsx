@@ -13,16 +13,22 @@ import {
   Truck,
   BarChart3,
   Users,
-  Store
+  Store,
+  LogOut
 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, hasRole } = useAuth();
+  const { profile, hasRole, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate("/auth");
+  };
 
   const cards = [
-    // Estoque
-    hasRole('estoque') && {
+    // Estoque - disponível para usuários 'estoque' ou 'master'
+    (hasRole('estoque') || hasRole('master')) && {
       title: "Estoque",
       description: "Gerenciar estoque de produtos",
       icon: Package,
@@ -30,8 +36,8 @@ const Dashboard = () => {
       onClick: () => navigate("/estoque")
     },
     
-    // Requisições
-    hasRole('requisitante') && {
+    // Requisições - disponível para usuários 'requisitante' ou 'master'
+    (hasRole('requisitante') || hasRole('master')) && {
       title: "Requisições",
       description: "Criar e gerenciar requisições",
       icon: ShoppingCart,
@@ -39,10 +45,10 @@ const Dashboard = () => {
       onClick: () => navigate("/requisicoes")
     },
 
-    // Transferências
-    (hasRole('transferencia') || hasRole('requisitante')) && {
+    // Transferências - disponível para usuários 'transferencia', 'requisitante' ou 'master'
+    (hasRole('transferencia') || hasRole('requisitante') || hasRole('master')) && {
       title: "Transferências",
-      description: hasRole('transferencia') 
+      description: hasRole('transferencia') || hasRole('master')
         ? "Gerenciar transferências entre lojas" 
         : "Confirmar recebimento de produtos",
       icon: Truck,
@@ -50,8 +56,8 @@ const Dashboard = () => {
       onClick: () => navigate("/transferencias")
     },
     
-    // Cotação
-    hasRole('comprador') && {
+    // Cotação - disponível para usuários 'comprador' ou 'master'
+    (hasRole('comprador') || hasRole('master')) && {
       title: "Cotação",
       description: "Comparar preços e criar pedidos",
       icon: Calculator,
@@ -59,8 +65,8 @@ const Dashboard = () => {
       onClick: () => navigate("/cotacao")
     },
     
-    // Histórico de Requisições
-    (hasRole('comprador') || hasRole('requisitante')) && {
+    // Histórico de Requisições - disponível para usuários 'comprador', 'requisitante' ou 'master'
+    (hasRole('comprador') || hasRole('requisitante') || hasRole('master')) && {
       title: "Histórico de Requisições",
       description: "Visualizar requisições anteriores",
       icon: History,
@@ -68,8 +74,8 @@ const Dashboard = () => {
       onClick: () => navigate("/historico-requisicoes")
     },
     
-    // Histórico de Pedidos
-    hasRole('comprador') && {
+    // Histórico de Pedidos - disponível para usuários 'comprador' ou 'master'
+    (hasRole('comprador') || hasRole('master')) && {
       title: "Histórico de Pedidos",
       description: "Visualizar pedidos de compra",
       icon: BarChart3,
@@ -77,7 +83,7 @@ const Dashboard = () => {
       onClick: () => navigate("/historico-pedidos")
     },
     
-    // Configurações
+    // Configurações - disponível apenas para usuários 'master'
     hasRole('master') && {
       title: "Configurações",
       description: "Gerenciar sistema e usuários",
@@ -136,6 +142,16 @@ const Dashboard = () => {
                   )}
                 </div>
               </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="flex items-center space-x-2"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Sair</span>
+              </Button>
             </div>
           </div>
         </div>
