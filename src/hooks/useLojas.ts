@@ -6,17 +6,19 @@ interface Loja {
   id: string;
   nome: string;
   ativo: boolean;
+  is_cd?: boolean;
 }
 
 export const useLojas = () => {
   const [lojas, setLojas] = useState<Loja[]>([]);
+  const [cdLoja, setCdLoja] = useState<Loja | null>(null);
 
   useEffect(() => {
     const fetchLojas = async () => {
       try {
         const { data, error } = await supabase
           .from('lojas')
-          .select('id, nome, ativo')
+          .select('id, nome, ativo, is_cd')
           .eq('ativo', true)
           .order('nome');
 
@@ -26,6 +28,10 @@ export const useLojas = () => {
         }
 
         setLojas(data || []);
+        
+        // Encontrar a loja CD
+        const cd = data?.find(loja => loja.is_cd);
+        setCdLoja(cd || null);
       } catch (error) {
         console.error('Erro ao buscar lojas:', error);
       }
@@ -34,5 +40,5 @@ export const useLojas = () => {
     fetchLojas();
   }, []);
 
-  return { lojas };
+  return { lojas, cdLoja };
 };

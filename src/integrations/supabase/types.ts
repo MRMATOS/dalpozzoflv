@@ -472,18 +472,21 @@ export type Database = {
           ativo: boolean | null
           criado_em: string | null
           id: string
+          is_cd: boolean | null
           nome: string
         }
         Insert: {
           ativo?: boolean | null
           criado_em?: string | null
           id?: string
+          is_cd?: boolean | null
           nome: string
         }
         Update: {
           ativo?: boolean | null
           criado_em?: string | null
           id?: string
+          is_cd?: boolean | null
           nome?: string
         }
         Relationships: []
@@ -919,6 +922,10 @@ export type Database = {
         Args: { produto_uuid: string }
         Returns: boolean
       }
+      get_cd_loja: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_loja: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -942,6 +949,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_cd_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_comprador_or_master: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -956,7 +967,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "master" | "comprador" | "estoque"
+      app_role: "master" | "comprador" | "estoque" | "cd"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1072,7 +1083,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["master", "comprador", "estoque"],
+      app_role: ["master", "comprador", "estoque", "cd"],
     },
   },
 } as const

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Loader2, Plus, Save } from 'lucide-react';
+import { Loader2, Plus, Save, AlertTriangle } from 'lucide-react';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import LojaCard from './LojaCard';
 
@@ -15,7 +15,8 @@ const LojasTab = () => {
   const queryClient = useQueryClient();
   const [newLoja, setNewLoja] = useState({
     nome: '',
-    ativo: true
+    ativo: true,
+    is_cd: false
   });
   const [showNewLoja, setShowNewLoja] = useState(false);
   const [editingLoja, setEditingLoja] = useState<string | null>(null);
@@ -58,7 +59,7 @@ const LojasTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
       toast.success('Loja criada com sucesso!');
-      setNewLoja({ nome: '', ativo: true });
+      setNewLoja({ nome: '', ativo: true, is_cd: false });
       setShowNewLoja(false);
     },
     onError: (error) => {
@@ -75,9 +76,13 @@ const LojasTab = () => {
       
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, { updates }) => {
       queryClient.invalidateQueries({ queryKey: ['lojas'] });
-      toast.success('Loja atualizada com sucesso!');
+      if (updates.is_cd) {
+        toast.success('Centro de Distribuição atualizado com sucesso!');
+      } else {
+        toast.success('Loja atualizada com sucesso!');
+      }
       setEditingLoja(null);
     },
     onError: (error) => {
@@ -106,6 +111,11 @@ const LojasTab = () => {
   });
 
   const handleDeleteClick = (loja: any) => {
+    if (loja.is_cd) {
+      toast.error('Não é possível excluir a loja que é Centro de Distribuição. Primeiro transfira o CD para outra loja.');
+      return;
+    }
+    
     setDeleteDialog({
       open: true,
       loja,
@@ -120,6 +130,9 @@ const LojasTab = () => {
     }
   };
 
+  const currentCD = lojas?.find(loja => loja.is_cd);
+  const hasCD = !!currentCD;
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -132,17 +145,35 @@ const LojasTab = () => {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base md:text-lg">Lojas</CardTitle>
+          <CardTitle className="text-base md:text-lg">
+            <div className="flex flex-col">
+              <span>Lojas</span>
+              {hasCD && (
+                <span className="text-sm text-orange-600 font-normal">
+                  CD atual: {currentCD.nome}
+                </span>
+              )}
+            </div>
+          </CardTitle>
           <Button onClick={() => setShowNewLoja(true)} disabled={showNewLoja} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             Nova
           </Button>
         </CardHeader>
         <CardContent>
+          {!hasCD && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center space-x-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-600" />
+              <span className="text-sm text-yellow-700">
+                Nenhuma loja está configurada como Centro de Distribuição. Configure uma loja como CD para ativar o sistema de transferências.
+              </span>
+            </div>
+          )}
+
           {showNewLoja && (
             <div className="mb-6 p-4 border rounded-lg bg-blue-50">
               <h3 className="font-semibold mb-4">Nova Loja</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <Input
                   placeholder="Nome da loja"
                   value={newLoja.nome}
@@ -154,6 +185,13 @@ const LojasTab = () => {
                     onCheckedChange={(checked) => setNewLoja({ ...newLoja, ativo: checked })}
                   />
                   <span className="text-sm">Ativa</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newLoja.is_cd}
+                    onCheckedChange={(checked) => setNewLoja({ ...newLoja, is_cd: checked })}
+                  />
+                  <span className="text-sm">Centro de Distribuição</span>
                 </div>
                 <div className="flex space-x-2">
                   <Button

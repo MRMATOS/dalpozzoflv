@@ -5,12 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Save, X, Store } from 'lucide-react';
+import { Edit, Trash2, Save, X, Store, Truck } from 'lucide-react';
 
 interface Loja {
   id: string;
   nome: string;
   ativo: boolean;
+  is_cd?: boolean;
   criado_em?: string;
 }
 
@@ -33,7 +34,8 @@ const LojaCard = ({
 }: LojaCardProps) => {
   const [editValues, setEditValues] = useState({
     nome: loja.nome,
-    ativo: loja.ativo
+    ativo: loja.ativo,
+    is_cd: loja.is_cd || false
   });
 
   const handleSave = () => {
@@ -44,11 +46,11 @@ const LojaCard = ({
   const isEditing = editingLoja === loja.id;
 
   return (
-    <Card className="mb-3">
+    <Card className={`mb-3 ${loja.is_cd ? 'border-orange-300 bg-orange-50' : ''}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-3">
-            {/* Nome */}
+            {/* Nome e Badge CD */}
             <div>
               {isEditing ? (
                 <Input
@@ -59,14 +61,23 @@ const LojaCard = ({
                 />
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Store className="w-5 h-5 text-blue-600" />
+                  {loja.is_cd ? (
+                    <Truck className="w-5 h-5 text-orange-600" />
+                  ) : (
+                    <Store className="w-5 h-5 text-blue-600" />
+                  )}
                   <h3 className="font-semibold text-lg text-gray-900">{loja.nome}</h3>
+                  {loja.is_cd && (
+                    <Badge className="bg-orange-600 text-white">
+                      Centro de Distribuição
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Status e Data */}
-            <div className="flex flex-wrap gap-3 items-center">
+            {/* Status, CD e Data */}
+            <div className="flex flex-wrap gap-4 items-center">
               <div className="flex items-center space-x-2">
                 <label className="text-xs text-gray-500">Status:</label>
                 {isEditing ? (
@@ -77,6 +88,20 @@ const LojaCard = ({
                 ) : (
                   <Badge variant={loja.ativo ? "default" : "secondary"} className={loja.ativo ? "bg-green-600" : ""}>
                     {loja.ativo ? 'Ativa' : 'Inativa'}
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <label className="text-xs text-gray-500">Centro de Distribuição:</label>
+                {isEditing ? (
+                  <Switch
+                    checked={editValues.is_cd}
+                    onCheckedChange={(checked) => setEditValues(prev => ({ ...prev, is_cd: checked }))}
+                  />
+                ) : (
+                  <Badge variant={loja.is_cd ? "default" : "outline"} className={loja.is_cd ? "bg-orange-600" : ""}>
+                    {loja.is_cd ? 'Sim' : 'Não'}
                   </Badge>
                 )}
               </div>
@@ -108,7 +133,8 @@ const LojaCard = ({
                 <Button variant="outline" size="sm" onClick={() => {
                   setEditValues({
                     nome: loja.nome,
-                    ativo: loja.ativo
+                    ativo: loja.ativo,
+                    is_cd: loja.is_cd || false
                   });
                   setEditingLoja(loja.id);
                 }} className="h-8">
