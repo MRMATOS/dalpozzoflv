@@ -79,18 +79,28 @@ const Requisicoes = () => {
 
   const createRequisitionMutation = useMutation({
     mutationFn: async (items: RequisitionItem[]) => {
-      console.log('Criando requisição para a loja:', profile?.loja);
+      console.log('=== CRIANDO REQUISIÇÃO ===');
+      console.log('Usuário:', user?.id, user?.nome);
+      console.log('Profile:', profile?.loja);
       console.log('Items da requisição:', items);
 
-      // Primeiro, criar a requisição
+      if (!user?.id || !profile?.loja) {
+        throw new Error('Usuário ou loja não identificados');
+      }
+
+      // Primeiro, criar a requisição usando usuario_id (que agora tem foreign key correta)
+      const requisicaoData = {
+        usuario_id: user.id, // Este campo agora referencia corretamente public.usuarios
+        user_id: user.id,    // Manter por compatibilidade
+        loja: profile.loja,
+        status: 'pendente'
+      };
+
+      console.log('Dados da requisição a ser criada:', requisicaoData);
+
       const { data: requisicao, error: requisicaoError } = await supabase
         .from('requisicoes')
-        .insert([{
-          usuario_id: user?.id,
-          user_id: user?.id,
-          loja: profile?.loja,
-          status: 'pendente'
-        }])
+        .insert([requisicaoData])
         .select()
         .single();
 
@@ -99,7 +109,7 @@ const Requisicoes = () => {
         throw requisicaoError;
       }
 
-      console.log('Requisição criada:', requisicao);
+      console.log('Requisição criada com sucesso:', requisicao);
 
       // Depois, criar os itens da requisição
       const itensRequisicao = items.map(item => ({
@@ -122,6 +132,7 @@ const Requisicoes = () => {
         throw itensError;
       }
 
+      console.log('Itens da requisição inseridos com sucesso');
       return requisicao;
     },
     onSuccess: () => {
@@ -132,7 +143,7 @@ const Requisicoes = () => {
     },
     onError: (error) => {
       console.error('Erro ao criar requisição:', error);
-      toast.error('Erro ao criar requisição');
+      toast.error(`Erro ao criar requisição: ${error.message}`);
     },
   });
 
@@ -186,9 +197,16 @@ const Requisicoes = () => {
       return;
     }
 
-    console.log('Enviando requisição com os itens:', items);
-    console.log('Usuário:', user);
-    console.log('Profile:', profile);
+    if (!user?.id) {
+      toast.error('Usuário não identificado. Faça login novamente.');
+      return;
+    }
+
+    console.log('=== SUBMETENDO REQUISIÇÃO ===');
+    console.log('Items selecionados:', items);
+    console.log('Usuário autenticado:', user.nome, 'ID:', user.id);
+    console.log('Loja:', profile.loja);
+    
     createRequisitionMutation.mutate(items);
   };
 

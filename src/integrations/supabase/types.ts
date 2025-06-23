@@ -672,7 +672,15 @@ export type Database = {
           user_id?: string | null
           usuario_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_requisicoes_usuario_id"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sinonimos_produto: {
         Row: {
