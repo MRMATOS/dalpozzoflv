@@ -43,7 +43,7 @@ function App() {
               <Route 
                 path="/estoque" 
                 element={
-                  <ProtectedRoute allowedRoles={['estoque']}>
+                  <ProtectedRoute allowedTypes={['estoque']}>
                     <Estoque />
                   </ProtectedRoute>
                 } 
@@ -51,7 +51,7 @@ function App() {
               <Route 
                 path="/requisicoes" 
                 element={
-                  <ProtectedRoute allowedRoles={['requisitante']}>
+                  <ProtectedRoute allowedTypes={['requisitante']}>
                     <Requisicoes />
                   </ProtectedRoute>
                 } 
@@ -59,7 +59,7 @@ function App() {
               <Route 
                 path="/cotacao" 
                 element={
-                  <ProtectedRoute allowedRoles={['comprador']}>
+                  <ProtectedRoute allowedTypes={['comprador']}>
                     <Cotacao />
                   </ProtectedRoute>
                 } 
@@ -67,7 +67,7 @@ function App() {
               <Route 
                 path="/resumo-pedido" 
                 element={
-                  <ProtectedRoute allowedRoles={['comprador']}>
+                  <ProtectedRoute allowedTypes={['comprador']}>
                     <ResumoPedido />
                   </ProtectedRoute>
                 } 
@@ -75,7 +75,7 @@ function App() {
               <Route 
                 path="/historico-requisicoes" 
                 element={
-                  <ProtectedRoute allowedRoles={['comprador', 'requisitante']}>
+                  <ProtectedRoute allowedTypes={['comprador', 'requisitante']}>
                     <HistoricoRequisicoes />
                   </ProtectedRoute>
                 } 
@@ -83,7 +83,7 @@ function App() {
               <Route 
                 path="/historico-pedidos" 
                 element={
-                  <ProtectedRoute allowedRoles={['comprador']}>
+                  <ProtectedRoute allowedTypes={['comprador']}>
                     <HistoricoPedidos />
                   </ProtectedRoute>
                 } 
@@ -91,7 +91,7 @@ function App() {
               <Route 
                 path="/transferencias" 
                 element={
-                  <ProtectedRoute allowedRoles={['transferencia', 'requisitante']}>
+                  <ProtectedRoute allowedTypes={['transferencia', 'requisitante']}>
                     <Transferencias />
                   </ProtectedRoute>
                 } 
@@ -99,7 +99,7 @@ function App() {
               <Route 
                 path="/configuracoes" 
                 element={
-                  <ProtectedRoute allowedRoles={['master']}>
+                  <ProtectedRoute allowedTypes={['master']}>
                     <Configuracoes />
                   </ProtectedRoute>
                 } 
