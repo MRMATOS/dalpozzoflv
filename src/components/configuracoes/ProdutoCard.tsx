@@ -237,23 +237,31 @@ const ProdutoCard = ({
         </CardContent>
       </Card>
 
-      {/* Variações (sempre visíveis se existirem) */}
+      {/* Variações com separação visual clara */}
       {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && (
-        <div className="ml-6 mb-4 space-y-2">
-          {produto.variacoes.map((variacao) => (
-            <ProdutoCard
-              key={variacao.id}
-              produto={variacao}
-              isExpanded={false}
-              onToggleExpanded={() => {}}
-              onEdit={onEdit}
-              onDelete={onDelete}
-              onUpdate={onUpdate}
-              editingProduct={editingProduct}
-              setEditingProduct={setEditingProduct}
-              onAddVariation={onAddVariation}
-            />
-          ))}
+        <div className="mb-6">
+          {/* Linha separadora sutil */}
+          <div className="border-l-2 border-gray-200 ml-4 pl-8 pt-2">
+            <div className="space-y-3">
+              {produto.variacoes.map((variacao) => (
+                <div key={variacao.id} className="relative">
+                  {/* Linha conectora para cada variação */}
+                  <div className="absolute -left-8 top-4 w-6 h-px bg-gray-200"></div>
+                  <ProdutoCard
+                    produto={variacao}
+                    isExpanded={false}
+                    onToggleExpanded={() => {}}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onUpdate={onUpdate}
+                    editingProduct={editingProduct}
+                    setEditingProduct={setEditingProduct}
+                    onAddVariation={onAddVariation}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
