@@ -22,10 +22,12 @@ import {
 import NotificacoesTransferencias from '@/components/transferencias/NotificacoesTransferencias';
 import DivergenciasManager from '@/components/transferencias/DivergenciasManager';
 import HistoricoTransferencia from '@/components/transferencias/HistoricoTransferencia';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const GestaoCd = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const isMobile = useIsMobile();
   const [historicoModal, setHistoricoModal] = useState<{ aberto: boolean; transferenceId?: string }>({ aberto: false });
 
   // Buscar requisições pendentes por loja (3 lojas específicas)
@@ -142,18 +144,31 @@ const GestaoCd = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
-            <TabsTrigger value="divergencias">Divergências</TabsTrigger>
-            <TabsTrigger value="historico">Histórico</TabsTrigger>
-          </TabsList>
+          {isMobile ? (
+            <div className="space-y-2">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+                <TabsTrigger value="divergencias">Divergências</TabsTrigger>
+              </TabsList>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="historico">Histórico</TabsTrigger>
+                <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+              </TabsList>
+            </div>
+          ) : (
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+              <TabsTrigger value="divergencias">Divergências</TabsTrigger>
+              <TabsTrigger value="historico">Histórico</TabsTrigger>
+            </TabsList>
+          )}
 
           <TabsContent value="dashboard" className="space-y-6">
             {/* ETAPA 5: Cards Resumo por Loja (exatamente 3 cards) */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Requisições Pendentes por Loja
+                Requisições Pendentes
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -251,7 +266,7 @@ const GestaoCd = () => {
             <div className="mt-8">
               <Card>
                 <CardHeader>
-                  <CardTitle>Ações do Centro de Distribuição</CardTitle>
+                  <CardTitle>Ações do CD</CardTitle>
                   <CardDescription>Acesso rápido às principais funcionalidades</CardDescription>
                 </CardHeader>
                 <CardContent>

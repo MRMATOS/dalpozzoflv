@@ -10,7 +10,6 @@ import {
   Calculator, 
   History, 
   Settings,
-  Truck,
   BarChart3,
   Users,
   Store,
@@ -53,17 +52,6 @@ const Dashboard = () => {
       icon: ShoppingCart,
       color: "bg-green-500",
       onClick: () => navigate("/requisicoes")
-    },
-
-    // Transferências - disponível para usuários 'transferencia', 'requisitante' ou 'master'
-    (hasRole('transferencia') || hasRole('requisitante') || hasRole('master')) && {
-      title: "Transferências",
-      description: hasRole('transferencia') || hasRole('master')
-        ? "Gerenciar transferências entre lojas" 
-        : "Confirmar recebimento de produtos",
-      icon: Truck,
-      color: "bg-yellow-500",
-      onClick: () => navigate("/transferencias")
     },
     
     // Cotação - disponível para usuários 'comprador' ou 'master'
@@ -112,9 +100,8 @@ const Dashboard = () => {
               <Store className="h-8 w-8 text-blue-600" />
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">
-                  Supermercado Dalpozzo - FLV
+                  Dal Pozzo FLV
                 </h1>
-                <p className="text-sm text-gray-500">Sistema de Compras</p>
               </div>
             </div>
             
@@ -128,31 +115,6 @@ const Dashboard = () => {
                   {hasRole('master') && (
                     <Badge variant="default" className="text-xs bg-red-600">
                       Master
-                    </Badge>
-                  )}
-                  {hasRole('cd') && (
-                    <Badge variant="default" className="text-xs bg-cyan-600">
-                      CD
-                    </Badge>
-                  )}
-                  {hasRole('comprador') && (
-                    <Badge variant="default" className="text-xs bg-purple-600">
-                      Comprador
-                    </Badge>
-                  )}
-                  {hasRole('estoque') && (
-                    <Badge variant="default" className="text-xs bg-blue-600">
-                      Estoque
-                    </Badge>
-                  )}
-                  {hasRole('requisitante') && (
-                    <Badge variant="default" className="text-xs bg-green-600">
-                      Requisitante
-                    </Badge>
-                  )}
-                  {hasRole('transferencia') && (
-                    <Badge variant="default" className="text-xs bg-yellow-600">
-                      Transferência
                     </Badge>
                   )}
                 </div>

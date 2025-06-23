@@ -17,7 +17,6 @@ import ResumoPedido from "./pages/ResumoPedido";
 import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 import HistoricoPedidos from "./pages/HistoricoPedidos";
 import Configuracoes from "./pages/Configuracoes";
-import Transferencias from "./pages/Transferencias";
 import GestaoCd from "./pages/GestaoCd";
 import TransferenciasCD from "./pages/TransferenciasCD";
 import NotFound from "./pages/NotFound";
@@ -95,14 +94,6 @@ function App() {
                 element={
                   <ProtectedRoute allowedTypes={['comprador']}>
                     <HistoricoPedidos />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/transferencias" 
-                element={
-                  <ProtectedRoute allowedTypes={['transferencia', 'requisitante', 'cd']}>
-                    <Transferencias />
                   </ProtectedRoute>
                 } 
               />

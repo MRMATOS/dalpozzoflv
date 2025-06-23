@@ -414,7 +414,7 @@ const TransferenciasCD = () => {
               </Button>
               <div>
                 <h1 className={`${isMobile ? 'text-lg' : 'text-lg'} font-semibold text-gray-900`}>
-                  Gestão de Transferências - CD
+                  Gerenciar separação
                 </h1>
               </div>
             </div>

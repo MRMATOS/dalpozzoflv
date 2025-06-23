@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,7 +29,7 @@ interface ItemPedido {
 }
 
 const HistoricoPedidos = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const [pedidos, setPedidos] = useState<PedidoHistorico[]>([]);
@@ -242,14 +243,6 @@ const HistoricoPedidos = () => {
               </Button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Histórico de Pedidos</h1>
-                <p className="text-sm text-gray-500">Sistema FLV</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <p className="text-xs text-gray-500">Comprador</p>
               </div>
             </div>
           </div>
