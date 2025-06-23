@@ -26,6 +26,7 @@ interface TabelaComparativaProps {
 
 const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
   const isMobile = useIsMobile();
+  const [buscaProduto, setBuscaProduto] = useState('');
   
   // Se é mobile, renderiza a versão mobile
   if (isMobile) {
@@ -47,8 +48,6 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
     onQuantidadeChange,
     onCalcularTotal,
   } = props;
-
-  const [buscaProduto, setBuscaProduto] = useState('');
 
   const produtosFiltrados = tabela.filter(item => 
     item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
