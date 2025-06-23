@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Save, X } from 'lucide-react';
+import { Edit, Trash2, Save, X, Truck } from 'lucide-react';
+import { useLojas } from '@/hooks/useLojas';
 
 interface Usuario {
   id: string;
@@ -36,6 +37,7 @@ const UsuarioCard = ({
   editingUser,
   setEditingUser
 }: UsuarioCardProps) => {
+  const { lojas, cdLoja } = useLojas();
   const [editValues, setEditValues] = useState({
     nome: usuario.nome,
     tipo: usuario.tipo,
@@ -51,6 +53,43 @@ const UsuarioCard = ({
 
   const isEditing = editingUser === usuario.id;
 
+  // Determinar quais lojas mostrar baseado no tipo
+  const getAvailableLojas = () => {
+    if (editValues.tipo === 'cd') {
+      // Usuários CD só podem ser vinculados à loja que é CD
+      return cdLoja ? [cdLoja] : [];
+    }
+    // Outros tipos podem ser vinculados a qualquer loja (exceto CD)
+    return lojas.filter(loja => !loja.is_cd);
+  };
+
+  // Auto-selecionar loja CD quando tipo for CD
+  const handleTipoChange = (newTipo: string) => {
+    const updates = { ...editValues, tipo: newTipo };
+    
+    if (newTipo === 'cd' && cdLoja) {
+      updates.loja = cdLoja.nome;
+    } else if (newTipo !== 'cd' && editValues.loja === cdLoja?.nome) {
+      // Se estava como CD e mudou, resetar para primeira loja disponível
+      const availableLojas = lojas.filter(loja => !loja.is_cd);
+      updates.loja = availableLojas[0]?.nome || 'Home';
+    }
+    
+    setEditValues(updates);
+  };
+
+  const getTipoBadgeColor = (tipo: string) => {
+    switch (tipo) {
+      case 'master': return 'bg-purple-600';
+      case 'comprador': return 'bg-blue-600';
+      case 'estoque': return 'bg-green-600';
+      case 'cd': return 'bg-orange-600';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  const availableLojas = getAvailableLojas();
+
   return (
     <Card className="mb-3">
       <CardContent className="p-4">
@@ -65,7 +104,12 @@ const UsuarioCard = ({
                   className="font-medium"
                 />
               ) : (
-                <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
+                  {usuario.tipo === 'cd' && (
+                    <Truck className="w-4 h-4 text-orange-600" />
+                  )}
+                </div>
               )}
             </div>
 
@@ -76,7 +120,7 @@ const UsuarioCard = ({
                 {isEditing ? (
                   <Select
                     value={editValues.tipo}
-                    onValueChange={(value) => setEditValues(prev => ({ ...prev, tipo: value }))}
+                    onValueChange={handleTipoChange}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
@@ -85,11 +129,12 @@ const UsuarioCard = ({
                       <SelectItem value="comprador">Comprador</SelectItem>
                       <SelectItem value="estoque">Estoque</SelectItem>
                       <SelectItem value="master">Master</SelectItem>
+                      <SelectItem value="cd">Centro de Distribuição</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                    {usuario.tipo}
+                  <Badge variant="outline" className={`text-white ${getTipoBadgeColor(usuario.tipo)}`}>
+                    {usuario.tipo === 'cd' ? 'Centro de Distribuição' : usuario.tipo}
                   </Badge>
                 )}
               </div>
@@ -100,19 +145,22 @@ const UsuarioCard = ({
                   <Select
                     value={editValues.loja}
                     onValueChange={(value) => setEditValues(prev => ({ ...prev, loja: value }))}
+                    disabled={editValues.tipo === 'cd' && availableLojas.length <= 1}
                   >
                     <SelectTrigger className="h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Home">Home</SelectItem>
-                      <SelectItem value="Campos">Campos</SelectItem>
-                      <SelectItem value="BH">BH</SelectItem>
+                      {availableLojas.map(loja => (
+                        <SelectItem key={loja.id} value={loja.nome}>
+                          {loja.nome} {loja.is_cd ? '(CD)' : ''}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Badge variant="outline" className="bg-green-50 text-green-700">
-                    {usuario.loja}
+                  <Badge variant="outline" className={`${usuario.tipo === 'cd' ? 'bg-orange-50 text-orange-700' : 'bg-green-50 text-green-700'}`}>
+                    {usuario.loja} {usuario.tipo === 'cd' ? '(CD)' : ''}
                   </Badge>
                 )}
               </div>

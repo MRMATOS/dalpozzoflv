@@ -11,9 +11,11 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Save } from 'lucide-react';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
 import UsuarioCard from './UsuarioCard';
+import { useLojas } from '@/hooks/useLojas';
 
 const UsuariosTab = () => {
   const queryClient = useQueryClient();
+  const { lojas, cdLoja } = useLojas();
   const [newUser, setNewUser] = useState({
     nome: '',
     tipo: 'estoque',
@@ -124,6 +126,28 @@ const UsuariosTab = () => {
     }
   };
 
+  // Função para determinar lojas disponíveis baseado no tipo
+  const getAvailableLojas = (tipo: string) => {
+    if (tipo === 'cd') {
+      return cdLoja ? [cdLoja] : [];
+    }
+    return lojas.filter(loja => !loja.is_cd);
+  };
+
+  // Auto-selecionar loja baseado no tipo
+  const handleNewUserTipoChange = (tipo: string) => {
+    const updates = { ...newUser, tipo };
+    
+    if (tipo === 'cd' && cdLoja) {
+      updates.loja = cdLoja.nome;
+    } else if (tipo !== 'cd' && newUser.loja === cdLoja?.nome) {
+      const availableLojas = lojas.filter(loja => !loja.is_cd);
+      updates.loja = availableLojas[0]?.nome || 'Home';
+    }
+    
+    setNewUser(updates);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -131,6 +155,8 @@ const UsuariosTab = () => {
       </div>
     );
   }
+
+  const availableLojas = getAvailableLojas(newUser.tipo);
 
   return (
     <>
@@ -152,7 +178,7 @@ const UsuariosTab = () => {
                   value={newUser.nome}
                   onChange={(e) => setNewUser({ ...newUser, nome: e.target.value })}
                 />
-                <Select value={newUser.tipo} onValueChange={(value) => setNewUser({ ...newUser, tipo: value })}>
+                <Select value={newUser.tipo} onValueChange={handleNewUserTipoChange}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -160,16 +186,23 @@ const UsuariosTab = () => {
                     <SelectItem value="comprador">Comprador</SelectItem>
                     <SelectItem value="estoque">Estoque</SelectItem>
                     <SelectItem value="master">Master</SelectItem>
+                    <SelectItem value="cd">Centro de Distribuição</SelectItem>
                   </SelectContent>
                 </Select>
-                <Select value={newUser.loja} onValueChange={(value) => setNewUser({ ...newUser, loja: value })}>
+                <Select 
+                  value={newUser.loja} 
+                  onValueChange={(value) => setNewUser({ ...newUser, loja: value })}
+                  disabled={newUser.tipo === 'cd' && availableLojas.length <= 1}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Home">Home</SelectItem>
-                    <SelectItem value="Campos">Campos</SelectItem>
-                    <SelectItem value="BH">BH</SelectItem>
+                    {availableLojas.map(loja => (
+                      <SelectItem key={loja.id} value={loja.nome}>
+                        {loja.nome} {loja.is_cd ? '(CD)' : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Input
