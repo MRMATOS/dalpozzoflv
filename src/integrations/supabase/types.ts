@@ -91,6 +91,53 @@ export type Database = {
           },
         ]
       }
+      divergencias_transferencias: {
+        Row: {
+          criado_em: string | null
+          descricao: string
+          id: string
+          quantidade_esperada: number | null
+          quantidade_real: number | null
+          resolvido: boolean | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          tipo_divergencia: string
+          transferencia_id: string | null
+        }
+        Insert: {
+          criado_em?: string | null
+          descricao: string
+          id?: string
+          quantidade_esperada?: number | null
+          quantidade_real?: number | null
+          resolvido?: boolean | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          tipo_divergencia: string
+          transferencia_id?: string | null
+        }
+        Update: {
+          criado_em?: string | null
+          descricao?: string
+          id?: string
+          quantidade_esperada?: number | null
+          quantidade_real?: number | null
+          resolvido?: boolean | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          tipo_divergencia?: string
+          transferencia_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "divergencias_transferencias_transferencia_id_fkey"
+            columns: ["transferencia_id"]
+            isOneToOne: false
+            referencedRelation: "transferencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       escala_abastecimento: {
         Row: {
           area_id: string | null
@@ -810,6 +857,50 @@ export type Database = {
           },
         ]
       }
+      transferencias_logs: {
+        Row: {
+          criado_em: string | null
+          id: string
+          observacoes: string | null
+          quantidade_anterior: number | null
+          quantidade_nova: number | null
+          status_anterior: string | null
+          status_novo: string
+          transferencia_id: string | null
+          usuario_id: string | null
+        }
+        Insert: {
+          criado_em?: string | null
+          id?: string
+          observacoes?: string | null
+          quantidade_anterior?: number | null
+          quantidade_nova?: number | null
+          status_anterior?: string | null
+          status_novo: string
+          transferencia_id?: string | null
+          usuario_id?: string | null
+        }
+        Update: {
+          criado_em?: string | null
+          id?: string
+          observacoes?: string | null
+          quantidade_anterior?: number | null
+          quantidade_nova?: number | null
+          status_anterior?: string | null
+          status_novo?: string
+          transferencia_id?: string | null
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transferencias_logs_transferencia_id_fkey"
+            columns: ["transferencia_id"]
+            isOneToOne: false
+            referencedRelation: "transferencias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -933,6 +1024,20 @@ export type Database = {
       get_cd_loja: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_transferencia_historico: {
+        Args: { transferencia_uuid: string }
+        Returns: {
+          id: string
+          tipo: string
+          descricao: string
+          status_anterior: string
+          status_novo: string
+          quantidade_anterior: number
+          quantidade_nova: number
+          usuario_nome: string
+          criado_em: string
+        }[]
       }
       get_user_loja: {
         Args: Record<PropertyKey, never>

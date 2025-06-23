@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,9 +9,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Loader2, Package, CheckCircle, AlertTriangle, Truck, ArrowLeft, Scale } from 'lucide-react';
+import { Loader2, Package, CheckCircle, AlertTriangle, Truck, ArrowLeft, Scale, History } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import HistoricoTransferencia from '@/components/transferencias/HistoricoTransferencia';
 
 interface ProdutoRequisitado {
   produto_id: string;
@@ -33,6 +33,7 @@ const TransferenciasCD = () => {
   
   const [produtosSeparacao, setProdutosSeparacao] = useState<Record<string, ProdutoRequisitado>>({});
   const [modalConfirmacao, setModalConfirmacao] = useState<{ aberto: boolean; loja?: string }>({ aberto: false });
+  const [historicoModal, setHistoricoModal] = useState<{ aberto: boolean; transferenceId?: string }>({ aberto: false });
 
   // Buscar todos os produtos requisitados agrupados
   const { data: produtosRequisitados, isLoading } = useQuery({
@@ -261,6 +262,13 @@ const TransferenciasCD = () => {
                 <p className="text-sm text-gray-500">Separação e transferência de produtos</p>
               </div>
             </div>
+            <Button
+              variant="outline"
+              onClick={() => setHistoricoModal({ aberto: true })}
+            >
+              <History className="h-4 w-4 mr-2" />
+              Ver Histórico
+            </Button>
           </div>
         </div>
       </header>
@@ -386,6 +394,13 @@ const TransferenciasCD = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal de Histórico */}
+        <HistoricoTransferencia
+          transferenceId={historicoModal.transferenceId || null}
+          isOpen={historicoModal.aberto}
+          onClose={() => setHistoricoModal({ aberto: false })}
+        />
       </main>
     </div>
   );
