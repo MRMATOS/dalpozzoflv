@@ -19,7 +19,7 @@ const Dashboard = () => {
   // Gestão CD - disponível para usuários 'cd' ou 'master'
   (hasRole('cd') || hasRole('master')) && {
     title: "Gestão CD",
-    description: "Centro de Distribuição - Gerenciar requisições e transferências",
+    description: "Gerenciar requisições e transferências",
     icon: Building2,
     color: "bg-cyan-500",
     onClick: () => navigate("/gestao-cd")
