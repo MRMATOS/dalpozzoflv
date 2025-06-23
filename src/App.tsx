@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useState } from "react";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Login from "./pages/Login";
@@ -18,11 +19,19 @@ import HistoricoPedidos from "./pages/HistoricoPedidos";
 import Configuracoes from "./pages/Configuracoes";
 import Transferencias from "./pages/Transferencias";
 import GestaoCd from "./pages/GestaoCd";
+import TransferenciasCD from "./pages/TransferenciasCD";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
-
 function App() {
+  const [queryClient] = useState(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
+    },
+  }));
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -102,6 +111,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedTypes={['cd']}>
                     <GestaoCd />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/transferencias-cd" 
+                element={
+                  <ProtectedRoute allowedTypes={['cd']}>
+                    <TransferenciasCD />
                   </ProtectedRoute>
                 } 
               />
