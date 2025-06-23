@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, Search, Send, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, Send, ArrowLeft, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import ProductCard from '@/components/requisicoes/ProductCard';
+import { useTransferencias } from '@/hooks/useTransferencias';
 
 interface Product {
   id: string;
@@ -28,6 +29,7 @@ const Requisicoes = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { criarTransferencias } = useTransferencias();
   const [searchTerm, setSearchTerm] = useState('');
   const [requisitionItems, setRequisitionItems] = useState<Record<string, RequisitionItem>>({});
 
@@ -43,6 +45,36 @@ const Requisicoes = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Buscar requisições pendentes da loja do usuário
+  const { data: requisicoesPendentes } = useQuery({
+    queryKey: ['requisicoes-pendentes', profile?.loja],
+    queryFn: async () => {
+      if (!profile?.loja) return [];
+      
+      const { data, error } = await supabase
+        .from('requisicoes')
+        .select(`
+          id,
+          loja,
+          status,
+          data_requisicao,
+          itens_requisicao(
+            produto_id,
+            quantidade,
+            quantidade_calculada,
+            produtos(produto, unidade, media_por_caixa)
+          )
+        `)
+        .eq('loja', profile.loja)
+        .eq('status', 'pendente')
+        .order('data_requisicao', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.loja,
   });
 
   const createRequisitionMutation = useMutation({
@@ -93,15 +125,32 @@ const Requisicoes = () => {
       return requisicao;
     },
     onSuccess: () => {
-      toast.success('Requisição enviada com sucesso!');
+      toast.success('Requisição criada com sucesso!');
       setRequisitionItems({});
       queryClient.invalidateQueries({ queryKey: ['produtos-requisicao'] });
-      queryClient.invalidateQueries({ queryKey: ['requisicoes'] });
-      navigate('/dashboard');
+      queryClient.invalidateQueries({ queryKey: ['requisicoes-pendentes'] });
     },
     onError: (error) => {
-      console.error('Erro ao enviar requisição:', error);
-      toast.error('Erro ao enviar requisição');
+      console.error('Erro ao criar requisição:', error);
+      toast.error('Erro ao criar requisição');
+    },
+  });
+
+  const enviarParaCDMutation = useMutation({
+    mutationFn: async (requisicaoId: string) => {
+      const result = await criarTransferencias(requisicaoId);
+      if (!result.success) {
+        throw new Error('Erro ao enviar para CD');
+      }
+      return result;
+    },
+    onSuccess: () => {
+      toast.success('Requisição enviada para o Centro de Distribuição!');
+      queryClient.invalidateQueries({ queryKey: ['requisicoes-pendentes'] });
+    },
+    onError: (error) => {
+      console.error('Erro ao enviar para CD:', error);
+      toast.error('Erro ao enviar requisição para CD');
     },
   });
 
@@ -141,6 +190,10 @@ const Requisicoes = () => {
     console.log('Usuário:', user);
     console.log('Profile:', profile);
     createRequisitionMutation.mutate(items);
+  };
+
+  const handleEnviarParaCD = (requisicaoId: string) => {
+    enviarParaCDMutation.mutate(requisicaoId);
   };
 
   const totalItems = Object.keys(requisitionItems).length;
@@ -204,10 +257,55 @@ const Requisicoes = () => {
         </div>
       </header>
 
+      {/* Requisições Pendentes */}
+      {requisicoesPendentes && requisicoesPendentes.length > 0 && (
+        <div className="bg-yellow-50 border-b border-yellow-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <h2 className="text-sm font-medium text-yellow-800 mb-3">Requisições Pendentes</h2>
+            <div className="space-y-2">
+              {requisicoesPendentes.map((req) => {
+                const totalItens = (req.itens_requisicao as any[]).length;
+                const totalCaixas = (req.itens_requisicao as any[]).reduce((sum, item) => sum + (item.quantidade || 0), 0);
+                const totalQuilos = (req.itens_requisicao as any[]).reduce((sum, item) => sum + (item.quantidade_calculada || 0), 0);
+                
+                return (
+                  <div key={req.id} className="flex items-center justify-between bg-white p-3 rounded border border-yellow-200">
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-gray-900">
+                        Requisição #{req.id.slice(0, 8)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {totalItens} produtos • {totalCaixas} caixas • {totalQuilos.toFixed(1)}kg
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(req.data_requisicao).toLocaleDateString('pt-BR')} às {new Date(req.data_requisicao).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleEnviarParaCD(req.id)}
+                      disabled={enviarParaCDMutation.isPending}
+                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                    >
+                      {enviarParaCDMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Truck className="h-4 w-4 mr-2" />
+                      )}
+                      Enviar para CD
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controles Fixos */}
       <div className="bg-white border-b sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Busca e Envio */}
+          {/* Busca e Criar Nova */}
           <div className="mb-4 flex gap-3 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -229,11 +327,11 @@ const Requisicoes = () => {
               ) : (
                 <Send className="h-4 w-4 mr-2" />
               )}
-              Enviar
+              Criar Requisição
             </Button>
           </div>
 
-          {/* Resumo */}
+          {/* Resumo Nova Requisição */}
           {totalItems > 0 && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="text-sm text-blue-800">
