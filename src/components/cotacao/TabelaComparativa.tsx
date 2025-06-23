@@ -4,8 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
 import { ItemTabelaComparativa } from '@/utils/productExtraction/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 import CotacaoActionButtons from './CotacaoActionButtons';
 import FornecedorCell from './FornecedorCell';
+import TabelaComparativaMobile from './TabelaComparativaMobile';
 
 interface TabelaComparativaProps {
   tabela: ItemTabelaComparativa[];
@@ -22,20 +24,30 @@ interface TabelaComparativaProps {
   onCalcularTotal: (fornecedor: string) => number;
 }
 
-const TabelaComparativa: React.FC<TabelaComparativaProps> = ({
-  tabela,
-  lojasComRequisicoes,
-  fornecedoresComProdutos,
-  temDados,
-  onCalcularPercentual,
-  onRestaurar,
-  onNova,
-  onVerResumo,
-  onObterEstoques,
-  onUnidadeChange,
-  onQuantidadeChange,
-  onCalcularTotal,
-}) => {
+const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
+  const isMobile = useIsMobile();
+  
+  // Se é mobile, renderiza a versão mobile
+  if (isMobile) {
+    return <TabelaComparativaMobile {...props} />;
+  }
+  
+  // Versão desktop (código original)
+  const {
+    tabela,
+    lojasComRequisicoes,
+    fornecedoresComProdutos,
+    temDados,
+    onCalcularPercentual,
+    onRestaurar,
+    onNova,
+    onVerResumo,
+    onObterEstoques,
+    onUnidadeChange,
+    onQuantidadeChange,
+    onCalcularTotal,
+  } = props;
+
   const [buscaProduto, setBuscaProduto] = useState('');
 
   const produtosFiltrados = tabela.filter(item => 
