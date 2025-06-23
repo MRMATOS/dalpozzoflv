@@ -14,7 +14,8 @@ import {
   BarChart3,
   Users,
   Store,
-  LogOut
+  LogOut,
+  Building2
 } from "lucide-react";
 
 const Dashboard = () => {
@@ -27,6 +28,15 @@ const Dashboard = () => {
   };
 
   const cards = [
+    // Gestão CD - disponível para usuários 'cd' ou 'master'
+    (hasRole('cd') || hasRole('master')) && {
+      title: "Gestão CD",
+      description: "Centro de Distribuição - Gerenciar requisições e transferências",
+      icon: Building2,
+      color: "bg-cyan-500",
+      onClick: () => navigate("/gestao-cd")
+    },
+    
     // Estoque - disponível para usuários 'estoque' ou 'master'
     (hasRole('estoque') || hasRole('master')) && {
       title: "Estoque",
@@ -118,6 +128,11 @@ const Dashboard = () => {
                   {hasRole('master') && (
                     <Badge variant="default" className="text-xs bg-red-600">
                       Master
+                    </Badge>
+                  )}
+                  {hasRole('cd') && (
+                    <Badge variant="default" className="text-xs bg-cyan-600">
+                      CD
                     </Badge>
                   )}
                   {hasRole('comprador') && (

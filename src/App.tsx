@@ -17,6 +17,7 @@ import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 import HistoricoPedidos from "./pages/HistoricoPedidos";
 import Configuracoes from "./pages/Configuracoes";
 import Transferencias from "./pages/Transferencias";
+import GestaoCd from "./pages/GestaoCd";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,14 @@ function App() {
                 element={
                   <ProtectedRoute allowedTypes={['transferencia', 'requisitante']}>
                     <Transferencias />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/gestao-cd" 
+                element={
+                  <ProtectedRoute allowedTypes={['cd']}>
+                    <GestaoCd />
                   </ProtectedRoute>
                 } 
               />
