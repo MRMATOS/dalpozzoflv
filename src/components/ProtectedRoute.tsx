@@ -76,8 +76,8 @@ const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRoute
             </Button>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   return <>{children}</>;
