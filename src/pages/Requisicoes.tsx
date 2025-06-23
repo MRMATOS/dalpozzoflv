@@ -88,10 +88,9 @@ const Requisicoes = () => {
         throw new Error('Usuário ou loja não identificados');
       }
 
-      // Primeiro, criar a requisição usando usuario_id (que agora tem foreign key correta)
+      // Criar a requisição usando APENAS usuario_id (sem user_id)
       const requisicaoData = {
-        usuario_id: user.id, // Este campo agora referencia corretamente public.usuarios
-        user_id: user.id,    // Manter por compatibilidade
+        usuario_id: user.id, // Apenas este campo que referencia corretamente public.usuarios
         loja: profile.loja,
         status: 'pendente'
       };
