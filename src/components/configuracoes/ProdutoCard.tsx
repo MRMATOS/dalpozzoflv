@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -237,8 +236,8 @@ const ProdutoCard = ({
         </CardContent>
       </Card>
 
-      {/* Variações com separação visual clara */}
-      {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && (
+      {/* Variações com separação visual clara - só aparecem quando expandido */}
+      {isProdutoPrincipal && produto.variacoes && produto.variacoes.length > 0 && isExpanded && (
         <div className="mb-6">
           {/* Linha separadora sutil */}
           <div className="border-l-2 border-gray-200 ml-4 pl-8 pt-2">

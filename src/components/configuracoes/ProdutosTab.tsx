@@ -370,7 +370,10 @@ const ProdutosTab = () => {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base md:text-lg">
-            {principais} produtos - {total - principais} variações
+            <div className="flex flex-col">
+              <span>{principais} produtos</span>
+              <span className="text-sm text-gray-500 font-normal">{total - principais} variações</span>
+            </div>
           </CardTitle>
           <Button onClick={() => setShowNewProduct(true)} disabled={showNewProduct} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
