@@ -1,6 +1,8 @@
 
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -10,6 +12,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRouteProps) => {
   const { user, profile, loading, hasRole } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -32,7 +35,11 @@ const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRoute
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Conta Inativa</h2>
-          <p className="text-gray-600">Sua conta foi desativada. Entre em contato com o administrador.</p>
+          <p className="text-gray-600 mb-4">Sua conta foi desativada. Entre em contato com o administrador.</p>
+          <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -44,7 +51,11 @@ const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRoute
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Acesso Negado</h2>
-          <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+          <p className="text-gray-600 mb-4">Você não tem permissão para acessar esta página.</p>
+          <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Voltar ao Dashboard
+          </Button>
         </div>
       </div>
     );
@@ -58,11 +69,15 @@ const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRoute
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Acesso Negado</h2>
-            <p className="text-gray-600">Você não tem permissão para acessar esta página.</p>
+            <p className="text-gray-600 mb-4">Você não tem permissão para acessar esta página.</p>
+            <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   return <>{children}</>;

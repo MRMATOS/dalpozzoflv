@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,11 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Package, CheckCircle, AlertTriangle, Truck } from 'lucide-react';
+import { Loader2, Package, CheckCircle, AlertTriangle, Truck, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Transferencias = () => {
   const { hasRole, profile } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [transferQuantities, setTransferQuantities] = useState<Record<string, number>>({});
 
@@ -305,15 +306,20 @@ const Transferencias = () => {
     confirmarRecebimentoMutation.mutate({ transferenceId });
   };
 
-  if (!hasRole('transferencia') && !profile?.loja) {
+  // Verificar se o usuário tem permissão para acessar a página
+  if (!hasRole('transferencia') && !hasRole('requisitante') && !hasRole('master') && !profile?.loja) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card>
           <CardHeader>
             <CardTitle>Acesso Negado</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p>Apenas usuários de transferência ou lojas podem acessar esta página.</p>
+          <CardContent className="text-center">
+            <p className="mb-4">Apenas usuários de transferência ou lojas podem acessar esta página.</p>
+            <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -345,6 +351,14 @@ const Transferencias = () => {
                 </p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Dashboard
+            </Button>
           </div>
         </div>
       </header>

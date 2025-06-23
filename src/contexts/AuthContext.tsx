@@ -173,6 +173,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const hasRole = (role: string): boolean => {
     if (!profile?.tipo) return false;
+    
+    // Usuários master têm acesso a todos os roles
+    if (profile.tipo === 'master') {
+      console.log('Usuário master tem acesso total ao role:', role);
+      return true;
+    }
+    
+    // Para outros usuários, verificar igualdade exata
     return profile.tipo === role;
   };
 
