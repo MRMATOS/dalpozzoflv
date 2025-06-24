@@ -47,6 +47,7 @@ const Cotacao = () => {
     setMensagemAtual,
     selecionarFornecedor,
     processarMensagem,
+    handleSalvarRascunho,
     handleRestaurarCotacao,
     handleNovaCotacao,
     atualizarQuantidade,
@@ -91,7 +92,7 @@ const Cotacao = () => {
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Carregando Cotação</h2>
-            <p className="text-sm text-gray-600">Verificando cotações em andamento...</p>
+            <p className="text-sm text-gray-600">Inicializando nova cotação...</p>
           </CardContent>
         </Card>
       </div>
@@ -140,6 +141,7 @@ const Cotacao = () => {
                 fornecedoresComProdutos={fornecedoresComProdutos}
                 temDados={temDados}
                 onCalcularPercentual={calcularPercentualSuprimento}
+                onSalvarRascunho={handleSalvarRascunho}
                 onRestaurar={handleRestaurarCotacao}
                 onNova={handleNovaCotacao}
                 onVerResumo={irParaResumo}

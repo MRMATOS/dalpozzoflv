@@ -15,22 +15,21 @@ interface UseCotacaoProps {
 export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacaoProps) => {
   const { 
     salvarCotacao, 
+    salvarRascunho,
     restaurarUltimaCotacao, 
     novaCotacao: limparCotacao,
     retrySync,
-    dadosCarregados,
     isLoadingCotacao,
     cotacaoRestaurada,
     syncStatus,
-    formatLastSyncTime,
-    novaCotacaoIniciada
+    formatLastSyncTime
   } = useCotacaoPersistence();
 
+  // Sempre inicializar com dados limpos
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [fornecedoresProcessados, setFornecedoresProcessados] = useState<Set<string>>(new Set());
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
   const [mensagemAtual, setMensagemAtual] = useState('');
-  const [dadosInicializados, setDadosInicializados] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
 
   const {
@@ -40,6 +39,11 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarUnidadePedido,
     atualizarPreco
   } = useComparisonTable({ produtosExtraidos, produtosDB });
+
+  console.log('=== ESTADO ATUAL DA COTAÇÃO ===');
+  console.log('Produtos extraídos:', produtosExtraidos.length);
+  console.log('Tabela comparativa:', tabelaComparativa.length);
+  console.log('Fornecedores processados:', fornecedoresProcessados.size);
 
   // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
@@ -59,51 +63,23 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Inicializar dados quando carregados do hook de persistência
+  // Auto-salvar somente quando há produtos e cotação já foi salva uma vez
   useEffect(() => {
-    if (!isLoadingCotacao && dadosCarregados && !dadosInicializados) {
-      console.log('=== INICIALIZANDO DADOS DA COTAÇÃO ===');
-      console.log('Nova cotação iniciada?', novaCotacaoIniciada);
-      console.log('Dados carregados:', dadosCarregados);
-      
-      // Se é uma nova cotação, não carrega dados anteriores
-      if (novaCotacaoIniciada) {
-        console.log('Nova cotação em andamento, mantendo dados limpos');
-        setProdutosExtraidos([]);
-        setTabelaComparativa([]);
-        setFornecedoresProcessados(new Set());
-      } else {
-        // Carregar dados da cotação anterior
-        setProdutosExtraidos(dadosCarregados.produtosExtraidos);
-        setTabelaComparativa(dadosCarregados.tabelaComparativa);
-        setFornecedoresProcessados(new Set(dadosCarregados.produtosExtraidos.map(p => p.fornecedor)));
-      }
-      
-      setDadosInicializados(true);
-    }
-  }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa, novaCotacaoIniciada]);
-
-  // Auto-salvar com debounce melhorado - inclui mudanças de preços
-  useEffect(() => {
-    if (dadosInicializados && (produtosExtraidos.length > 0 || tabelaComparativa.length > 0) && !isLoadingCotacao && !syncStatus.isSyncing) {
+    if (produtosExtraidos.length > 0 && tabelaComparativa.length > 0 && !isLoadingCotacao && !syncStatus.isSyncing) {
       const timeoutId = setTimeout(() => {
-        console.log('=== AUTO-SALVANDO COTAÇÃO ===');
-        console.log('Produtos extraídos:', produtosExtraidos.length);
-        console.log('Tabela comparativa:', tabelaComparativa.length);
-        
+        console.log('=== TENTANDO AUTO-SAVE ===');
         salvarCotacao({
           produtosExtraidos,
           tabelaComparativa,
           fornecedoresProcessados,
         });
-      }, 1500); // Reduzido para 1.5s para ser mais responsivo
+      }, 1500);
       return () => clearTimeout(timeoutId);
     }
   }, [
     produtosExtraidos, 
     tabelaComparativa, 
     salvarCotacao, 
-    dadosInicializados, 
     isLoadingCotacao, 
     fornecedoresProcessados,
     syncStatus.isSyncing
@@ -186,6 +162,17 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos, isProcessing]);
   
+  // Função para salvar rascunho manualmente
+  const handleSalvarRascunho = useCallback(async () => {
+    console.log('=== SALVANDO RASCUNHO MANUALMENTE ===');
+    const sucesso = await salvarRascunho({
+      produtosExtraidos,
+      tabelaComparativa,
+      fornecedoresProcessados,
+    });
+    return sucesso;
+  }, [salvarRascunho, produtosExtraidos, tabelaComparativa, fornecedoresProcessados]);
+
   const handleRestaurarCotacao = async () => {
     console.log('=== RESTAURANDO COTAÇÃO ===');
     const dadosRestaurados = await restaurarUltimaCotacao();
@@ -199,9 +186,13 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   const handleNovaCotacao = async () => {
     console.log('=== CRIANDO NOVA COTAÇÃO ===');
     const dadosLimpos = await limparCotacao();
+    
+    // Limpar todos os estados locais
     setProdutosExtraidos(dadosLimpos.produtosExtraidos);
     setTabelaComparativa(dadosLimpos.tabelaComparativa);
     setFornecedoresProcessados(new Set());
+    setFornecedorSelecionado(null);
+    setMensagemAtual('');
   };
   
   const calcularPercentualSuprimento = (loja: string) => {
@@ -228,7 +219,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   
   return {
     isLoading: isLoadingCotacao,
-    dadosInicializados,
+    dadosInicializados: true, // Sempre true pois não há carregamento
     produtosExtraidos,
     tabelaComparativa,
     fornecedoresProcessados,
@@ -240,6 +231,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     setMensagemAtual,
     selecionarFornecedor,
     processarMensagem,
+    handleSalvarRascunho,
     handleRestaurarCotacao,
     handleNovaCotacao,
     atualizarQuantidade,

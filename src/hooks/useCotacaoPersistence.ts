@@ -32,91 +32,21 @@ export const useCotacaoPersistence = () => {
   
   const [cotacaoId, setCotacaoId] = useState<string | null>(null);
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
-  const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
-  const [dadosCarregados, setDadosCarregados] = useState<CotacaoData | null>(null);
-  const [novaCotacaoIniciada, setNovaCotacaoIniciada] = useState(false);
+  const [isLoadingCotacao, setIsLoadingCotacao] = useState(false);
+  const [cotacaoSalva, setCotacaoSalva] = useState(false);
   
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveDataRef = useRef<string>('');
 
-  // Carregar cotação em rascunho ao inicializar
+  // Sempre inicializar com dados limpos - removido auto-load
   useEffect(() => {
-    const carregarCotacaoRascunho = async () => {
-      if (!isAuthenticated || !user?.id) {
-        setIsLoadingCotacao(false);
-        return;
-      }
-
-      console.log('=== CARREGANDO COTAÇÃO EM RASCUNHO ===');
-      console.log('User ID:', user.id);
-      console.log('Nova cotação iniciada?', novaCotacaoIniciada);
-
-      // Se uma nova cotação foi iniciada, não carrega a anterior
-      if (novaCotacaoIniciada) {
-        console.log('Nova cotação em andamento, não carregando rascunho anterior');
-        setDadosCarregados({
-          produtosExtraidos: [],
-          tabelaComparativa: [],
-        });
-        setIsLoadingCotacao(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('cotacoes')
-          .select('*')
-          .eq('user_id', user.id)
-          .is('enviado_em', null)
-          .order('data', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (error) {
-          console.error('Erro ao carregar cotação em rascunho:', error);
-          setIsLoadingCotacao(false);
-          return;
-        }
-
-        if (data) {
-          console.log('Cotação encontrada:', data);
-          setCotacaoId(data.id);
-          
-          const dadosRestaurados = {
-            produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
-            tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
-          };
-          
-          setDadosCarregados(dadosRestaurados);
-          console.log('Dados carregados automaticamente:', dadosRestaurados);
-          
-          if (dadosRestaurados.produtosExtraidos.length > 0) {
-            toast.success('Cotação em andamento restaurada automaticamente');
-          }
-          
-          // Marcar como sincronizado
-          completSync();
-        } else {
-          console.log('Nenhuma cotação em rascunho encontrada');
-          setDadosCarregados({
-            produtosExtraidos: [],
-            tabelaComparativa: [],
-          });
-        }
-      } catch (error) {
-        console.error('Erro ao buscar cotação:', error);
-        setDadosCarregados({
-          produtosExtraidos: [],
-          tabelaComparativa: [],
-        });
-        failSync('Erro ao carregar cotação');
-      } finally {
-        setIsLoadingCotacao(false);
-      }
-    };
-
-    carregarCotacaoRascunho();
-  }, [user?.id, isAuthenticated, novaCotacaoIniciada, completSync, failSync]);
+    console.log('=== INICIALIZANDO COTAÇÃO LIMPA ===');
+    console.log('User authenticated:', isAuthenticated);
+    if (isAuthenticated) {
+      setIsLoadingCotacao(false);
+      completSync();
+    }
+  }, [isAuthenticated, completSync]);
 
   // Implementar retry automático
   const tentarSalvarComRetry = useCallback(async (
@@ -157,7 +87,7 @@ export const useCotacaoPersistence = () => {
           retryTimeoutRef.current = setTimeout(async () => {
             const sucesso = await tentarSalvarComRetry(dadosCotacao, tentativa + 1);
             resolve(sucesso);
-          }, RETRY_DELAY * tentativa); // Backoff exponencial
+          }, RETRY_DELAY * tentativa);
         });
       }
       
@@ -165,8 +95,46 @@ export const useCotacaoPersistence = () => {
     }
   }, [cotacaoId, secureUpdate, secureInsert]);
 
-  // Salvar cotação com debounce e retry
+  // Salvamento manual de rascunho
+  const salvarRascunho = useCallback(async (dadosCotacao: CotacaoData) => {
+    if (!isAuthenticated || !user?.id || !dadosCotacao.produtosExtraidos.length) {
+      toast.error('Adicione produtos antes de salvar');
+      return false;
+    }
+
+    console.log('=== SALVANDO RASCUNHO MANUALMENTE ===');
+    console.log('Dados para salvar:', dadosCotacao);
+
+    startSync();
+
+    try {
+      const sucesso = await tentarSalvarComRetry(dadosCotacao);
+      
+      if (sucesso) {
+        setCotacaoSalva(true);
+        completSync();
+        toast.success('Rascunho salvo com sucesso!');
+        return true;
+      } else {
+        failSync('Falha ao salvar rascunho');
+        toast.error('Erro ao salvar rascunho. Tente novamente.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro ao salvar rascunho:', error);
+      failSync('Erro inesperado ao salvar');
+      toast.error('Erro inesperado ao salvar rascunho');
+      return false;
+    }
+  }, [user?.id, isAuthenticated, startSync, completSync, failSync, tentarSalvarComRetry]);
+
+  // Auto-save somente após primeira salvamento manual
   const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
+    if (!cotacaoSalva) {
+      console.log('Auto-save desabilitado até primeiro salvamento manual');
+      return;
+    }
+
     if (!isAuthenticated || !user?.id || !dadosCotacao.produtosExtraidos.length) return;
 
     // Verificar se os dados realmente mudaram
@@ -176,15 +144,14 @@ export const useCotacaoPersistence = () => {
     });
     
     if (dadosString === lastSaveDataRef.current) {
-      console.log('Dados não mudaram, pulando salvamento');
+      console.log('Dados não mudaram, pulando auto-save');
       return;
     }
 
     lastSaveDataRef.current = dadosString;
     markUnsavedChanges();
 
-    console.log('=== INICIANDO SALVAMENTO COM RETRY ===');
-    console.log('User ID:', user.id);
+    console.log('=== AUTO-SAVE ATIVADO ===');
 
     startSync();
 
@@ -193,16 +160,15 @@ export const useCotacaoPersistence = () => {
       
       if (sucesso) {
         completSync();
-        console.log('Cotação salva com sucesso');
+        console.log('Auto-save concluído com sucesso');
       } else {
-        failSync('Falha ao salvar após múltiplas tentativas');
-        toast.error('Erro ao salvar cotação. Verifique sua conexão.');
+        failSync('Falha no auto-save');
       }
     } catch (error) {
-      console.error('Erro geral ao salvar cotação:', error);
-      failSync('Erro inesperado ao salvar');
+      console.error('Erro no auto-save:', error);
+      failSync('Erro no auto-save');
     }
-  }, [user?.id, isAuthenticated, startSync, completSync, failSync, markUnsavedChanges, tentarSalvarComRetry]);
+  }, [user?.id, isAuthenticated, startSync, completSync, failSync, markUnsavedChanges, tentarSalvarComRetry, cotacaoSalva]);
 
   // Limpar timeout ao desmontar
   useEffect(() => {
@@ -227,31 +193,35 @@ export const useCotacaoPersistence = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [syncStatus.hasUnsavedChanges]);
 
-  // Restaurar última cotação enviada
+  // Restaurar último rascunho (não enviado)
   const restaurarUltimaCotacao = useCallback(async (): Promise<RestauracaoData | null> => {
     if (!isAuthenticated || !user?.id) return null;
+
+    console.log('=== RESTAURANDO ÚLTIMO RASCUNHO ===');
 
     try {
       const { data, error } = await supabase
         .from('cotacoes')
         .select('*')
         .eq('user_id', user.id)
-        .not('enviado_em', 'is', null)
-        .order('enviado_em', { ascending: false })
+        .is('enviado_em', null) // Buscar apenas rascunhos não enviados
+        .order('data', { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) {
         console.error('Erro ao restaurar cotação:', error);
+        toast.error('Erro ao restaurar cotação');
         return null;
       }
 
       if (data) {
-        setCotacaoRestaurada(new Date(data.enviado_em));
-        toast.success(`Cotação restaurada do dia ${new Date(data.enviado_em).toLocaleDateString('pt-BR')}`);
+        console.log('Rascunho encontrado para restaurar:', data);
+        setCotacaoId(data.id);
+        setCotacaoRestaurada(new Date(data.data));
+        setCotacaoSalva(true); // Marcar como salva para habilitar auto-save
         
-        // Resetar flag de nova cotação
-        setNovaCotacaoIniciada(false);
+        toast.success(`Rascunho restaurado do dia ${new Date(data.data).toLocaleDateString('pt-BR')}`);
         
         return {
           produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
@@ -259,7 +229,7 @@ export const useCotacaoPersistence = () => {
         };
       }
 
-      toast.info('Nenhuma cotação anterior encontrada');
+      toast.info('Nenhum rascunho encontrado');
       return null;
     } catch (error) {
       console.error('Erro ao restaurar cotação:', error);
@@ -268,65 +238,26 @@ export const useCotacaoPersistence = () => {
     }
   }, [user?.id, isAuthenticated]);
 
-  // Finalizar cotação atual antes de criar nova
-  const finalizarCotacaoAtual = useCallback(async (): Promise<boolean> => {
-    if (!cotacaoId || !isAuthenticated || !user?.id) return true;
-
-    console.log('=== FINALIZANDO COTAÇÃO ATUAL ===');
-    console.log('Cotação ID:', cotacaoId);
-
-    try {
-      const { error } = await secureUpdate('cotacoes', cotacaoId, { 
-        enviado_em: new Date().toISOString() 
-      });
-
-      if (error) {
-        console.error('Erro ao finalizar cotação atual:', error);
-        return false;
-      }
-
-      console.log('Cotação atual finalizada com sucesso');
-      return true;
-    } catch (error) {
-      console.error('Erro ao finalizar cotação atual:', error);
-      return false;
-    }
-  }, [cotacaoId, user?.id, secureUpdate, isAuthenticated]);
-
-  // Criar nova cotação (limpar dados e finalizar anterior)
+  // Nova cotação - apenas limpar dados locais
   const novaCotacao = useCallback(async () => {
-    console.log('=== INICIANDO NOVA COTAÇÃO ===');
+    console.log('=== NOVA COTAÇÃO - LIMPANDO DADOS LOCAIS ===');
     
-    // Finalizar cotação atual se existir
-    const cotacaoFinalizada = await finalizarCotacaoAtual();
-    
-    if (!cotacaoFinalizada) {
-      toast.error('Erro ao finalizar cotação atual');
-      return {
-        produtosExtraidos: [] as ProdutoExtraido[],
-        tabelaComparativa: [] as ItemTabelaComparativa[],
-      };
-    }
-
     // Limpar dados locais
     setCotacaoId(null);
     setCotacaoRestaurada(null);
-    setNovaCotacaoIniciada(true); // Marcar que nova cotação foi iniciada
+    setCotacaoSalva(false); // Desabilitar auto-save até próximo salvamento manual
+    lastSaveDataRef.current = '';
     
     const dadosLimpos = {
       produtosExtraidos: [] as ProdutoExtraido[],
       tabelaComparativa: [] as ItemTabelaComparativa[],
     };
     
-    setDadosCarregados(dadosLimpos);
-    lastSaveDataRef.current = '';
     completSync();
-    
     toast.success('Nova cotação iniciada');
-    console.log('Nova cotação iniciada com sucesso');
     
     return dadosLimpos;
-  }, [finalizarCotacaoAtual, completSync]);
+  }, [completSync]);
 
   // Marcar cotação como enviada
   const marcarComoEnviada = useCallback(async (): Promise<string | null> => {
@@ -360,22 +291,21 @@ export const useCotacaoPersistence = () => {
 
   // Retry manual
   const retrySync = useCallback(() => {
-    if (dadosCarregados) {
-      salvarCotacao(dadosCarregados);
-    }
-  }, [dadosCarregados, salvarCotacao]);
+    toast.info('Tentando sincronizar novamente...');
+  }, []);
 
   return {
     salvarCotacao,
+    salvarRascunho,
     restaurarUltimaCotacao,
     novaCotacao,
     marcarComoEnviada,
     retrySync,
     cotacaoRestaurada,
     isLoadingCotacao,
-    dadosCarregados,
+    dadosCarregados: null, // Remover dados carregados automaticamente
     syncStatus,
     formatLastSyncTime,
-    novaCotacaoIniciada
+    novaCotacaoIniciada: false // Sempre false agora
   };
 };

@@ -1,10 +1,11 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, FileText, RotateCcw } from 'lucide-react';
+import { Clock, FileText, RotateCcw, Save } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CotacaoActionButtonsProps {
+  onSalvarRascunho: () => Promise<boolean>;
   onRestaurarCotacao: () => void;
   onNovaCotacao: () => void;
   onVerResumo: () => void;
@@ -12,13 +13,36 @@ interface CotacaoActionButtonsProps {
 }
 
 const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
+  onSalvarRascunho,
   onRestaurarCotacao,
   onNovaCotacao,
   onVerResumo,
   temDados
 }) => {
+  const handleSalvarClick = async () => {
+    await onSalvarRascunho();
+  };
+
   return (
     <div className="flex items-center space-x-3">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSalvarClick}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Salvar rascunho</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -32,7 +56,7 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Restaurar última cotação</p>
+            <p>Restaurar último rascunho</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
