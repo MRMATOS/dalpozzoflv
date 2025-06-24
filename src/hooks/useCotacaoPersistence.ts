@@ -34,6 +34,7 @@ export const useCotacaoPersistence = () => {
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
   const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
   const [dadosCarregados, setDadosCarregados] = useState<CotacaoData | null>(null);
+  const [novaCotacaoIniciada, setNovaCotacaoIniciada] = useState(false);
   
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveDataRef = useRef<string>('');
@@ -48,6 +49,18 @@ export const useCotacaoPersistence = () => {
 
       console.log('=== CARREGANDO COTAÇÃO EM RASCUNHO ===');
       console.log('User ID:', user.id);
+      console.log('Nova cotação iniciada?', novaCotacaoIniciada);
+
+      // Se uma nova cotação foi iniciada, não carrega a anterior
+      if (novaCotacaoIniciada) {
+        console.log('Nova cotação em andamento, não carregando rascunho anterior');
+        setDadosCarregados({
+          produtosExtraidos: [],
+          tabelaComparativa: [],
+        });
+        setIsLoadingCotacao(false);
+        return;
+      }
 
       try {
         const { data, error } = await supabase
@@ -103,7 +116,7 @@ export const useCotacaoPersistence = () => {
     };
 
     carregarCotacaoRascunho();
-  }, [user?.id, isAuthenticated, completSync, failSync]);
+  }, [user?.id, isAuthenticated, novaCotacaoIniciada, completSync, failSync]);
 
   // Implementar retry automático
   const tentarSalvarComRetry = useCallback(async (
@@ -237,6 +250,9 @@ export const useCotacaoPersistence = () => {
         setCotacaoRestaurada(new Date(data.enviado_em));
         toast.success(`Cotação restaurada do dia ${new Date(data.enviado_em).toLocaleDateString('pt-BR')}`);
         
+        // Resetar flag de nova cotação
+        setNovaCotacaoIniciada(false);
+        
         return {
           produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
           tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
@@ -252,19 +268,65 @@ export const useCotacaoPersistence = () => {
     }
   }, [user?.id, isAuthenticated]);
 
-  // Criar nova cotação (limpar dados)
-  const novaCotacao = useCallback(() => {
+  // Finalizar cotação atual antes de criar nova
+  const finalizarCotacaoAtual = useCallback(async (): Promise<boolean> => {
+    if (!cotacaoId || !isAuthenticated || !user?.id) return true;
+
+    console.log('=== FINALIZANDO COTAÇÃO ATUAL ===');
+    console.log('Cotação ID:', cotacaoId);
+
+    try {
+      const { error } = await secureUpdate('cotacoes', cotacaoId, { 
+        enviado_em: new Date().toISOString() 
+      });
+
+      if (error) {
+        console.error('Erro ao finalizar cotação atual:', error);
+        return false;
+      }
+
+      console.log('Cotação atual finalizada com sucesso');
+      return true;
+    } catch (error) {
+      console.error('Erro ao finalizar cotação atual:', error);
+      return false;
+    }
+  }, [cotacaoId, user?.id, secureUpdate, isAuthenticated]);
+
+  // Criar nova cotação (limpar dados e finalizar anterior)
+  const novaCotacao = useCallback(async () => {
+    console.log('=== INICIANDO NOVA COTAÇÃO ===');
+    
+    // Finalizar cotação atual se existir
+    const cotacaoFinalizada = await finalizarCotacaoAtual();
+    
+    if (!cotacaoFinalizada) {
+      toast.error('Erro ao finalizar cotação atual');
+      return {
+        produtosExtraidos: [] as ProdutoExtraido[],
+        tabelaComparativa: [] as ItemTabelaComparativa[],
+      };
+    }
+
+    // Limpar dados locais
     setCotacaoId(null);
     setCotacaoRestaurada(null);
+    setNovaCotacaoIniciada(true); // Marcar que nova cotação foi iniciada
+    
     const dadosLimpos = {
       produtosExtraidos: [] as ProdutoExtraido[],
       tabelaComparativa: [] as ItemTabelaComparativa[],
     };
+    
     setDadosCarregados(dadosLimpos);
     lastSaveDataRef.current = '';
     completSync();
+    
+    toast.success('Nova cotação iniciada');
+    console.log('Nova cotação iniciada com sucesso');
+    
     return dadosLimpos;
-  }, [completSync]);
+  }, [finalizarCotacaoAtual, completSync]);
 
   // Marcar cotação como enviada
   const marcarComoEnviada = useCallback(async (): Promise<string | null> => {
@@ -313,6 +375,7 @@ export const useCotacaoPersistence = () => {
     isLoadingCotacao,
     dadosCarregados,
     syncStatus,
-    formatLastSyncTime
+    formatLastSyncTime,
+    novaCotacaoIniciada
   };
 };

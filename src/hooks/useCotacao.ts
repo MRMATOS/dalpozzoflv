@@ -22,7 +22,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     isLoadingCotacao,
     cotacaoRestaurada,
     syncStatus,
-    formatLastSyncTime
+    formatLastSyncTime,
+    novaCotacaoIniciada
   } = useCotacaoPersistence();
 
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
@@ -61,17 +62,35 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   // Inicializar dados quando carregados do hook de persistência
   useEffect(() => {
     if (!isLoadingCotacao && dadosCarregados && !dadosInicializados) {
-      setProdutosExtraidos(dadosCarregados.produtosExtraidos);
-      setTabelaComparativa(dadosCarregados.tabelaComparativa);
-      setFornecedoresProcessados(new Set(dadosCarregados.produtosExtraidos.map(p => p.fornecedor)));
+      console.log('=== INICIALIZANDO DADOS DA COTAÇÃO ===');
+      console.log('Nova cotação iniciada?', novaCotacaoIniciada);
+      console.log('Dados carregados:', dadosCarregados);
+      
+      // Se é uma nova cotação, não carrega dados anteriores
+      if (novaCotacaoIniciada) {
+        console.log('Nova cotação em andamento, mantendo dados limpos');
+        setProdutosExtraidos([]);
+        setTabelaComparativa([]);
+        setFornecedoresProcessados(new Set());
+      } else {
+        // Carregar dados da cotação anterior
+        setProdutosExtraidos(dadosCarregados.produtosExtraidos);
+        setTabelaComparativa(dadosCarregados.tabelaComparativa);
+        setFornecedoresProcessados(new Set(dadosCarregados.produtosExtraidos.map(p => p.fornecedor)));
+      }
+      
       setDadosInicializados(true);
     }
-  }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa]);
+  }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa, novaCotacaoIniciada]);
 
   // Auto-salvar com debounce melhorado - inclui mudanças de preços
   useEffect(() => {
-    if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao && !syncStatus.isSyncing) {
+    if (dadosInicializados && (produtosExtraidos.length > 0 || tabelaComparativa.length > 0) && !isLoadingCotacao && !syncStatus.isSyncing) {
       const timeoutId = setTimeout(() => {
+        console.log('=== AUTO-SALVANDO COTAÇÃO ===');
+        console.log('Produtos extraídos:', produtosExtraidos.length);
+        console.log('Tabela comparativa:', tabelaComparativa.length);
+        
         salvarCotacao({
           produtosExtraidos,
           tabelaComparativa,
@@ -168,6 +187,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos, isProcessing]);
   
   const handleRestaurarCotacao = async () => {
+    console.log('=== RESTAURANDO COTAÇÃO ===');
     const dadosRestaurados = await restaurarUltimaCotacao();
     if (dadosRestaurados) {
       setProdutosExtraidos(dadosRestaurados.produtosExtraidos);
@@ -176,8 +196,9 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   };
 
-  const handleNovaCotacao = () => {
-    const dadosLimpos = limparCotacao();
+  const handleNovaCotacao = async () => {
+    console.log('=== CRIANDO NOVA COTAÇÃO ===');
+    const dadosLimpos = await limparCotacao();
     setProdutosExtraidos(dadosLimpos.produtosExtraidos);
     setTabelaComparativa(dadosLimpos.tabelaComparativa);
     setFornecedoresProcessados(new Set());
