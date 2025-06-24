@@ -35,6 +35,12 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
       const chave = `${produto.produto}_${produto.tipo}`;
       if (!produtosAgrupados[chave]) {
         const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
+        
+        // Buscar dados existentes na tabela atual para preservar quantidades e unidades
+        const itemExistente = tabelaComparativa.find(item => 
+          item.produto === produto.produto && item.tipo === produto.tipo
+        );
+        
         produtosAgrupados[chave] = {
           produto: produto.produto,
           tipo: produto.tipo,
@@ -42,10 +48,13 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
           quantidades: {},
           unidadePedido: {}
         };
+        
         fornecedoresList.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
-          produtosAgrupados[chave].quantidades[f] = 0;
-          produtosAgrupados[chave].unidadePedido[f] = unidadePadrao;
+          // Preservar quantidades existentes ou inicializar com 0
+          produtosAgrupados[chave].quantidades[f] = itemExistente?.quantidades[f] || 0;
+          // Preservar unidades existentes ou usar padrão
+          produtosAgrupados[chave].unidadePedido[f] = itemExistente?.unidadePedido[f] || unidadePadrao;
         });
       }
       produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
@@ -55,7 +64,7 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
       a.produto.localeCompare(b.produto) || a.tipo.localeCompare(b.tipo)
     );
     setTabelaComparativa(tabela);
-  }, [obterUnidadePadraoProduto]);
+  }, [obterUnidadePadraoProduto, tabelaComparativa]);
 
   useEffect(() => {
     if (produtosExtraidos) {
@@ -79,11 +88,20 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
     }
   };
 
+  const atualizarPreco = (produtoIndex: number, fornecedor: string, preco: string) => {
+    const novaTabela = [...tabelaComparativa];
+    if (novaTabela[produtoIndex]) {
+        const novoPreco = parseFloat(preco) || 0;
+        novaTabela[produtoIndex].fornecedores[fornecedor] = novoPreco;
+        setTabelaComparativa(novaTabela);
+    }
+  };
+
   return {
     tabelaComparativa,
     setTabelaComparativa,
     atualizarQuantidade,
     atualizarUnidadePedido,
+    atualizarPreco,
   };
 };
-

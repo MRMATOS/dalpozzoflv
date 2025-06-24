@@ -51,6 +51,7 @@ const Cotacao = () => {
     handleNovaCotacao,
     atualizarQuantidade,
     atualizarUnidadePedido,
+    atualizarPreco,
     calcularPercentualSuprimento,
     retrySync,
     formatLastSyncTime,
@@ -145,6 +146,7 @@ const Cotacao = () => {
                 onObterEstoques={obterEstoquesDisplay}
                 onQuantidadeChange={atualizarQuantidade}
                 onUnidadeChange={atualizarUnidadePedido}
+                onPrecoChange={atualizarPreco}
                 onCalcularTotal={calcularTotalFornecedor}
               />
             )}

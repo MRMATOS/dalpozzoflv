@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +19,7 @@ interface TabelaComparativaMobileProps {
   onObterEstoques: (produto: string, tipo: string) => React.ReactNode;
   onUnidadeChange: (prodIndex: number, forn: string, unid: string) => void;
   onQuantidadeChange: (prodIndex: number, forn: string, qtd: string) => void;
+  onPrecoChange: (prodIndex: number, forn: string, preco: string) => void;
   onCalcularTotal: (fornecedor: string) => number;
 }
 
@@ -35,6 +35,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
   onObterEstoques,
   onUnidadeChange,
   onQuantidadeChange,
+  onPrecoChange,
   onCalcularTotal,
 }) => {
   const [buscaProduto, setBuscaProduto] = useState('');
@@ -107,6 +108,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
                         opcoesUnidade={unidadesDisponiveis}
                         onQuantidadeChange={(value) => onQuantidadeChange(produtoIndexOriginal, fornecedor, value)}
                         onUnidadeChange={(value) => onUnidadeChange(produtoIndexOriginal, fornecedor, value)}
+                        onPrecoChange={(value) => onPrecoChange(produtoIndexOriginal, fornecedor, value)}
                       />
                     );
                   })}

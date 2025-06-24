@@ -36,7 +36,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     tabelaComparativa,
     setTabelaComparativa,
     atualizarQuantidade,
-    atualizarUnidadePedido
+    atualizarUnidadePedido,
+    atualizarPreco
   } = useComparisonTable({ produtosExtraidos, produtosDB });
 
   // Função para remover produtos de um fornecedor
@@ -67,7 +68,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [isLoadingCotacao, dadosCarregados, dadosInicializados, setTabelaComparativa]);
 
-  // Auto-salvar com debounce melhorado
+  // Auto-salvar com debounce melhorado - inclui mudanças de preços
   useEffect(() => {
     if (dadosInicializados && produtosExtraidos.length > 0 && !isLoadingCotacao && !syncStatus.isSyncing) {
       const timeoutId = setTimeout(() => {
@@ -76,7 +77,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
           tabelaComparativa,
           fornecedoresProcessados,
         });
-      }, 2000);
+      }, 1500); // Reduzido para 1.5s para ser mais responsivo
       return () => clearTimeout(timeoutId);
     }
   }, [
@@ -222,6 +223,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     handleNovaCotacao,
     atualizarQuantidade,
     atualizarUnidadePedido,
+    atualizarPreco,
     calcularPercentualSuprimento,
     retrySync,
     formatLastSyncTime

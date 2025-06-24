@@ -21,6 +21,7 @@ interface TabelaComparativaProps {
   onObterEstoques: (produto: string, tipo: string) => React.ReactNode;
   onUnidadeChange: (prodIndex: number, forn: string, unid: string) => void;
   onQuantidadeChange: (prodIndex: number, forn: string, qtd: string) => void;
+  onPrecoChange: (prodIndex: number, forn: string, preco: string) => void;
   onCalcularTotal: (fornecedor: string) => number;
 }
 
@@ -46,6 +47,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
     onObterEstoques,
     onUnidadeChange,
     onQuantidadeChange,
+    onPrecoChange,
     onCalcularTotal,
   } = props;
 
@@ -120,6 +122,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                           opcoesUnidade={unidadesDisponiveis}
                           onQuantidadeChange={(value) => onQuantidadeChange(produtoIndexOriginal, fornecedor, value)}
                           onUnidadeChange={(value) => onUnidadeChange(produtoIndexOriginal, fornecedor, value)}
+                          onPrecoChange={(value) => onPrecoChange(produtoIndexOriginal, fornecedor, value)}
                         />
                       );
                     })}
