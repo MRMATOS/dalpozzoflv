@@ -21,11 +21,12 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     retrySync,
     isLoadingCotacao,
     cotacaoRestaurada,
+    dadosCarregados,
     syncStatus,
     formatLastSyncTime
   } = useCotacaoPersistence();
 
-  // Sempre inicializar com dados limpos
+  // Inicializar com dados carregados automaticamente
   const [produtosExtraidos, setProdutosExtraidos] = useState<ProdutoExtraido[]>([]);
   const [fornecedoresProcessados, setFornecedoresProcessados] = useState<Set<string>>(new Set());
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
@@ -39,6 +40,23 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarUnidadePedido,
     atualizarPreco
   } = useComparisonTable({ produtosExtraidos, produtosDB });
+
+  // Carregar dados automaticamente quando disponíveis
+  useEffect(() => {
+    if (dadosCarregados && !isLoadingCotacao) {
+      console.log('=== CARREGANDO DADOS AUTOMATICAMENTE ===');
+      console.log('Dados carregados:', dadosCarregados);
+      
+      setProdutosExtraidos(dadosCarregados.produtosExtraidos);
+      setTabelaComparativa(dadosCarregados.tabelaComparativa);
+      
+      // Extrair fornecedores processados dos produtos
+      const fornecedoresUnicos = new Set(dadosCarregados.produtosExtraidos.map(p => p.fornecedor));
+      setFornecedoresProcessados(fornecedoresUnicos);
+      
+      console.log('Estados atualizados com dados carregados');
+    }
+  }, [dadosCarregados, isLoadingCotacao, setTabelaComparativa]);
 
   console.log('=== ESTADO ATUAL DA COTAÇÃO ===');
   console.log('Produtos extraídos:', produtosExtraidos.length);
@@ -219,7 +237,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   
   return {
     isLoading: isLoadingCotacao,
-    dadosInicializados: true, // Sempre true pois não há carregamento
+    dadosInicializados: !isLoadingCotacao, // True quando carregamento terminar
     produtosExtraidos,
     tabelaComparativa,
     fornecedoresProcessados,

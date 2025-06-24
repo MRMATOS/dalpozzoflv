@@ -2,7 +2,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Clock } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import { SyncStatus } from '@/hooks/useSyncStatus';
 
@@ -15,13 +16,15 @@ interface CotacaoHeaderProps {
   syncStatus: SyncStatus;
   formatLastSyncTime: () => string;
   onRetrySync?: () => void;
+  onRestaurarCotacao: () => void;
 }
 
 const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({ 
   profile, 
   syncStatus, 
   formatLastSyncTime, 
-  onRetrySync 
+  onRetrySync,
+  onRestaurarCotacao
 }) => {
   const navigate = useNavigate();
 
@@ -39,6 +42,27 @@ const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({
               formatLastSyncTime={formatLastSyncTime}
               onRetry={onRetrySync}
             />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRestaurarCotacao}
+                    className="flex items-center gap-2"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Restaurar
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Restaurar último rascunho</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>

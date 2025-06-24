@@ -92,7 +92,7 @@ const Cotacao = () => {
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900 mb-2">Carregando Cotação</h2>
-            <p className="text-sm text-gray-600">Inicializando nova cotação...</p>
+            <p className="text-sm text-gray-600">Carregando última cotação...</p>
           </CardContent>
         </Card>
       </div>
@@ -106,6 +106,7 @@ const Cotacao = () => {
         syncStatus={syncStatus}
         formatLastSyncTime={formatLastSyncTime}
         onRetrySync={retrySync}
+        onRestaurarCotacao={handleRestaurarCotacao}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
