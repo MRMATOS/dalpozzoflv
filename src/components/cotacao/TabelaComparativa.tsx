@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +14,7 @@ interface TabelaComparativaProps {
   fornecedoresComProdutos: string[];
   temDados: boolean;
   onCalcularPercentual: (loja: string) => number;
+  onSalvarRascunho: () => Promise<boolean>;
   onRestaurar: () => void;
   onNova: () => void;
   onVerResumo: () => void;
@@ -41,6 +41,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
     fornecedoresComProdutos,
     temDados,
     onCalcularPercentual,
+    onSalvarRascunho,
     onRestaurar,
     onNova,
     onVerResumo,
@@ -75,6 +76,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
           </div>
           
           <CotacaoActionButtons
+            onSalvarRascunho={onSalvarRascunho}
             onRestaurarCotacao={onRestaurar}
             onNovaCotacao={onNova}
             onVerResumo={onVerResumo}
