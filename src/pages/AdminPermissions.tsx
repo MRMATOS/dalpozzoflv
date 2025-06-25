@@ -125,8 +125,8 @@ const AdminPermissions = () => {
         .from('user_permissions')
         .select('id')
         .eq('user_id', userId)
-        .eq('resource', resource)
-        .eq('action', action)
+        .eq('resource', resource as any)
+        .eq('action', action as any)
         .maybeSingle();
 
       if (existing) {
@@ -135,8 +135,8 @@ const AdminPermissions = () => {
           .from('user_permissions')
           .update({ enabled })
           .eq('user_id', userId)
-          .eq('resource', resource)
-          .eq('action', action);
+          .eq('resource', resource as any)
+          .eq('action', action as any);
 
         if (updateError) throw updateError;
       } else {
