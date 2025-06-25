@@ -4,47 +4,39 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
-import { useState } from "react";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import Auth from "./pages/Auth";
 import Estoque from "./pages/Estoque";
 import Requisicoes from "./pages/Requisicoes";
 import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
+import Configuracoes from "./pages/Configuracoes";
 import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 import HistoricoPedidos from "./pages/HistoricoPedidos";
-import Configuracoes from "./pages/Configuracoes";
 import GestaoCd from "./pages/GestaoCd";
 import TransferenciasCD from "./pages/TransferenciasCD";
+import Transferencias from "./pages/Transferencias";
+import AdminPermissions from "./pages/AdminPermissions";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
-function App() {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        refetchOnWindowFocus: false,
-      },
-    },
-  }));
+const queryClient = new QueryClient();
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <AuthProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/login" element={<Login />} />
               <Route 
                 path="/dashboard" 
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute requiredResource="dashboard">
                     <Dashboard />
                   </ProtectedRoute>
                 } 
@@ -52,7 +44,7 @@ function App() {
               <Route 
                 path="/estoque" 
                 element={
-                  <ProtectedRoute allowedTypes={['estoque', 'cd', 'comprador']}>
+                  <ProtectedRoute requiredResource="estoque">
                     <Estoque />
                   </ProtectedRoute>
                 } 
@@ -60,7 +52,7 @@ function App() {
               <Route 
                 path="/requisicoes" 
                 element={
-                  <ProtectedRoute allowedTypes={['requisitante', 'estoque']}>
+                  <ProtectedRoute requiredResource="requisicoes">
                     <Requisicoes />
                   </ProtectedRoute>
                 } 
@@ -68,7 +60,7 @@ function App() {
               <Route 
                 path="/cotacao" 
                 element={
-                  <ProtectedRoute allowedTypes={['comprador']}>
+                  <ProtectedRoute requiredResource="cotacao">
                     <Cotacao />
                   </ProtectedRoute>
                 } 
@@ -76,15 +68,23 @@ function App() {
               <Route 
                 path="/resumo-pedido" 
                 element={
-                  <ProtectedRoute allowedTypes={['comprador']}>
+                  <ProtectedRoute requiredResource="cotacao">
                     <ResumoPedido />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/configuracoes" 
+                element={
+                  <ProtectedRoute requiredResource="configuracoes">
+                    <Configuracoes />
                   </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/historico-requisicoes" 
                 element={
-                  <ProtectedRoute allowedTypes={['comprador', 'requisitante', 'cd']}>
+                  <ProtectedRoute requiredResource="historico_requisicoes">
                     <HistoricoRequisicoes />
                   </ProtectedRoute>
                 } 
@@ -92,7 +92,7 @@ function App() {
               <Route 
                 path="/historico-pedidos" 
                 element={
-                  <ProtectedRoute allowedTypes={['comprador']}>
+                  <ProtectedRoute requiredResource="historico_pedidos">
                     <HistoricoPedidos />
                   </ProtectedRoute>
                 } 
@@ -100,7 +100,7 @@ function App() {
               <Route 
                 path="/gestao-cd" 
                 element={
-                  <ProtectedRoute allowedTypes={['cd']}>
+                  <ProtectedRoute requiredResource="gestao_cd">
                     <GestaoCd />
                   </ProtectedRoute>
                 } 
@@ -108,24 +108,32 @@ function App() {
               <Route 
                 path="/transferencias-cd" 
                 element={
-                  <ProtectedRoute allowedTypes={['cd']}>
+                  <ProtectedRoute requiredResource="gestao_cd" requiredAction="edit">
                     <TransferenciasCD />
                   </ProtectedRoute>
                 } 
               />
               <Route 
-                path="/configuracoes" 
+                path="/transferencias/:lojaDestino" 
                 element={
-                  <ProtectedRoute allowedTypes={['master', 'comprador']}>
-                    <Configuracoes />
+                  <ProtectedRoute requiredResource="gestao_cd" requiredAction="edit">
+                    <Transferencias />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/permissions" 
+                element={
+                  <ProtectedRoute requiredRole="master">
+                    <AdminPermissions />
                   </ProtectedRoute>
                 } 
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

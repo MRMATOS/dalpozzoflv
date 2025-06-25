@@ -901,6 +901,44 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          action: Database["public"]["Enums"]["permission_action"]
+          created_at: string
+          enabled: boolean
+          id: string
+          resource: Database["public"]["Enums"]["system_resource"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["permission_action"]
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          resource: Database["public"]["Enums"]["system_resource"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["permission_action"]
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          resource?: Database["public"]["Enums"]["system_resource"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -1043,6 +1081,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          resource: Database["public"]["Enums"]["system_resource"]
+          action: Database["public"]["Enums"]["permission_action"]
+          enabled: boolean
+        }[]
+      }
       get_user_profile: {
         Args: { _user_id: string }
         Returns: {
@@ -1078,9 +1124,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      user_has_permission: {
+        Args: {
+          _user_id: string
+          _resource: Database["public"]["Enums"]["system_resource"]
+          _action: Database["public"]["Enums"]["permission_action"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "master" | "comprador" | "estoque" | "cd"
+      permission_action: "view" | "edit" | "create" | "delete"
+      system_resource:
+        | "dashboard"
+        | "estoque"
+        | "requisicoes"
+        | "cotacao"
+        | "gestao_cd"
+        | "configuracoes"
+        | "historico_requisicoes"
+        | "historico_pedidos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1197,6 +1261,17 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["master", "comprador", "estoque", "cd"],
+      permission_action: ["view", "edit", "create", "delete"],
+      system_resource: [
+        "dashboard",
+        "estoque",
+        "requisicoes",
+        "cotacao",
+        "gestao_cd",
+        "configuracoes",
+        "historico_requisicoes",
+        "historico_pedidos",
+      ],
     },
   },
 } as const

@@ -1,20 +1,31 @@
 
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiredResource?: string;
+  requiredAction?: 'view' | 'edit' | 'create' | 'delete';
+  // Manter compatibilidade com sistema antigo
   requiredRole?: string;
   allowedTypes?: string[];
 }
 
-const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRouteProps) => {
+const ProtectedRoute = ({ 
+  children, 
+  requiredResource, 
+  requiredAction = 'view',
+  requiredRole,
+  allowedTypes 
+}: ProtectedRouteProps) => {
   const { user, profile, loading, hasRole } = useAuth();
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
   const navigate = useNavigate();
 
-  if (loading) {
+  if (loading || permissionsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -45,7 +56,32 @@ const ProtectedRoute = ({ children, requiredRole, allowedTypes }: ProtectedRoute
     );
   }
 
-  // Check required role if specified
+  // Novo sistema de permissões granulares
+  if (requiredResource) {
+    const hasRequiredPermission = hasPermission(
+      requiredResource as any, 
+      requiredAction
+    );
+
+    if (!hasRequiredPermission) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Acesso Negado</h2>
+            <p className="text-gray-600 mb-4">
+              Você não tem permissão para {requiredAction === 'view' ? 'visualizar' : 'acessar'} este recurso.
+            </p>
+            <Button onClick={() => navigate('/dashboard')} className="flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  // Sistema antigo - manter compatibilidade
   if (requiredRole && !hasRole(requiredRole)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
