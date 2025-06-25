@@ -120,18 +120,48 @@ const AdminPermissions = () => {
     try {
       setSaving(true);
 
-      const { error } = await supabase
-        .from('user_permissions')
-        .upsert({
-          user_id: userId,
-          resource: resource,
-          action: action,
-          enabled: enabled
-        }, {
-          onConflict: 'user_id,resource,action'
-        });
+      // Usar rpc para fazer upsert, pois o TypeScript está tendo problemas com a interface gerada
+      const { error } = await supabase.rpc('upsert_user_permission', {
+        p_user_id: userId,
+        p_resource: resource,
+        p_action: action,
+        p_enabled: enabled
+      });
 
-      if (error) throw error;
+      if (error) {
+        // Se a RPC não existe, fazer insert/update manual
+        const { data: existing } = await supabase
+          .from('user_permissions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('resource', resource)
+          .eq('action', action)
+          .single();
+
+        if (existing) {
+          // Update existing permission
+          const { error: updateError } = await supabase
+            .from('user_permissions')
+            .update({ enabled })
+            .eq('user_id', userId)
+            .eq('resource', resource)
+            .eq('action', action);
+
+          if (updateError) throw updateError;
+        } else {
+          // Insert new permission
+          const { error: insertError } = await supabase
+            .from('user_permissions')
+            .insert({
+              user_id: userId,
+              resource: resource as any,
+              action: action as any,
+              enabled: enabled
+            });
+
+          if (insertError) throw insertError;
+        }
+      }
 
       // Atualizar estado local
       setPermissions(prev => ({
