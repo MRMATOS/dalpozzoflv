@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2 } from "lucide-react";
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const {
@@ -11,67 +12,71 @@ const Dashboard = () => {
     hasRole,
     signOut
   } = useAuth();
+
   const handleLogout = async () => {
     await signOut();
     navigate("/auth");
   };
+
   const cards = [
-  // Gestão CD - disponível para usuários 'cd' ou 'master'
-  (hasRole('cd') || hasRole('master')) && {
-    title: "Gestão CD",
-    description: "Gerenciar requisições e transferências",
-    icon: Building2,
-    color: "bg-cyan-500",
-    onClick: () => navigate("/gestao-cd")
-  },
-  // Estoque - disponível para usuários 'estoque' ou 'master'
-  (hasRole('estoque') || hasRole('master')) && {
-    title: "Estoque",
-    description: "Gerenciar estoque de produtos",
-    icon: Package,
-    color: "bg-blue-500",
-    onClick: () => navigate("/estoque")
-  },
-  // Requisições - disponível para usuários 'requisitante' ou 'master'
-  (hasRole('requisitante') || hasRole('master')) && {
-    title: "Requisições",
-    description: "Criar e gerenciar requisições",
-    icon: ShoppingCart,
-    color: "bg-green-500",
-    onClick: () => navigate("/requisicoes")
-  },
-  // Cotação - disponível para usuários 'comprador' ou 'master'
-  (hasRole('comprador') || hasRole('master')) && {
-    title: "Cotação",
-    description: "Comparar preços e criar pedidos",
-    icon: Calculator,
-    color: "bg-purple-500",
-    onClick: () => navigate("/cotacao")
-  },
-  // Histórico de Requisições - disponível para usuários 'comprador', 'requisitante' ou 'master'
-  (hasRole('comprador') || hasRole('requisitante') || hasRole('master')) && {
-    title: "Histórico de Requisições",
-    description: "Visualizar requisições anteriores",
-    icon: History,
-    color: "bg-orange-500",
-    onClick: () => navigate("/historico-requisicoes")
-  },
-  // Histórico de Pedidos - disponível para usuários 'comprador' ou 'master'
-  (hasRole('comprador') || hasRole('master')) && {
-    title: "Histórico de Pedidos",
-    description: "Visualizar pedidos de compra",
-    icon: BarChart3,
-    color: "bg-indigo-500",
-    onClick: () => navigate("/historico-pedidos")
-  },
-  // Configurações - disponível para usuários 'comprador' ou 'master'
-  (hasRole('comprador') || hasRole('master')) && {
-    title: "Configurações",
-    description: "Gerenciar produtos e fornecedores",
-    icon: Settings,
-    color: "bg-gray-500",
-    onClick: () => navigate("/configuracoes")
-  }].filter(Boolean);
+    // Gestão CD - disponível para usuários 'cd', 'estoque' ou 'master'
+    (hasRole('cd') || hasRole('estoque') || hasRole('master')) && {
+      title: "Gestão CD",
+      description: "Gerenciar requisições e transferências",
+      icon: Building2,
+      color: "bg-cyan-500",
+      onClick: () => navigate("/gestao-cd")
+    },
+    // Estoque - disponível para usuários 'estoque' ou 'master'
+    (hasRole('estoque') || hasRole('master')) && {
+      title: "Estoque",
+      description: "Gerenciar estoque de produtos",
+      icon: Package,
+      color: "bg-blue-500",
+      onClick: () => navigate("/estoque")
+    },
+    // Requisições - disponível para usuários 'requisitante' ou 'master'
+    (hasRole('requisitante') || hasRole('master')) && {
+      title: "Requisições",
+      description: "Criar e gerenciar requisições",
+      icon: ShoppingCart,
+      color: "bg-green-500",
+      onClick: () => navigate("/requisicoes")
+    },
+    // Cotação - disponível para usuários 'comprador' ou 'master'
+    (hasRole('comprador') || hasRole('master')) && {
+      title: "Cotação",
+      description: "Comparar preços e criar pedidos",
+      icon: Calculator,
+      color: "bg-purple-500",
+      onClick: () => navigate("/cotacao")
+    },
+    // Histórico de Requisições - disponível para usuários 'comprador', 'requisitante', 'estoque' ou 'master'
+    (hasRole('comprador') || hasRole('requisitante') || hasRole('estoque') || hasRole('master')) && {
+      title: "Histórico de Requisições",
+      description: "Visualizar requisições anteriores",
+      icon: History,
+      color: "bg-orange-500",
+      onClick: () => navigate("/historico-requisicoes")
+    },
+    // Histórico de Pedidos - disponível para usuários 'comprador' ou 'master'
+    (hasRole('comprador') || hasRole('master')) && {
+      title: "Histórico de Pedidos",
+      description: "Visualizar pedidos de compra",
+      icon: BarChart3,
+      color: "bg-indigo-500",
+      onClick: () => navigate("/historico-pedidos")
+    },
+    // Configurações - disponível para usuários 'comprador' ou 'master'
+    (hasRole('comprador') || hasRole('master')) && {
+      title: "Configurações",
+      description: "Gerenciar produtos e fornecedores",
+      icon: Settings,
+      color: "bg-gray-500",
+      onClick: () => navigate("/configuracoes")
+    }
+  ].filter(Boolean);
+
   return <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -151,4 +156,5 @@ const Dashboard = () => {
       </main>
     </div>;
 };
+
 export default Dashboard;

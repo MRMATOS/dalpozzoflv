@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,10 +31,52 @@ const GestaoCd = () => {
   const isMobile = useIsMobile();
   const [historicoModal, setHistoricoModal] = useState<{ aberto: boolean; transferenceId?: string }>({ aberto: false });
 
-  // Buscar requisições pendentes por loja (3 lojas específicas)
-  const { data: requisicoesPorLoja } = useQuery({
-    queryKey: ['requisicoes-cd-por-loja'],
+  // Buscar loja CD dinamicamente
+  const { data: cdLoja } = useQuery({
+    queryKey: ['cd-loja-gestao'],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('is_cd', true)
+        .eq('ativo', true)
+        .single();
+
+      if (error) {
+        console.error('Erro ao buscar loja CD:', error);
+        return 'Home Center'; // fallback
+      }
+
+      return data?.nome || 'Home Center';
+    },
+  });
+
+  // Buscar todas as lojas ativas (exceto CD)
+  const { data: lojasAtivas } = useQuery({
+    queryKey: ['lojas-ativas'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('ativo', true)
+        .eq('is_cd', false)
+        .order('nome');
+
+      if (error) {
+        console.error('Erro ao buscar lojas:', error);
+        return [];
+      }
+
+      return data?.map(loja => loja.nome) || [];
+    },
+  });
+
+  // Buscar requisições pendentes por loja (usando lojas dinâmicas)
+  const { data: requisicoesPorLoja } = useQuery({
+    queryKey: ['requisicoes-cd-por-loja', cdLoja, lojasAtivas],
+    queryFn: async () => {
+      if (!cdLoja || !lojasAtivas || lojasAtivas.length === 0) return [];
+
       const { data: requisicoes, error } = await supabase
         .from('requisicoes')
         .select(`
@@ -48,7 +91,7 @@ const GestaoCd = () => {
           )
         `)
         .eq('status', 'pendente')
-        .neq('loja', 'Home')
+        .in('loja', lojasAtivas)
         .order('data_requisicao', { ascending: false });
 
       if (error) throw error;
@@ -84,12 +127,15 @@ const GestaoCd = () => {
 
       return Object.values(porLoja);
     },
+    enabled: !!cdLoja && !!lojasAtivas && lojasAtivas.length > 0,
   });
 
   // Buscar estoque do CD para verificar disponibilidade
   const { data: estoqueCd } = useQuery({
-    queryKey: ['estoque-cd'],
+    queryKey: ['estoque-cd-gestao', cdLoja],
     queryFn: async () => {
+      if (!cdLoja) return {};
+
       const { data, error } = await supabase
         .from('estoque_atual')
         .select(`
@@ -97,7 +143,7 @@ const GestaoCd = () => {
           quantidade,
           produtos(produto)
         `)
-        .eq('loja', 'Home');
+        .eq('loja', cdLoja);
 
       if (error) throw error;
       
@@ -111,6 +157,7 @@ const GestaoCd = () => {
 
       return estoqueMap;
     },
+    enabled: !!cdLoja,
   });
 
   const getStatusAtendimento = (loja: string) => {
@@ -135,7 +182,7 @@ const GestaoCd = () => {
               </Button>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">Gestão CD</h1>
-                <p className="text-sm text-gray-500">Centro de Distribuição - {profile?.nome}</p>
+                <p className="text-sm text-gray-500">{cdLoja} - {profile?.nome}</p>
               </div>
             </div>
           </div>
@@ -165,104 +212,104 @@ const GestaoCd = () => {
           )}
 
           <TabsContent value="dashboard" className="space-y-6">
-            {/* ETAPA 5: Cards Resumo por Loja (exatamente 3 cards) */}
+            {/* Cards Resumo por Loja (dinâmico) */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Requisições Pendentes
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {requisicoesPorLoja && requisicoesPorLoja.length > 0 ? (
-                  requisicoesPorLoja.map((dadosLoja: any) => (
-                    <Card key={dadosLoja.loja} className="border-l-4 border-l-blue-500">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg flex items-center">
-                            <Store className="h-5 w-5 mr-2 text-blue-600" />
-                            {dadosLoja.loja}
-                          </CardTitle>
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                            {dadosLoja.requisicoes.length} requisições
-                          </Badge>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
+                {lojasAtivas && lojasAtivas.length > 0 ? (
+                  lojasAtivas.map((nomeEoja) => {
+                    const dadosLoja = requisicoesPorLoja?.find(r => r.loja === nomeEoja);
+                    
+                    return (
+                      <Card key={nomeEoja} className={`border-l-4 ${dadosLoja ? 'border-l-blue-500' : 'border-l-gray-300'}`}>
+                        <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Data/Hora:</span>
-                            <span className="text-sm font-medium">
-                              {dadosLoja.ultimaRequisicao ? 
-                                new Date(dadosLoja.ultimaRequisicao).toLocaleString('pt-BR') : 
-                                'N/A'
-                              }
-                            </span>
+                            <CardTitle className={`text-lg flex items-center ${!dadosLoja ? 'text-gray-500' : ''}`}>
+                              <Store className="h-5 w-5 mr-2 text-blue-600" />
+                              {nomeEoja}
+                            </CardTitle>
+                            {dadosLoja && (
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                {dadosLoja.requisicoes.length} requisições
+                              </Badge>
+                            )}
                           </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 flex items-center">
-                              <Package className="h-4 w-4 mr-1" />
-                              Total Caixas:
-                            </span>
-                            <span className="text-lg font-bold text-blue-600">
-                              {dadosLoja.totalCaixas}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600 flex items-center">
-                              <Scale className="h-4 w-4 mr-1" />
-                              Total Kg:
-                            </span>
-                            <span className="text-lg font-bold text-green-600">
-                              {dadosLoja.totalKg.toFixed(1)}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Status:</span>
-                            <Badge variant="outline" className="text-green-700 border-green-700">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              {getStatusAtendimento(dadosLoja.loja)}
-                            </Badge>
-                          </div>
-                          
-                          <div className="pt-2 border-t">
-                            <Button 
-                              size="sm" 
-                              className="w-full"
-                              onClick={() => navigate('/transferencias-cd')}
-                            >
-                              <Truck className="h-4 w-4 mr-2" />
-                              Gerenciar Separação
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardHeader>
+                        <CardContent>
+                          {dadosLoja ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Data/Hora:</span>
+                                <span className="text-sm font-medium">
+                                  {dadosLoja.ultimaRequisicao ? 
+                                    new Date(dadosLoja.ultimaRequisicao).toLocaleString('pt-BR') : 
+                                    'N/A'
+                                  }
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 flex items-center">
+                                  <Package className="h-4 w-4 mr-1" />
+                                  Total Caixas:
+                                </span>
+                                <span className="text-lg font-bold text-blue-600">
+                                  {dadosLoja.totalCaixas}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600 flex items-center">
+                                  <Scale className="h-4 w-4 mr-1" />
+                                  Total Kg:
+                                </span>
+                                <span className="text-lg font-bold text-green-600">
+                                  {dadosLoja.totalKg.toFixed(1)}
+                                </span>
+                              </div>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-gray-600">Status:</span>
+                                <Badge variant="outline" className="text-green-700 border-green-700">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  {getStatusAtendimento(dadosLoja.loja)}
+                                </Badge>
+                              </div>
+                              
+                              <div className="pt-2 border-t">
+                                <Button 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => navigate('/transferencias-cd')}
+                                >
+                                  <Truck className="h-4 w-4 mr-2" />
+                                  Gerenciar Separação
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-center py-6">
+                              <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                              <p className="text-gray-500 text-sm">Nenhuma requisição pendente</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 ) : (
-                  // Mostrar cards vazios para as 3 lojas se não houver requisições
-                  ['Loja 1', 'Loja 2', 'Loja 3'].map((loja) => (
-                    <Card key={loja} className="border-l-4 border-l-gray-300">
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-lg flex items-center text-gray-500">
-                          <Store className="h-5 w-5 mr-2" />
-                          {loja}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-center py-6">
-                          <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">Nenhuma requisição pendente</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                  <div className="col-span-3 text-center py-8">
+                    <Store className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Nenhuma loja ativa encontrada</p>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* Ações Rápidas para o CD */}
+            {/* Ações Rápidas para o CD */}  
             <div className="mt-8">
               <Card>
                 <CardHeader>

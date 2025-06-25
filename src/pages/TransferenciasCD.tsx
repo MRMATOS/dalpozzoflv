@@ -56,7 +56,7 @@ const TransferenciasCD = () => {
       }
 
       console.log('Loja CD encontrada:', data?.nome);
-      return data?.nome || 'CD';
+      return data?.nome || 'Home Center';
     },
   });
 
@@ -108,7 +108,7 @@ const TransferenciasCD = () => {
         estoqueMap[item.produto_id] = item.quantidade || 0;
       });
 
-      // Processar produtos por loja
+      // Processar produtos por loja e AGRUPAR produtos iguais
       const produtosPorLoja: Record<string, ProdutoRequisitado[]> = {};
       
       requisicoes?.forEach(req => {
@@ -120,23 +120,34 @@ const TransferenciasCD = () => {
           const estoqueAtual = estoqueMap[item.produto_id] || 0;
           console.log(`Produto ${item.produtos?.produto}: estoque CD = ${estoqueAtual}`);
           
-          const produto: ProdutoRequisitado = {
-            produto_id: item.produto_id,
-            produto_nome: item.produtos?.produto || '',
-            loja: req.loja,
-            quantidade_requisitada: item.quantidade || 0,
-            quantidade_calculada: item.quantidade_calculada || 0,
-            estoque_cd: estoqueAtual,
-            quantidade_separar: item.quantidade_calculada || 0,
-            confirmado: false,
-            requisicao_id: req.id
-          };
+          // Verificar se já existe este produto para esta loja
+          const produtoExistente = produtosPorLoja[req.loja].find(p => p.produto_id === item.produto_id);
+          
+          if (produtoExistente) {
+            // AGRUPAR: somar quantidades
+            produtoExistente.quantidade_requisitada += item.quantidade || 0;
+            produtoExistente.quantidade_calculada += item.quantidade_calculada || 0;
+            produtoExistente.quantidade_separar += item.quantidade_calculada || 0;
+          } else {
+            // Criar novo produto
+            const produto: ProdutoRequisitado = {
+              produto_id: item.produto_id,
+              produto_nome: item.produtos?.produto || '',
+              loja: req.loja,
+              quantidade_requisitada: item.quantidade || 0,
+              quantidade_calculada: item.quantidade_calculada || 0,
+              estoque_cd: estoqueAtual,
+              quantidade_separar: item.quantidade_calculada || 0,
+              confirmado: false,
+              requisicao_id: req.id
+            };
 
-          produtosPorLoja[req.loja].push(produto);
+            produtosPorLoja[req.loja].push(produto);
+          }
         });
       });
 
-      console.log('Produtos processados por loja:', produtosPorLoja);
+      console.log('Produtos processados por loja (agrupados):', produtosPorLoja);
       return produtosPorLoja;
     },
     enabled: !!cdLoja,

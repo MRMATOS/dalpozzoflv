@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -61,17 +62,25 @@ const ProdutoCard = ({
   };
 
   const handleSave = () => {
+    console.log('Salvando produto:', produto.id, editValues);
+    
     const updates: any = {
-      produto: produto.produto,
       unidade: editValues.unidade,
       ativo: editValues.ativo,
       media_por_caixa: mostrarMediaPorCaixa(editValues.unidade) ? editValues.media_por_caixa : null
     };
 
-    if (produto.produto_pai_id) {
+    // Se é produto principal, atualizar nome do produto
+    if (!produto.produto_pai_id) {
+      updates.produto = editValues.produto;
+    } else {
+      // Se é variação, atualizar nome da variação
       updates.nome_variacao = editValues.nome_variacao;
+      // Manter o nome do produto pai
+      updates.produto = produto.produto;
     }
 
+    console.log('Updates finais:', updates);
     onUpdate(produto.id, updates);
     setEditingProduct(null);
   };
@@ -111,6 +120,7 @@ const ProdutoCard = ({
                         [produto.produto_pai_id ? 'nome_variacao' : 'produto']: e.target.value
                       }))}
                       className="font-medium"
+                      placeholder={produto.produto_pai_id ? "Nome da variação" : "Nome do produto"}
                     />
                   ) : (
                     <div>
@@ -169,6 +179,8 @@ const ProdutoCard = ({
                             media_por_caixa: parseFloat(e.target.value) || 0
                           }))}
                           className="h-8"
+                          min="0"
+                          step="0.1"
                         />
                       ) : (
                         <Badge variant="outline" className={`${isProdutoPrincipal ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'} text-xs`}>
@@ -203,13 +215,24 @@ const ProdutoCard = ({
                   <Button size="sm" onClick={handleSave} className="bg-green-600 hover:bg-green-700 h-8">
                     <Save className="w-4 h-4" />
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => setEditingProduct(null)} className="h-8">
+                  <Button variant="outline" size="sm" onClick={() => {
+                    setEditingProduct(null);
+                    // Resetar valores ao cancelar
+                    setEditValues({
+                      produto: produto.produto,
+                      nome_variacao: produto.nome_variacao || '',
+                      unidade: produto.unidade || 'Kg',
+                      media_por_caixa: produto.media_por_caixa || 20,
+                      ativo: produto.ativo
+                    });
+                  }} className="h-8">
                     <X className="w-4 h-4" />
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="outline" size="sm" onClick={() => {
+                    console.log('Iniciando edição do produto:', produto.id);
                     setEditValues({
                       produto: produto.produto,
                       nome_variacao: produto.nome_variacao || '',
