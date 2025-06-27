@@ -694,6 +694,179 @@ export type Database = {
         }
         Relationships: []
       }
+      recebimentos: {
+        Row: {
+          criado_em: string
+          finalizado_em: string | null
+          finalizado_por: string | null
+          fornecedor: string | null
+          id: string
+          iniciado_por: string | null
+          observacoes: string | null
+          origem: string | null
+          status: string
+          total_peso_bruto: number | null
+          total_peso_liquido: number | null
+          total_produtos: number | null
+        }
+        Insert: {
+          criado_em?: string
+          finalizado_em?: string | null
+          finalizado_por?: string | null
+          fornecedor?: string | null
+          id?: string
+          iniciado_por?: string | null
+          observacoes?: string | null
+          origem?: string | null
+          status?: string
+          total_peso_bruto?: number | null
+          total_peso_liquido?: number | null
+          total_produtos?: number | null
+        }
+        Update: {
+          criado_em?: string
+          finalizado_em?: string | null
+          finalizado_por?: string | null
+          fornecedor?: string | null
+          id?: string
+          iniciado_por?: string | null
+          observacoes?: string | null
+          origem?: string | null
+          status?: string
+          total_peso_bruto?: number | null
+          total_peso_liquido?: number | null
+          total_produtos?: number | null
+        }
+        Relationships: []
+      }
+      recebimentos_pallets: {
+        Row: {
+          id: string
+          observacoes: string | null
+          ordem: number
+          peso_kg: number
+          recebimento_id: string
+          registrado_em: string
+        }
+        Insert: {
+          id?: string
+          observacoes?: string | null
+          ordem: number
+          peso_kg: number
+          recebimento_id: string
+          registrado_em?: string
+        }
+        Update: {
+          id?: string
+          observacoes?: string | null
+          ordem?: number
+          peso_kg?: number
+          recebimento_id?: string
+          registrado_em?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimentos_pallets_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recebimentos_produtos: {
+        Row: {
+          estoque_atualizado: boolean | null
+          id: string
+          loja_destino: string
+          pallets_utilizados: number[] | null
+          peso_bruto_kg: number
+          peso_liquido_kg: number
+          produto_id: string | null
+          produto_nome: string
+          quantidade_caixas: number | null
+          recebimento_id: string
+          registrado_em: string
+          registrado_por: string | null
+          tara_caixas_kg: number | null
+          tara_pallets_kg: number | null
+          tipo_caixa_id: string | null
+          tipo_caixa_nome: string | null
+        }
+        Insert: {
+          estoque_atualizado?: boolean | null
+          id?: string
+          loja_destino: string
+          pallets_utilizados?: number[] | null
+          peso_bruto_kg: number
+          peso_liquido_kg: number
+          produto_id?: string | null
+          produto_nome: string
+          quantidade_caixas?: number | null
+          recebimento_id: string
+          registrado_em?: string
+          registrado_por?: string | null
+          tara_caixas_kg?: number | null
+          tara_pallets_kg?: number | null
+          tipo_caixa_id?: string | null
+          tipo_caixa_nome?: string | null
+        }
+        Update: {
+          estoque_atualizado?: boolean | null
+          id?: string
+          loja_destino?: string
+          pallets_utilizados?: number[] | null
+          peso_bruto_kg?: number
+          peso_liquido_kg?: number
+          produto_id?: string | null
+          produto_nome?: string
+          quantidade_caixas?: number | null
+          recebimento_id?: string
+          registrado_em?: string
+          registrado_por?: string | null
+          tara_caixas_kg?: number | null
+          tara_pallets_kg?: number | null
+          tipo_caixa_id?: string | null
+          tipo_caixa_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimentos_produtos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recebimentos_produtos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recebimentos_produtos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["produto_pai_id_ref"]
+          },
+          {
+            foreignKeyName: "recebimentos_produtos_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recebimentos_produtos_tipo_caixa_id_fkey"
+            columns: ["tipo_caixa_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_caixas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       requisicoes: {
         Row: {
           data_requisicao: string | null
@@ -768,6 +941,33 @@ export type Database = {
             referencedColumns: ["produto_pai_id_ref"]
           },
         ]
+      }
+      tipos_caixas: {
+        Row: {
+          ativo: boolean
+          criado_em: string
+          descricao: string | null
+          id: string
+          nome: string
+          tara_kg: number
+        }
+        Insert: {
+          ativo?: boolean
+          criado_em?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tara_kg?: number
+        }
+        Update: {
+          ativo?: boolean
+          criado_em?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tara_kg?: number
+        }
+        Relationships: []
       }
       transferencias: {
         Row: {
@@ -1045,6 +1245,10 @@ export type Database = {
       }
     }
     Functions: {
+      calcular_tara_pallets: {
+        Args: { _recebimento_id: string; _pallets_utilizados: number[] }
+        Returns: number
+      }
       check_produto_dependencies: {
         Args: { produto_uuid: string }
         Returns: {

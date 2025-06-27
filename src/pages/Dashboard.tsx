@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +158,25 @@ const Dashboard = () => {
               </Card>;
         })}
         </div>
+
+        {(profile?.tipo === 'cd' || profile?.tipo === 'master') && (
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/recebimento')}>
+            <CardHeader>
+              <CardTitle className="flex items-center text-purple-700">
+                <Package className="mr-2 h-5 w-5" />
+                Recebimento Físico
+              </CardTitle>
+              <CardDescription>
+                Registrar recebimento de mercadorias no CD
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-gray-600">
+                Pesagem de pallets, registro de produtos e atualização automática do estoque
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {cards.length === 0 && <Card className="text-center py-8">
             <CardContent>
