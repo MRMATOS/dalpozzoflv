@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,15 @@ import NotificacoesTransferencias from '@/components/transferencias/Notificacoes
 import DivergenciasManager from '@/components/transferencias/DivergenciasManager';
 import HistoricoTransferencia from '@/components/transferencias/HistoricoTransferencia';
 import { useIsMobile } from '@/hooks/use-mobile';
+
+// Type definitions for requisitions data structure
+interface RequisicaoLoja {
+  loja: string;
+  requisicoes: any[];
+  totalCaixas: number;
+  totalKg: number;
+  ultimaRequisicao: string | null;
+}
 
 const GestaoCd = () => {
   const navigate = useNavigate();
@@ -74,7 +84,7 @@ const GestaoCd = () => {
   // Buscar requisições pendentes E requisições "enviado" que têm transferências pendentes
   const { data: requisicoesPorLoja } = useQuery({
     queryKey: ['requisicoes-cd-por-loja', cdLoja, lojasAtivas],
-    queryFn: async () => {
+    queryFn: async (): Promise<RequisicaoLoja[]> => {
       if (!cdLoja || !lojasAtivas || lojasAtivas.length === 0) {
         console.log('Sem lojas ativas ou CD definido');
         return [];
@@ -167,7 +177,7 @@ const GestaoCd = () => {
         }
 
         return acc;
-      }, {} as Record<string, any>);
+      }, {} as Record<string, RequisicaoLoja>);
 
       const resultado = Object.values(porLoja);
       console.log('Requisições agrupadas por loja (corrigido):', resultado);
