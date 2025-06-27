@@ -28,6 +28,27 @@ export const useTransferencias = () => {
     try {
       console.log('Buscando transferências...');
       
+      // Primeiro buscar lojas ativas
+      const { data: lojasAtivas, error: lojasError } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('ativo', true);
+
+      if (lojasError) {
+        console.error('Erro ao buscar lojas ativas:', lojasError);
+        return;
+      }
+
+      const nomesLojasAtivas = lojasAtivas?.map(loja => loja.nome) || [];
+      console.log('Lojas ativas para transferências:', nomesLojasAtivas);
+
+      if (nomesLojasAtivas.length === 0) {
+        console.log('Nenhuma loja ativa encontrada');
+        setTransferencias([]);
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('transferencias')
         .select(`
@@ -44,6 +65,8 @@ export const useTransferencias = () => {
           produtos!inner(produto, unidade, media_por_caixa)
         `)
         .eq('status', 'pendente')
+        .in('loja_origem', nomesLojasAtivas)
+        .in('loja_destino', nomesLojasAtivas)
         .order('criado_em', { ascending: false });
 
       if (error) {
@@ -105,12 +128,38 @@ export const useTransferencias = () => {
 
       console.log('Requisição encontrada:', requisicao);
 
+      // Verificar se a loja é ativa
+      const { data: lojaAtiva, error: lojaError } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('nome', requisicao.loja)
+        .eq('ativo', true)
+        .single();
+
+      if (lojaError || !lojaAtiva) {
+        console.error('Loja não encontrada ou inativa:', requisicao.loja);
+        throw new Error('Loja não encontrada ou inativa');
+      }
+
+      // Buscar a loja CD
+      const { data: cdLoja, error: cdError } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('is_cd', true)
+        .eq('ativo', true)
+        .single();
+
+      if (cdError || !cdLoja) {
+        console.error('Centro de Distribuição não encontrado');
+        throw new Error('Centro de Distribuição não encontrado');
+      }
+
       // Criar transferências para cada item
       const transferenciasParaCriar = (requisicao.itens_requisicao as any[]).map(item => ({
         requisicao_id: requisicaoId,
         produto_id: item.produto_id,
         loja_origem: requisicao.loja,
-        loja_destino: 'Centro de Distribuição',
+        loja_destino: cdLoja.nome,
         quantidade_requisitada: item.quantidade_calculada || 0,
         status: 'pendente',
         transferido_por: user?.id

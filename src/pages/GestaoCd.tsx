@@ -51,7 +51,7 @@ const GestaoCd = () => {
     },
   });
 
-  // Buscar todas as lojas ativas (exceto CD)
+  // Buscar todas as lojas ativas (exceto CD) - filtro aplicado
   const { data: lojasAtivas } = useQuery({
     queryKey: ['lojas-ativas'],
     queryFn: async () => {
@@ -67,15 +67,21 @@ const GestaoCd = () => {
         return [];
       }
 
+      console.log('Lojas ativas encontradas para Gestão CD:', data);
       return data?.map(loja => loja.nome) || [];
     },
   });
 
-  // Buscar requisições pendentes por loja (usando lojas dinâmicas)
+  // Buscar requisições pendentes por loja (usando apenas lojas ativas)
   const { data: requisicoesPorLoja } = useQuery({
     queryKey: ['requisicoes-cd-por-loja', cdLoja, lojasAtivas],
     queryFn: async () => {
-      if (!cdLoja || !lojasAtivas || lojasAtivas.length === 0) return [];
+      if (!cdLoja || !lojasAtivas || lojasAtivas.length === 0) {
+        console.log('Sem lojas ativas ou CD definido');
+        return [];
+      }
+
+      console.log('Buscando requisições para lojas:', lojasAtivas);
 
       const { data: requisicoes, error } = await supabase
         .from('requisicoes')
@@ -94,10 +100,22 @@ const GestaoCd = () => {
         .in('loja', lojasAtivas)
         .order('data_requisicao', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar requisições:', error);
+        throw error;
+      }
 
-      // Agrupar por loja
-      const porLoja = (requisicoes || []).reduce((acc, req) => {
+      console.log('Requisições encontradas:', requisicoes);
+
+      // Filtrar apenas requisições que têm itens e agrupar por loja
+      const requisicoesComItens = requisicoes?.filter(req => {
+        const itens = req.itens_requisicao as any[];
+        return itens && itens.length > 0;
+      }) || [];
+
+      console.log('Requisições com itens:', requisicoesComItens);
+
+      const porLoja = requisicoesComItens.reduce((acc, req) => {
         if (!acc[req.loja]) {
           acc[req.loja] = {
             loja: req.loja,
@@ -125,7 +143,9 @@ const GestaoCd = () => {
         return acc;
       }, {} as Record<string, any>);
 
-      return Object.values(porLoja);
+      const resultado = Object.values(porLoja);
+      console.log('Requisições agrupadas por loja:', resultado);
+      return resultado;
     },
     enabled: !!cdLoja && !!lojasAtivas && lojasAtivas.length > 0,
   });
@@ -212,7 +232,7 @@ const GestaoCd = () => {
           )}
 
           <TabsContent value="dashboard" className="space-y-6">
-            {/* Cards Resumo por Loja (dinâmico) */}
+            {/* Cards Resumo por Loja (apenas lojas ativas) */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Requisições Pendentes
@@ -220,16 +240,16 @@ const GestaoCd = () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {lojasAtivas && lojasAtivas.length > 0 ? (
-                  lojasAtivas.map((nomeEoja) => {
-                    const dadosLoja = requisicoesPorLoja?.find(r => r.loja === nomeEoja);
+                  lojasAtivas.map((nomeLoja) => {
+                    const dadosLoja = requisicoesPorLoja?.find(r => r.loja === nomeLoja);
                     
                     return (
-                      <Card key={nomeEoja} className={`border-l-4 ${dadosLoja ? 'border-l-blue-500' : 'border-l-gray-300'}`}>
+                      <Card key={nomeLoja} className={`border-l-4 ${dadosLoja ? 'border-l-blue-500' : 'border-l-gray-300'}`}>
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className={`text-lg flex items-center ${!dadosLoja ? 'text-gray-500' : ''}`}>
                               <Store className="h-5 w-5 mr-2 text-blue-600" />
-                              {nomeEoja}
+                              {nomeLoja}
                             </CardTitle>
                             {dadosLoja && (
                               <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">

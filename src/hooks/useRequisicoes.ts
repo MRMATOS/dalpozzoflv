@@ -32,6 +32,28 @@ export const useRequisicoes = () => {
     try {
       console.log('Buscando requisições...');
       
+      // Primeiro buscar lojas ativas
+      const { data: lojasAtivas, error: lojasError } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('ativo', true)
+        .eq('is_cd', false);
+
+      if (lojasError) {
+        console.error('Erro ao buscar lojas ativas:', lojasError);
+        return;
+      }
+
+      const nomesLojasAtivas = lojasAtivas?.map(loja => loja.nome) || [];
+      console.log('Lojas ativas encontradas:', nomesLojasAtivas);
+
+      if (nomesLojasAtivas.length === 0) {
+        console.log('Nenhuma loja ativa encontrada');
+        setRequisicoes([]);
+        setLojasComRequisicoes([]);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('itens_requisicao')
         .select(`
@@ -42,7 +64,8 @@ export const useRequisicoes = () => {
           requisicoes!inner(loja, status),
           produtos!inner(produto, unidade, media_por_caixa)
         `)
-        .eq('requisicoes.status', 'pendente');
+        .eq('requisicoes.status', 'pendente')
+        .in('requisicoes.loja', nomesLojasAtivas);
 
       if (error) {
         console.error('Erro ao buscar requisições:', error);
@@ -65,8 +88,8 @@ export const useRequisicoes = () => {
 
       setRequisicoes(requisicoesFormatadas);
 
-      // Extrair lojas únicas que têm requisições
-      const lojas = [...new Set(requisicoesFormatadas.map(item => item.loja).filter(loja => loja))];
+      // Extrair lojas únicas que têm requisições (apenas ativas)
+      const lojas = [...new Set(requisicoesFormatadas.map(item => item.loja).filter(loja => loja && nomesLojasAtivas.includes(loja)))];
       setLojasComRequisicoes(lojas);
 
     } catch (error) {
@@ -77,6 +100,25 @@ export const useRequisicoes = () => {
   const fetchRequisicoesCompletas = async () => {
     try {
       console.log('Buscando requisições completas...');
+      
+      // Primeiro buscar lojas ativas
+      const { data: lojasAtivas, error: lojasError } = await supabase
+        .from('lojas')
+        .select('nome')
+        .eq('ativo', true)
+        .eq('is_cd', false);
+
+      if (lojasError) {
+        console.error('Erro ao buscar lojas ativas:', lojasError);
+        return;
+      }
+
+      const nomesLojasAtivas = lojasAtivas?.map(loja => loja.nome) || [];
+
+      if (nomesLojasAtivas.length === 0) {
+        setRequisicoesCompletas([]);
+        return;
+      }
       
       const { data, error } = await supabase
         .from('requisicoes')
@@ -93,6 +135,7 @@ export const useRequisicoes = () => {
           )
         `)
         .eq('status', 'pendente')
+        .in('loja', nomesLojasAtivas)
         .order('data_requisicao', { ascending: false });
 
       if (error) {
@@ -102,7 +145,13 @@ export const useRequisicoes = () => {
 
       console.log('Requisições completas encontradas:', data);
 
-      const requisicoesFormatadas = data?.map(req => {
+      // Filtrar requisições que têm itens
+      const requisicoesComItens = data?.filter(req => {
+        const itens = req.itens_requisicao as any[];
+        return itens && itens.length > 0;
+      }) || [];
+
+      const requisicoesFormatadas = requisicoesComItens.map(req => {
         const itens = (req.itens_requisicao as any[]).map(item => ({
           produto_id: item.produto_id,
           produto_nome: item.produtos?.produto || '',
@@ -123,7 +172,7 @@ export const useRequisicoes = () => {
           total_caixas: itens.reduce((sum, item) => sum + item.quantidade, 0),
           total_quilos: itens.reduce((sum, item) => sum + item.quantidade_calculada, 0)
         };
-      }) || [];
+      });
 
       console.log('Requisições completas formatadas:', requisicoesFormatadas);
       setRequisicoesCompletas(requisicoesFormatadas);
