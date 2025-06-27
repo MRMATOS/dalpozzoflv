@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -151,9 +150,11 @@ const GestaoCd = () => {
       console.log('Requisições que precisam de atenção do CD:', requisicoesParaCD);
 
       // Agrupar por loja
-      const porLoja = requisicoesParaCD.reduce((acc, req) => {
-        if (!acc[req.loja]) {
-          acc[req.loja] = {
+      const porLoja: Record<string, RequisicaoLoja> = {};
+      
+      requisicoesParaCD.forEach(req => {
+        if (!porLoja[req.loja]) {
+          porLoja[req.loja] = {
             loja: req.loja,
             requisicoes: [],
             totalCaixas: 0,
@@ -162,24 +163,22 @@ const GestaoCd = () => {
           };
         }
         
-        acc[req.loja].requisicoes.push(req);
+        porLoja[req.loja].requisicoes.push(req);
         
         // Calcular totais
         (req.itens_requisicao as any[]).forEach(item => {
-          acc[req.loja].totalCaixas += item.quantidade || 0;
-          acc[req.loja].totalKg += item.quantidade_calculada || 0;
+          porLoja[req.loja].totalCaixas += item.quantidade || 0;
+          porLoja[req.loja].totalKg += item.quantidade_calculada || 0;
         });
 
         // Definir última requisição
-        if (!acc[req.loja].ultimaRequisicao || 
-            new Date(req.data_requisicao) > new Date(acc[req.loja].ultimaRequisicao)) {
-          acc[req.loja].ultimaRequisicao = req.data_requisicao;
+        if (!porLoja[req.loja].ultimaRequisicao || 
+            new Date(req.data_requisicao) > new Date(porLoja[req.loja].ultimaRequisicao)) {
+          porLoja[req.loja].ultimaRequisicao = req.data_requisicao;
         }
+      });
 
-        return acc;
-      }, {} as Record<string, RequisicaoLoja>);
-
-      const resultado = Object.values(porLoja);
+      const resultado: RequisicaoLoja[] = Object.values(porLoja);
       console.log('Requisições agrupadas por loja (corrigido):', resultado);
       return resultado;
     },
