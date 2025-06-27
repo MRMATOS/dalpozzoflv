@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +50,7 @@ const GestaoCd = () => {
     },
   });
 
-  // Buscar todas as lojas ativas (exceto CD) - filtro aplicado
+  // Buscar todas as lojas ativas (exceto CD)
   const { data: lojasAtivas } = useQuery({
     queryKey: ['lojas-ativas'],
     queryFn: async () => {
@@ -72,7 +71,7 @@ const GestaoCd = () => {
     },
   });
 
-  // Buscar requisições pendentes por loja (usando apenas lojas ativas)
+  // Buscar requisições pendentes E requisições "enviado" que têm transferências pendentes
   const { data: requisicoesPorLoja } = useQuery({
     queryKey: ['requisicoes-cd-por-loja', cdLoja, lojasAtivas],
     queryFn: async () => {
@@ -81,8 +80,9 @@ const GestaoCd = () => {
         return [];
       }
 
-      console.log('Buscando requisições para lojas:', lojasAtivas);
+      console.log('Buscando requisições para CD. Loja CD:', cdLoja, 'Lojas ativas:', lojasAtivas);
 
+      // Buscar requisições pendentes ou com transferências pendentes
       const { data: requisicoes, error } = await supabase
         .from('requisicoes')
         .select(`
@@ -96,7 +96,7 @@ const GestaoCd = () => {
             produtos(produto, media_por_caixa)
           )
         `)
-        .eq('status', 'pendente')
+        .in('status', ['pendente', 'enviado'])
         .in('loja', lojasAtivas)
         .order('data_requisicao', { ascending: false });
 
@@ -107,15 +107,41 @@ const GestaoCd = () => {
 
       console.log('Requisições encontradas:', requisicoes);
 
-      // Filtrar apenas requisições que têm itens e agrupar por loja
-      const requisicoesComItens = requisicoes?.filter(req => {
+      // Filtrar requisições que precisam de atenção do CD
+      const requisicoesParaCD = [];
+      
+      for (const req of requisicoes || []) {
         const itens = req.itens_requisicao as any[];
-        return itens && itens.length > 0;
-      }) || [];
+        if (!itens || itens.length === 0) continue;
 
-      console.log('Requisições com itens:', requisicoesComItens);
+        let precisaAtencaoCD = false;
 
-      const porLoja = requisicoesComItens.reduce((acc, req) => {
+        if (req.status === 'pendente') {
+          // Requisições pendentes sempre precisam de atenção
+          precisaAtencaoCD = true;
+        } else if (req.status === 'enviado') {
+          // Para requisições "enviado", verificar se há transferências pendentes
+          const { data: transferencias } = await supabase
+            .from('transferencias')
+            .select('status')
+            .eq('requisicao_id', req.id)
+            .eq('loja_destino', cdLoja);
+
+          const temTransferenciasPendentes = transferencias?.some(t => t.status === 'pendente');
+          if (temTransferenciasPendentes) {
+            precisaAtencaoCD = true;
+          }
+        }
+
+        if (precisaAtencaoCD) {
+          requisicoesParaCD.push(req);
+        }
+      }
+
+      console.log('Requisições que precisam de atenção do CD:', requisicoesParaCD);
+
+      // Agrupar por loja
+      const porLoja = requisicoesParaCD.reduce((acc, req) => {
         if (!acc[req.loja]) {
           acc[req.loja] = {
             loja: req.loja,
@@ -144,7 +170,7 @@ const GestaoCd = () => {
       }, {} as Record<string, any>);
 
       const resultado = Object.values(porLoja);
-      console.log('Requisições agrupadas por loja:', resultado);
+      console.log('Requisições agrupadas por loja (corrigido):', resultado);
       return resultado;
     },
     enabled: !!cdLoja && !!lojasAtivas && lojasAtivas.length > 0,
@@ -232,10 +258,10 @@ const GestaoCd = () => {
           )}
 
           <TabsContent value="dashboard" className="space-y-6">
-            {/* Cards Resumo por Loja (apenas lojas ativas) */}
+            {/* Cards Resumo por Loja */}
             <div className="mb-8">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                Requisições Pendentes
+                Requisições Pendentes de Processamento
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -244,7 +270,7 @@ const GestaoCd = () => {
                     const dadosLoja = requisicoesPorLoja?.find(r => r.loja === nomeLoja);
                     
                     return (
-                      <Card key={nomeLoja} className={`border-l-4 ${dadosLoja ? 'border-l-blue-500' : 'border-l-gray-300'}`}>
+                      <Card key={nomeLoja} className={`border-l-4 ${dadosLoja ? 'border-l-orange-500' : 'border-l-gray-300'}`}>
                         <CardHeader className="pb-3">
                           <div className="flex items-center justify-between">
                             <CardTitle className={`text-lg flex items-center ${!dadosLoja ? 'text-gray-500' : ''}`}>
@@ -252,8 +278,8 @@ const GestaoCd = () => {
                               {nomeLoja}
                             </CardTitle>
                             {dadosLoja && (
-                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                {dadosLoja.requisicoes.length} requisições
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                                {dadosLoja.requisicoes.length} pendentes
                               </Badge>
                             )}
                           </div>
@@ -262,7 +288,7 @@ const GestaoCd = () => {
                           {dadosLoja ? (
                             <div className="space-y-3">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm text-gray-600">Data/Hora:</span>
+                                <span className="text-sm text-gray-600">Última requisição:</span>
                                 <span className="text-sm font-medium">
                                   {dadosLoja.ultimaRequisicao ? 
                                     new Date(dadosLoja.ultimaRequisicao).toLocaleString('pt-BR') : 
@@ -274,9 +300,9 @@ const GestaoCd = () => {
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 flex items-center">
                                   <Package className="h-4 w-4 mr-1" />
-                                  Total Caixas:
+                                  Caixas pendentes:
                                 </span>
-                                <span className="text-lg font-bold text-blue-600">
+                                <span className="text-lg font-bold text-orange-600">
                                   {dadosLoja.totalCaixas}
                                 </span>
                               </div>
@@ -284,36 +310,36 @@ const GestaoCd = () => {
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600 flex items-center">
                                   <Scale className="h-4 w-4 mr-1" />
-                                  Total Kg:
+                                  Kg pendentes:
                                 </span>
-                                <span className="text-lg font-bold text-green-600">
+                                <span className="text-lg font-bold text-blue-600">
                                   {dadosLoja.totalKg.toFixed(1)}
                                 </span>
                               </div>
                               
                               <div className="flex items-center justify-between">
                                 <span className="text-sm text-gray-600">Status:</span>
-                                <Badge variant="outline" className="text-green-700 border-green-700">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  {getStatusAtendimento(dadosLoja.loja)}
+                                <Badge variant="outline" className="text-orange-700 border-orange-700">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Aguardando separação
                                 </Badge>
                               </div>
                               
                               <div className="pt-2 border-t">
                                 <Button 
                                   size="sm" 
-                                  className="w-full"
+                                  className="w-full bg-orange-600 hover:bg-orange-700"
                                   onClick={() => navigate('/transferencias-cd')}
                                 >
                                   <Truck className="h-4 w-4 mr-2" />
-                                  Gerenciar Separação
+                                  Iniciar Separação
                                 </Button>
                               </div>
                             </div>
                           ) : (
                             <div className="text-center py-6">
-                              <Clock className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-gray-500 text-sm">Nenhuma requisição pendente</p>
+                              <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
+                              <p className="text-gray-500 text-sm">Tudo processado</p>
                             </div>
                           )}
                         </CardContent>

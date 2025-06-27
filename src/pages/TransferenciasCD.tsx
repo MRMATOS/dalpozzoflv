@@ -60,7 +60,7 @@ const TransferenciasCD = () => {
     },
   });
 
-  // Buscar todos os produtos requisitados agrupados
+  // CORREÇÃO: Buscar tanto requisições pendentes quanto "enviado" com transferências pendentes
   const { data: produtosRequisitados, isLoading } = useQuery({
     queryKey: ['produtos-requisitados-cd', cdLoja],
     queryFn: async () => {
@@ -68,11 +68,13 @@ const TransferenciasCD = () => {
       
       console.log('Buscando produtos requisitados para CD...', cdLoja);
       
+      // Buscar requisições que precisam de atenção do CD
       const { data: requisicoes, error } = await supabase
         .from('requisicoes')
         .select(`
           id,
           loja,
+          status,
           data_requisicao,
           itens_requisicao (
             produto_id,
@@ -81,7 +83,7 @@ const TransferenciasCD = () => {
             produtos (produto, unidade, media_por_caixa)
           )
         `)
-        .eq('status', 'pendente')
+        .in('status', ['pendente', 'enviado'])
         .neq('loja', cdLoja)
         .order('loja', { ascending: true });
 
@@ -89,6 +91,32 @@ const TransferenciasCD = () => {
         console.error('Erro ao buscar requisições:', error);
         throw error;
       }
+
+      console.log('Requisições encontradas para separação:', requisicoes);
+
+      // Filtrar requisições que realmente precisam de separação
+      const requisicoesParaSeparacao = [];
+      
+      for (const req of requisicoes || []) {
+        if (req.status === 'pendente') {
+          // Requisições pendentes sempre precisam de separação
+          requisicoesParaSeparacao.push(req);
+        } else if (req.status === 'enviado') {
+          // Para requisições "enviado", verificar se há transferências pendentes
+          const { data: transferencias } = await supabase
+            .from('transferencias')
+            .select('status')
+            .eq('requisicao_id', req.id)
+            .eq('loja_destino', cdLoja);
+
+          const temTransferenciasPendentes = transferencias?.some(t => t.status === 'pendente');
+          if (temTransferenciasPendentes) {
+            requisicoesParaSeparacao.push(req);
+          }
+        }
+      }
+
+      console.log('Requisições que precisam de separação:', requisicoesParaSeparacao);
 
       // Buscar estoque do CD usando o nome correto da loja
       const { data: estoque, error: estoqueError } = await supabase
@@ -111,7 +139,7 @@ const TransferenciasCD = () => {
       // Processar produtos por loja e AGRUPAR produtos iguais
       const produtosPorLoja: Record<string, ProdutoRequisitado[]> = {};
       
-      requisicoes?.forEach(req => {
+      requisicoesParaSeparacao.forEach(req => {
         if (!produtosPorLoja[req.loja]) {
           produtosPorLoja[req.loja] = [];
         }
@@ -153,7 +181,7 @@ const TransferenciasCD = () => {
     enabled: !!cdLoja,
   });
 
-  // Mutation para processar separação
+  // CORREÇÃO: Atualizar mutation para marcar requisições como "separado"
   const processarSeparacaoMutation = useMutation({
     mutationFn: async ({ loja, produtos }: { loja: string; produtos: ProdutoRequisitado[] }) => {
       if (!cdLoja) throw new Error('Loja CD não encontrada');
@@ -200,7 +228,7 @@ const TransferenciasCD = () => {
         }
       }
 
-      // Atualizar status das requisições para 'separado'
+      // CORREÇÃO: Atualizar status das requisições para 'separado'
       const requisicaoIds = [...new Set(produtos.map(p => p.requisicao_id))];
       for (const reqId of requisicaoIds) {
         const { error: reqError } = await supabase
@@ -219,6 +247,7 @@ const TransferenciasCD = () => {
     onSuccess: () => {
       toast.success('Separação processada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['produtos-requisitados-cd'] });
+      queryClient.invalidateQueries({ queryKey: ['requisicoes-cd-por-loja'] });
       setModalConfirmacao({ aberto: false });
       setProdutosSeparacao({});
     },

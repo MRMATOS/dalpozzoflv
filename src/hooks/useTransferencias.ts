@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -154,6 +153,8 @@ export const useTransferencias = () => {
         throw new Error('Centro de Distribuição não encontrado');
       }
 
+      console.log('Loja CD encontrada:', cdLoja.nome);
+
       // Criar transferências para cada item
       const transferenciasParaCriar = (requisicao.itens_requisicao as any[]).map(item => ({
         requisicao_id: requisicaoId,
@@ -176,18 +177,8 @@ export const useTransferencias = () => {
         throw transferError;
       }
 
-      // Atualizar status da requisição para "enviado"
-      const { error: updateError } = await supabase
-        .from('requisicoes')
-        .update({ status: 'enviado' })
-        .eq('id', requisicaoId);
-
-      if (updateError) {
-        console.error('Erro ao atualizar status da requisição:', updateError);
-        throw updateError;
-      }
-
-      console.log('Transferências criadas com sucesso!');
+      console.log('Transferências criadas com sucesso! Requisição permanece pendente.');
+      
       await fetchTransferencias(); // Recarregar lista
       
       return { success: true };
