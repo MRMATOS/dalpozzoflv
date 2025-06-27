@@ -87,7 +87,7 @@ const GestaoCd = () => {
     queryFn: async (): Promise<RequisicaoLoja[]> => {
       if (!cdLoja || !lojasAtivas || lojasAtivas.length === 0) {
         console.log('Sem lojas ativas ou CD definido');
-        return [];
+        return [] as RequisicaoLoja[];
       }
 
       console.log('Buscando requisições para CD. Loja CD:', cdLoja, 'Lojas ativas:', lojasAtivas);
