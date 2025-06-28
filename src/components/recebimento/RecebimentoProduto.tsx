@@ -356,6 +356,12 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Botão Registrar Produto - Logo abaixo do card de cálculo */}
+                <Button type="submit" disabled={loading || pesoLiquido <= 0} className="w-full">
+                  {loading ? 'Registrando...' : 'Registrar Produto'}
+                  <Plus className="h-4 w-4 ml-2" />
+                </Button>
               </div>
 
               <PalletsVisualizacao
@@ -365,11 +371,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 palletsIndisponiveis={palletsIndisponiveis}
               />
             </div>
-
-            <Button type="submit" disabled={loading || pesoLiquido <= 0} className="w-full">
-              {loading ? 'Registrando...' : 'Registrar Produto'}
-              <Plus className="h-4 w-4 ml-2" />
-            </Button>
           </form>
         </CardContent>
       </Card>

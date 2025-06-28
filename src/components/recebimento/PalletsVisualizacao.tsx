@@ -47,11 +47,9 @@ const PalletsVisualizacao: React.FC<PalletsVisualizacaoProps> = ({
 
   return (
     <div className="space-y-3">
-      <Label className="text-sm font-medium">Pallets Utilizados</Label>
-      
       {/* Pallets Disponíveis */}
       <div className="space-y-2">
-        <div className="text-xs text-gray-500 font-medium">Disponíveis:</div>
+        <div className="text-sm font-medium text-gray-700">Pallets disponíveis:</div>
         <div className="max-h-40 overflow-y-auto space-y-1">
           {palletsDisponiveis.map((pallet) => (
             <div 
@@ -81,10 +79,10 @@ const PalletsVisualizacao: React.FC<PalletsVisualizacaoProps> = ({
         </div>
       </div>
 
-      {/* Pallets Indisponíveis */}
+      {/* Pallets Utilizados */}
       {palletsUsados.length > 0 && (
         <div className="space-y-2">
-          <div className="text-xs text-gray-500 font-medium">Utilizados:</div>
+          <div className="text-sm font-medium text-gray-700">Pallets utilizados:</div>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {palletsUsados.map((pallet) => (
               <div 
