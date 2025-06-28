@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -25,13 +24,17 @@ const PalletsVisualizacao: React.FC<PalletsVisualizacaoProps> = ({
   onPalletsChange,
   palletsIndisponiveis
 }) => {
-  // Separar pallets disponíveis e indisponíveis
+  // Separar pallets disponíveis (incluindo os selecionados no formulário atual)
   const palletsDisponiveis = pallets
-    .filter(p => !palletsIndisponiveis.includes(p.ordem))
+    .filter(p => {
+      // Mostrar se está disponível OU se está selecionado no formulário atual
+      return !palletsIndisponiveis.includes(p.ordem) || palletsUtilizados.includes(p.ordem);
+    })
     .sort((a, b) => b.ordem - a.ordem); // Último primeiro
 
+  // Pallets que já foram usados em produtos anteriores (sem os do formulário atual)
   const palletsUsados = pallets
-    .filter(p => palletsIndisponiveis.includes(p.ordem))
+    .filter(p => palletsIndisponiveis.includes(p.ordem) && !palletsUtilizados.includes(p.ordem))
     .sort((a, b) => b.ordem - a.ordem);
 
   const togglePallet = (ordem: number) => {
