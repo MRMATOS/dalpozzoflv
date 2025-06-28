@@ -6,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Plus, Calculator, AlertTriangle } from "lucide-react";
+import { Package, Plus, Calculator, AlertTriangle, Undo2 } from "lucide-react";
 import { toast } from 'sonner';
+import TipoCaixaSelector from './TipoCaixaSelector';
+import PalletsVisualizacao from './PalletsVisualizacao';
 
 interface Pallet {
   id: string;
@@ -45,13 +46,13 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 }) => {
   const [formData, setFormData] = useState({
     produto_id: '',
-    produto_nome: '',
     peso_bruto: '',
     quantidade_caixas: '',
     tipo_caixa_id: '',
     loja_destino: 'Home Center'
   });
   const [palletsUtilizados, setPalletsUtilizados] = useState<number[]>([]);
+  const [palletsIndisponiveis, setPalletsIndisponiveis] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Buscar produtos disponíveis
@@ -62,6 +63,8 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         .from('produtos')
         .select('id, produto, media_por_caixa')
         .eq('ativo', true)
+        .not('produto', 'is', null)
+        .neq('produto', '')
         .order('produto');
 
       if (error) throw error;
@@ -70,7 +73,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   });
 
   // Buscar tipos de caixa
-  const { data: tiposCaixa } = useQuery({
+  const { data: tiposCaixa, refetch: refetchTiposCaixa } = useQuery({
     queryKey: ['tipos-caixa-recebimento'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -99,6 +102,14 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     },
   });
 
+  // Calcular pallets indisponíveis baseado nos produtos já registrados
+  React.useEffect(() => {
+    const palletsUsados = produtos.reduce((acc: number[], produto) => {
+      return acc.concat(produto.pallets_utilizados);
+    }, []);
+    setPalletsIndisponiveis(palletsUsados);
+  }, [produtos]);
+
   // Calcular tara automaticamente
   const calcularTara = () => {
     const taraPallets = palletsUtilizados.reduce((acc, ordem) => {
@@ -119,7 +130,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const adicionarProduto = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.produto_nome || !formData.peso_bruto || pesoBruto <= 0) {
+    if (!formData.produto_id || !formData.peso_bruto || pesoBruto <= 0) {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
@@ -131,14 +142,15 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
     setLoading(true);
     try {
+      const produto = produtosDisponiveis?.find(p => p.id === formData.produto_id);
       const tipoCaixa = tiposCaixa?.find(t => t.id === formData.tipo_caixa_id);
 
       const { error } = await supabase
         .from('recebimentos_produtos')
         .insert({
           recebimento_id: recebimentoId,
-          produto_id: formData.produto_id || null,
-          produto_nome: formData.produto_nome,
+          produto_id: formData.produto_id,
+          produto_nome: produto?.produto || '',
           peso_bruto_kg: pesoBruto,
           peso_liquido_kg: pesoLiquido,
           quantidade_caixas: parseInt(formData.quantidade_caixas || '0'),
@@ -155,7 +167,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
       // Resetar formulário
       setFormData({
         produto_id: '',
-        produto_nome: '',
         peso_bruto: '',
         quantidade_caixas: '',
         tipo_caixa_id: '',
@@ -173,14 +184,61 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     }
   };
 
+  const desfazerUltimoProduto = async () => {
+    if (produtos.length === 0) {
+      toast.error('Nenhum produto para desfazer');
+      return;
+    }
+
+    const ultimoProduto = produtos[produtos.length - 1];
+    
+    if (!confirm(`Desfazer produto "${ultimoProduto.produto_nome}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('recebimentos_produtos')
+        .delete()
+        .eq('id', ultimoProduto.id);
+
+      if (error) throw error;
+
+      onProdutoAdded();
+      toast.success('Produto desfeito com sucesso!');
+    } catch (error) {
+      console.error('Erro ao desfazer produto:', error);
+      toast.error('Erro ao desfazer produto');
+    }
+  };
+
+  const handleTipoCaixaChange = (value: string) => {
+    if (value === 'nova-caixa') {
+      // O modal será aberto pelo TipoCaixaSelector
+      return;
+    }
+    setFormData(prev => ({ ...prev, tipo_caixa_id: value }));
+  };
+
   return (
     <div className="space-y-6">
       {/* Formulário para registrar produto */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="h-5 w-5 mr-2" />
-            Registrar Produto Recebido
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Package className="h-5 w-5 mr-2" />
+              Registrar Produto Recebido
+            </div>
+            {produtos.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={desfazerUltimoProduto}
+                className="text-orange-600 hover:text-orange-700"
+              >
+                <Undo2 className="h-4 w-4 mr-1" />
+                Desfazer Último
+              </Button>
+            )}
           </CardTitle>
           <CardDescription>
             Registre o peso bruto e deixe o sistema calcular automaticamente o peso líquido
@@ -188,20 +246,13 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={adicionarProduto} className="space-y-6">
-            {/* Seleção/Nome do Produto */}
+            {/* Linha 1: Produto e Loja Destino */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Produto</Label>
+                <Label>Produto *</Label>
                 <Select
                   value={formData.produto_id}
-                  onValueChange={(value) => {
-                    const produto = produtosDisponiveis?.find(p => p.id === value);
-                    setFormData(prev => ({
-                      ...prev,
-                      produto_id: value,
-                      produto_nome: produto?.produto || ''
-                    }));
-                  }}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, produto_id: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o produto" />
@@ -214,33 +265,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="produto_nome">Nome do Produto *</Label>
-                <Input
-                  id="produto_nome"
-                  value={formData.produto_nome}
-                  onChange={(e) => setFormData(prev => ({ ...prev, produto_nome: e.target.value }))}
-                  placeholder="Digite o nome do produto"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Peso Bruto */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="peso_bruto">Peso Bruto (kg) *</Label>
-                <Input
-                  id="peso_bruto"
-                  type="number"
-                  step="0.1"
-                  value={formData.peso_bruto}
-                  onChange={(e) => setFormData(prev => ({ ...prev, peso_bruto: e.target.value }))}
-                  placeholder="Ex: 150.5"
-                  required
-                />
               </div>
 
               <div className="space-y-2">
@@ -263,8 +287,18 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
               </div>
             </div>
 
-            {/* Caixas e Tipo */}
+            {/* Linha 2: Tipo de Caixa e Quantidade */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de Caixa</Label>
+                <TipoCaixaSelector
+                  tiposCaixa={tiposCaixa || []}
+                  value={formData.tipo_caixa_id}
+                  onValueChange={handleTipoCaixaChange}
+                  onTiposUpdated={refetchTiposCaixa}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="quantidade_caixas">Quantidade de Caixas</Label>
                 <Input
@@ -275,91 +309,58 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                   placeholder="0"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label>Tipo de Caixa</Label>
-                <Select
-                  value={formData.tipo_caixa_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, tipo_caixa_id: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiposCaixa?.map((tipo) => (
-                      <SelectItem key={tipo.id} value={tipo.id}>
-                        {tipo.nome} ({tipo.tara_kg} kg)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
-            {/* Seleção de Pallets */}
-            {pallets.length > 0 && (
-              <div className="space-y-3">
-                <Label>Pallets Utilizados</Label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                  {pallets
-                    .sort((a, b) => a.ordem - b.ordem)
-                    .map((pallet) => (
-                      <div key={pallet.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`pallet-${pallet.ordem}`}
-                          checked={palletsUtilizados.includes(pallet.ordem)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setPalletsUtilizados(prev => [...prev, pallet.ordem].sort((a, b) => a - b));
-                            } else {
-                              setPalletsUtilizados(prev => prev.filter(p => p !== pallet.ordem));
-                            }
-                          }}
-                        />
-                        <Label htmlFor={`pallet-${pallet.ordem}`} className="text-sm">
-                          P{pallet.ordem} ({pallet.peso_kg.toFixed(1)}kg)
-                        </Label>
-                      </div>
-                    ))}
-                </div>
+            {/* Linha 3: Peso Bruto e Pallets */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="peso_bruto">Peso Bruto (kg) *</Label>
+                <Input
+                  id="peso_bruto"
+                  type="number"
+                  step="0.1"
+                  value={formData.peso_bruto}
+                  onChange={(e) => setFormData(prev => ({ ...prev, peso_bruto: e.target.value }))}
+                  placeholder="Ex: 150.5"
+                  required
+                />
               </div>
-            )}
 
-            {/* Cálculo Automático */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center text-blue-800">
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Cálculo Automático
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Peso Bruto:</span>
-                    <div className="font-mono font-bold">{pesoBruto.toFixed(1)} kg</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Tara Pallets:</span>
-                    <div className="font-mono font-bold text-orange-600">-{taraPallets.toFixed(1)} kg</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Tara Caixas:</span>
-                    <div className="font-mono font-bold text-orange-600">-{taraCaixas.toFixed(1)} kg</div>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Peso Líquido:</span>
-                    <div className={`font-mono font-bold text-lg ${pesoLiquido > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {pesoLiquido.toFixed(1)} kg
+              <PalletsVisualizacao
+                pallets={pallets}
+                palletsUtilizados={palletsUtilizados}
+                onPalletsChange={setPalletsUtilizados}
+                palletsIndisponiveis={palletsIndisponiveis}
+              />
+            </div>
+
+            {/* Cálculo Automático - Compacto */}
+            <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <Calculator className="h-5 w-5 text-blue-600" />
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="text-center">
+                        <div className="text-gray-600">Bruto</div>
+                        <div className="font-mono font-bold">{pesoBruto.toFixed(1)} kg</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-gray-600">Tara Total</div>
+                        <div className="font-mono font-bold text-orange-600">-{(taraPallets + taraCaixas).toFixed(1)} kg</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-gray-600">Líquido</div>
+                        <div className={`font-mono font-bold text-lg ${pesoLiquido > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {pesoLiquido.toFixed(1)} kg
+                        </div>
+                      </div>
                     </div>
                   </div>
+                  {pesoLiquido <= 0 && (
+                    <AlertTriangle className="h-5 w-5 text-red-500" />
+                  )}
                 </div>
-                {pesoLiquido <= 0 && (
-                  <div className="flex items-center mt-3 text-red-600">
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    <span className="text-sm">Peso líquido inválido. Verifique os valores.</span>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
