@@ -107,10 +107,12 @@ const RecebimentoDashboard = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Recebimento Físico</h1>
-                <p className="text-sm text-gray-500">Centro de Distribuição - {profile?.nome}</p>
-              </div>
+              {!isMobile && (
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">Recebimento</h1>
+                  <p className="text-sm text-gray-500">Centro de Distribuição - {profile?.nome}</p>
+                </div>
+              )}
             </div>
             <Button onClick={() => navigate('/recebimento/novo')} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
@@ -119,6 +121,15 @@ const RecebimentoDashboard = () => {
           </div>
         </div>
       </header>
+
+      {/* Título mobile abaixo do header */}
+      {isMobile && (
+        <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
+          <div className="max-w-7xl mx-auto">
+            <p className="text-sm text-gray-600">Recebimento - Centro de Distribuição</p>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="dashboard" className="space-y-6">
@@ -211,24 +222,43 @@ const RecebimentoDashboard = () => {
                 {recebimentosAndamento && recebimentosAndamento.length > 0 ? (
                   <div className="space-y-4">
                     {recebimentosAndamento.map((recebimento) => (
-                      <div key={recebimento.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={recebimento.id} className={`border rounded-lg p-4 ${isMobile ? 'space-y-3' : 'flex items-center justify-between'}`}>
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2">
+                          <div className={`flex items-center ${isMobile ? 'justify-between' : 'space-x-2'}`}>
                             <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                               Em andamento
                             </Badge>
-                            {recebimento.fornecedor && (
+                            {recebimento.fornecedor && !isMobile && (
                               <span className="text-sm font-medium">{recebimento.fornecedor}</span>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 mt-1">
-                            Iniciado em {new Date(recebimento.criado_em).toLocaleString('pt-BR')}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {(recebimento.recebimentos_produtos as any[])?.[0]?.count || 0} produtos registrados
-                          </p>
+                          {isMobile && (
+                            <div className="mt-2 space-y-1">
+                              <p className="text-sm text-gray-500">
+                                Iniciado em {new Date(recebimento.criado_em).toLocaleString('pt-BR')}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {(recebimento.recebimentos_produtos as any[])?.[0]?.count || 0} produtos registrados
+                              </p>
+                            </div>
+                          )}
+                          {!isMobile && (
+                            <>
+                              <p className="text-sm text-gray-500 mt-1">
+                                Iniciado em {new Date(recebimento.criado_em).toLocaleString('pt-BR')}
+                              </p>
+                              <p className="text-xs text-gray-400">
+                                {(recebimento.recebimentos_produtos as any[])?.[0]?.count || 0} produtos registrados
+                              </p>
+                            </>
+                          )}
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className={`flex items-center space-x-2 ${isMobile ? 'justify-end mt-3' : ''}`}>
+                          <CancelRecebimentoButton
+                            recebimentoId={recebimento.id}
+                            variant="outline"
+                            onCancel={() => window.location.reload()}
+                          />
                           <Button
                             size="sm"
                             onClick={() => navigate(`/recebimento/${recebimento.id}`)}
@@ -236,11 +266,6 @@ const RecebimentoDashboard = () => {
                           >
                             Continuar
                           </Button>
-                          <CancelRecebimentoButton
-                            recebimentoId={recebimento.id}
-                            variant="outline"
-                            onCancel={() => window.location.reload()}
-                          />
                         </div>
                       </div>
                     ))}

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Plus, Calculator, AlertTriangle, Undo2 } from "lucide-react";
+import { Package, Plus, Undo2 } from "lucide-react";
 import { toast } from 'sonner';
 import TipoCaixaSelector from './TipoCaixaSelector';
 import PalletsVisualizacao from './PalletsVisualizacao';
@@ -55,10 +56,8 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const [palletsIndisponiveis, setPalletsIndisponiveis] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Usar o hook para produtos com pai que mostra todas as variações
   const { produtos: produtosDisponiveis } = useProdutosComPai();
 
-  // Buscar tipos de caixa
   const { data: tiposCaixa, refetch: refetchTiposCaixa } = useQuery({
     queryKey: ['tipos-caixa-recebimento'],
     queryFn: async () => {
@@ -73,7 +72,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     },
   });
 
-  // Buscar lojas ativas
   const { data: lojas } = useQuery({
     queryKey: ['lojas-recebimento'],
     queryFn: async () => {
@@ -88,7 +86,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     },
   });
 
-  // Carregar último tipo de caixa usado
   useEffect(() => {
     const ultimoTipoCaixa = localStorage.getItem('ultimo-tipo-caixa-recebimento');
     if (ultimoTipoCaixa) {
@@ -96,7 +93,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     }
   }, []);
 
-  // Calcular pallets indisponíveis baseado nos produtos já registrados
   useEffect(() => {
     const palletsUsados = produtos.reduce((acc: number[], produto) => {
       return acc.concat(produto.pallets_utilizados || []);
@@ -104,7 +100,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     setPalletsIndisponiveis(palletsUsados);
   }, [produtos]);
 
-  // Calcular tara automaticamente
   const calcularTara = () => {
     const taraPallets = palletsUtilizados.reduce((acc, ordem) => {
       const pallet = pallets.find(p => p.ordem === ordem);
@@ -158,17 +153,15 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
       if (error) throw error;
 
-      // Salvar último tipo de caixa usado
       if (formData.tipo_caixa_id) {
         localStorage.setItem('ultimo-tipo-caixa-recebimento', formData.tipo_caixa_id);
       }
 
-      // Resetar formulário mas manter tipo de caixa
       setFormData(prev => ({
         produto_id: '',
         peso_bruto: '',
         quantidade_caixas: '',
-        tipo_caixa_id: prev.tipo_caixa_id, // Mantém o último tipo selecionado
+        tipo_caixa_id: prev.tipo_caixa_id,
         loja_destino: prev.loja_destino
       }));
       setPalletsUtilizados([]);
@@ -211,7 +204,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
   const handleTipoCaixaChange = (value: string) => {
     if (value === 'nova-caixa') {
-      // O modal será aberto pelo TipoCaixaSelector
       return;
     }
     setFormData(prev => ({ ...prev, tipo_caixa_id: value }));
@@ -219,7 +211,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Formulário para registrar produto */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -245,7 +236,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         </CardHeader>
         <CardContent>
           <form onSubmit={adicionarProduto} className="space-y-6">
-            {/* Linha 1: Produto e Loja Destino */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Produto *</Label>
@@ -286,7 +276,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
               </div>
             </div>
 
-            {/* Linha 2: Tipo de Caixa e Quantidade */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo de Caixa</Label>
@@ -310,7 +299,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
               </div>
             </div>
 
-            {/* Linha 3: Peso Bruto e Pallets */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -326,7 +314,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                   />
                 </div>
 
-                {/* Card de Cálculo Automático - Sem ícone da calculadora */}
                 <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between">
@@ -348,14 +335,10 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                           </div>
                         </div>
                       </div>
-                      {pesoLiquido <= 0 && (
-                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                      )}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Botão Registrar Produto - Logo abaixo do card de cálculo */}
                 <Button type="submit" disabled={loading || pesoLiquido <= 0} className="w-full bg-blue-600 hover:bg-blue-700">
                   {loading ? 'Registrando...' : 'Registrar Produto'}
                   <Plus className="h-4 w-4 ml-2" />
@@ -373,7 +356,6 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         </CardContent>
       </Card>
 
-      {/* Lista de produtos registrados */}
       <Card>
         <CardHeader>
           <CardTitle>Produtos Registrados</CardTitle>

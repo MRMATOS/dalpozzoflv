@@ -9,24 +9,21 @@ import ProdutosTab from '@/components/configuracoes/ProdutosTab';
 import UsuariosTab from '@/components/configuracoes/UsuariosTab';
 import FornecedoresTab from '@/components/configuracoes/FornecedoresTab';
 import LojasTab from '@/components/configuracoes/LojasTab';
+import TiposCaixasTab from '@/components/configuracoes/TiposCaixasTab';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
 
-  // Definir abas baseadas no perfil do usuário
   const isMaster = hasRole('master');
   const isComprador = hasRole('comprador');
 
-  // Para compradores: apenas produtos e fornecedores
-  // Para master: todas as abas
   const availableTabs = isMaster 
-    ? ['produtos', 'usuarios', 'fornecedores', 'lojas']
-    : ['produtos', 'fornecedores'];
+    ? ['produtos', 'usuarios', 'fornecedores', 'lojas', 'tipos-caixas']
+    : ['produtos', 'fornecedores', 'tipos-caixas'];
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Simplificado */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
@@ -47,10 +44,9 @@ const Configuracoes = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="produtos" className="w-full">
-          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-4' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-5' : 'grid-cols-3'}`}>
             {availableTabs.includes('produtos') && (
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
             )}
@@ -62,6 +58,9 @@ const Configuracoes = () => {
             )}
             {availableTabs.includes('lojas') && (
               <TabsTrigger value="lojas">Lojas</TabsTrigger>
+            )}
+            {availableTabs.includes('tipos-caixas') && (
+              <TabsTrigger value="tipos-caixas">Tipos de Caixas</TabsTrigger>
             )}
           </TabsList>
           
@@ -86,6 +85,12 @@ const Configuracoes = () => {
           {availableTabs.includes('lojas') && (
             <TabsContent value="lojas" className="mt-6">
               <LojasTab />
+            </TabsContent>
+          )}
+          
+          {availableTabs.includes('tipos-caixas') && (
+            <TabsContent value="tipos-caixas" className="mt-6">
+              <TiposCaixasTab />
             </TabsContent>
           )}
         </Tabs>

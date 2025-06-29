@@ -19,12 +19,14 @@ import PesagemPallets from '@/components/recebimento/PesagemPallets';
 import RecebimentoProduto from '@/components/recebimento/RecebimentoProduto';
 import { toast } from 'sonner';
 import CancelRecebimentoButton from '@/components/recebimento/CancelRecebimentoButton';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const RecebimentoAtivo = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
   // Buscar dados do recebimento
   const { data: recebimento, refetch } = useQuery({
@@ -119,6 +121,7 @@ const RecebimentoAtivo = () => {
               </Button>
             </div>
             <div className="flex items-center space-x-2">
+              <CancelRecebimentoButton recebimentoId={id!} />
               {podeSerFinalizado && (
                 <Button
                   onClick={finalizarRecebimento}
@@ -126,16 +129,14 @@ const RecebimentoAtivo = () => {
                   className="bg-green-600 hover:bg-green-700"
                 >
                   {loading ? 'Finalizando...' : 'Finalizar'}
-                  <CheckCircle className="h-4 w-4 ml-2" />
                 </Button>
               )}
-              <CancelRecebimentoButton recebimentoId={id!} />
             </div>
           </div>
         </div>
       </header>
 
-      {/* Título e status movidos para baixo do header */}
+      {/* Título e status abaixo do header */}
       <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center space-x-2">

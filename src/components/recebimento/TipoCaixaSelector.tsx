@@ -36,7 +36,6 @@ const TipoCaixaSelector: React.FC<TipoCaixaSelectorProps> = ({
 
       if (error) throw error;
 
-      // Se o tipo excluído estava selecionado, limpar seleção
       if (value === tipoId) {
         onValueChange('');
       }
@@ -65,9 +64,22 @@ const TipoCaixaSelector: React.FC<TipoCaixaSelectorProps> = ({
     setTipoParaEditar(null);
   };
 
+  const handleNovaClick = () => {
+    setTipoParaEditar(null);
+    setModalAberto(true);
+  };
+
+  const handleValueChange = (newValue: string) => {
+    if (newValue === 'nova-caixa') {
+      handleNovaClick();
+      return;
+    }
+    onValueChange(newValue);
+  };
+
   return (
     <>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={value} onValueChange={handleValueChange}>
         <SelectTrigger>
           <SelectValue placeholder="Selecione o tipo" />
         </SelectTrigger>

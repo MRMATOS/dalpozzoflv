@@ -94,7 +94,8 @@ const Dashboard = () => {
     }
   ].filter(Boolean);
 
-  return <div className="min-h-screen bg-gray-50">
+  return (
+    <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -112,9 +113,11 @@ const Dashboard = () => {
                   <Badge variant="outline" className="text-xs">
                     {profile?.loja}
                   </Badge>
-                  {hasRole('master') && <Badge variant="default" className="text-xs bg-red-600">
+                  {hasRole('master') && (
+                    <Badge variant="default" className="text-xs bg-red-600">
                       Master
-                    </Badge>}
+                    </Badge>
+                  )}
                 </div>
               </div>
               
@@ -135,8 +138,9 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {cards.map((card: any, index) => {
-          const IconComponent = card.icon;
-          return <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+            const IconComponent = card.icon;
+            return (
+              <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardHeader className="pb-3">
                   <div className="flex items-center space-x-3">
                     <div className={`p-2 rounded-lg ${card.color}`}>
@@ -155,34 +159,38 @@ const Dashboard = () => {
                     Acessar
                   </Button>
                 </CardContent>
-              </Card>;
-        })}
+              </Card>
+            );
+          })}
         </div>
 
         {(profile?.tipo === 'cd' || profile?.tipo === 'master') && (
-          <Card className="cursor-pointer hover:shadow-md transition-shadow mt-6" onClick={() => navigate('/recebimento')}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-lg bg-purple-500">
-                  <Package className="h-6 w-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/recebimento')}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-purple-500">
+                    <Package className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg">Recebimento</CardTitle>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-lg text-gray-900">Recebimento Físico</CardTitle>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="mb-4 text-sm">
-                Registrar recebimento de mercadorias no CD
-              </CardDescription>
-              <Button className="w-full bg-purple-600 hover:bg-purple-700" variant="default">
-                Acessar
-              </Button>
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                <CardDescription className="mb-4 text-sm">
+                  Registrar recebimento de mercadorias no CD
+                </CardDescription>
+                <Button className="w-full bg-blue-600 hover:bg-blue-700" variant="default">
+                  Acessar
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
-        {cards.length === 0 && <Card className="text-center py-8">
+        {cards.length === 0 && (
+          <Card className="text-center py-8">
             <CardContent>
               <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-500">
@@ -192,9 +200,11 @@ const Dashboard = () => {
                 Entre em contato com o administrador para verificar suas permissões.
               </p>
             </CardContent>
-          </Card>}
+          </Card>
+        )}
       </main>
-    </div>;
+    </div>
+  );
 };
 
 export default Dashboard;
