@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -226,7 +225,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center">
               <Package className="h-5 w-5 mr-2" />
-              Registrar Produto Recebido
+              Registrar Produto
             </div>
             {produtos.length > 0 && (
               <Button
@@ -327,13 +326,12 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                   />
                 </div>
 
-                {/* Card de Cálculo Automático - Abaixo do peso bruto */}
+                {/* Card de Cálculo Automático - Sem ícone da calculadora */}
                 <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
                   <CardContent className="pt-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <Calculator className="h-5 w-5 text-blue-600" />
-                        <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="grid grid-cols-3 gap-4 text-sm w-full">
                           <div className="text-center">
                             <div className="text-gray-600">Bruto</div>
                             <div className="font-mono font-bold">{pesoBruto.toFixed(1)} kg</div>
@@ -358,7 +356,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 </Card>
 
                 {/* Botão Registrar Produto - Logo abaixo do card de cálculo */}
-                <Button type="submit" disabled={loading || pesoLiquido <= 0} className="w-full">
+                <Button type="submit" disabled={loading || pesoLiquido <= 0} className="w-full bg-blue-600 hover:bg-blue-700">
                   {loading ? 'Registrando...' : 'Registrar Produto'}
                   <Plus className="h-4 w-4 ml-2" />
                 </Button>

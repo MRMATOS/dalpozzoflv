@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import { useIsMobile } from '@/hooks/use-mobile';
+import CancelRecebimentoButton from '@/components/recebimento/CancelRecebimentoButton';
 
 const RecebimentoDashboard = () => {
   const navigate = useNavigate();
@@ -112,7 +112,7 @@ const RecebimentoDashboard = () => {
                 <p className="text-sm text-gray-500">Centro de Distribuição - {profile?.nome}</p>
               </div>
             </div>
-            <Button onClick={() => navigate('/recebimento/novo')}>
+            <Button onClick={() => navigate('/recebimento/novo')} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Novo Recebimento
             </Button>
@@ -189,7 +189,7 @@ const RecebimentoDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{tiposCaixas?.length || 0}</div>
-                  <p className="text-xs text-muted-foreforeground">
+                  <p className="text-xs text-muted-foreground">
                     Cadastrados no sistema
                   </p>
                 </CardContent>
@@ -228,12 +228,20 @@ const RecebimentoDashboard = () => {
                             {(recebimento.recebimentos_produtos as any[])?.[0]?.count || 0} produtos registrados
                           </p>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => navigate(`/recebimento/${recebimento.id}`)}
-                        >
-                          Continuar
-                        </Button>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            size="sm"
+                            onClick={() => navigate(`/recebimento/${recebimento.id}`)}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            Continuar
+                          </Button>
+                          <CancelRecebimentoButton
+                            recebimentoId={recebimento.id}
+                            variant="outline"
+                            onCancel={() => window.location.reload()}
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -256,29 +264,29 @@ const RecebimentoDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button 
                     variant="outline" 
-                    className="h-auto p-4 flex flex-col items-center space-y-2"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-blue-50 border-blue-200"
                     onClick={() => navigate('/recebimento/novo')}
                   >
-                    <Plus className="h-6 w-6" />
-                    <span>Novo Recebimento</span>
+                    <Plus className="h-6 w-6 text-blue-600" />
+                    <span className="text-blue-600">Novo Recebimento</span>
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="h-auto p-4 flex flex-col items-center space-y-2"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-gray-50"
                     onClick={() => navigate('/recebimento/historico')}
                   >
-                    <History className="h-6 w-6" />
-                    <span>Histórico</span>
+                    <History className="h-6 w-6 text-gray-600" />
+                    <span className="text-gray-600">Histórico</span>
                   </Button>
                   
                   <Button 
                     variant="outline" 
-                    className="h-auto p-4 flex flex-col items-center space-y-2"
+                    className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-green-50 border-green-200"
                     onClick={() => navigate('/estoque')}
                   >
-                    <Package className="h-6 w-6" />
-                    <span>Ver Estoque</span>
+                    <Package className="h-6 w-6 text-green-600" />
+                    <span className="text-green-600">Ver Estoque</span>
                   </Button>
                 </div>
               </CardContent>

@@ -151,7 +151,7 @@ const Dashboard = () => {
                   <CardDescription className="mb-4 text-sm">
                     {card.description}
                   </CardDescription>
-                  <Button onClick={card.onClick} className="w-full" variant="outline">
+                  <Button onClick={card.onClick} className="w-full bg-blue-600 hover:bg-blue-700" variant="default">
                     Acessar
                   </Button>
                 </CardContent>
@@ -160,20 +160,24 @@ const Dashboard = () => {
         </div>
 
         {(profile?.tipo === 'cd' || profile?.tipo === 'master') && (
-          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/recebimento')}>
-            <CardHeader>
-              <CardTitle className="flex items-center text-purple-700">
-                <Package className="mr-2 h-5 w-5" />
-                Recebimento Físico
-              </CardTitle>
-              <CardDescription>
-                Registrar recebimento de mercadorias no CD
-              </CardDescription>
+          <Card className="cursor-pointer hover:shadow-md transition-shadow mt-6" onClick={() => navigate('/recebimento')}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-lg bg-purple-500">
+                  <Package className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-gray-900">Recebimento Físico</CardTitle>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-600">
-                Pesagem de pallets, registro de produtos e atualização automática do estoque
-              </p>
+              <CardDescription className="mb-4 text-sm">
+                Registrar recebimento de mercadorias no CD
+              </CardDescription>
+              <Button className="w-full bg-purple-600 hover:bg-purple-700" variant="default">
+                Acessar
+              </Button>
             </CardContent>
           </Card>
         )}

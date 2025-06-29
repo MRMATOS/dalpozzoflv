@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
 import PesagemPallets from '@/components/recebimento/PesagemPallets';
 import RecebimentoProduto from '@/components/recebimento/RecebimentoProduto';
 import { toast } from 'sonner';
+import CancelRecebimentoButton from '@/components/recebimento/CancelRecebimentoButton';
 
 const RecebimentoAtivo = () => {
   const { id } = useParams<{ id: string }>();
@@ -117,31 +117,38 @@ const RecebimentoAtivo = () => {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Recebimento Ativo</h1>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                    {recebimento.status}
-                  </Badge>
-                  {recebimento.fornecedor && (
-                    <span className="text-sm text-gray-500">{recebimento.fornecedor}</span>
-                  )}
-                </div>
-              </div>
             </div>
-            {podeSerFinalizado && (
-              <Button
-                onClick={finalizarRecebimento}
-                disabled={loading}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                {loading ? 'Finalizando...' : 'Finalizar Recebimento'}
-                <CheckCircle className="h-4 w-4 ml-2" />
-              </Button>
-            )}
+            <div className="flex items-center space-x-2">
+              {podeSerFinalizado && (
+                <Button
+                  onClick={finalizarRecebimento}
+                  disabled={loading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {loading ? 'Finalizando...' : 'Finalizar'}
+                  <CheckCircle className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+              <CancelRecebimentoButton recebimentoId={id!} />
+            </div>
           </div>
         </div>
       </header>
+
+      {/* Título e status movidos para baixo do header */}
+      <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-sm font-medium text-gray-600">Recebimento Ativo</h1>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+              {recebimento.status}
+            </Badge>
+            {recebimento.fornecedor && (
+              <span className="text-sm text-gray-500">{recebimento.fornecedor}</span>
+            )}
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="pallets" className="space-y-6">

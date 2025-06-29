@@ -75,23 +75,23 @@ const TipoCaixaSelector: React.FC<TipoCaixaSelectorProps> = ({
           {tiposCaixa?.map((tipo) => (
             <SelectItem key={tipo.id} value={tipo.id}>
               <div className="flex items-center justify-between w-full">
-                <span>{tipo.nome} ({tipo.tara_kg} kg)</span>
+                <span className="flex-1">{tipo.nome} ({tipo.tara_kg} kg)</span>
                 <div className="flex items-center space-x-1 ml-2">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0"
+                    className="h-6 w-6 p-0 hover:bg-blue-100"
                     onClick={(e) => editarTipo(tipo, e)}
                   >
-                    <Edit className="h-3 w-3" />
+                    <Edit className="h-3 w-3 text-blue-600" />
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 text-red-600"
+                    className="h-6 w-6 p-0 hover:bg-red-100"
                     onClick={(e) => excluirTipo(tipo.id, e)}
                   >
-                    <Trash2 className="h-3 w-3" />
+                    <Trash2 className="h-3 w-3 text-red-600" />
                   </Button>
                 </div>
               </div>
