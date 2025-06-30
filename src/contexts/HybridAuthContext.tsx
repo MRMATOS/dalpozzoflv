@@ -65,7 +65,7 @@ export const HybridAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           nome: profile.nome,
           loja: profile.loja,
           codigo_acesso: profile.codigo_acesso,
-          google_email: profile.google_email,
+          google_email: authUser.email, // Use email from auth user
           tipo: roleData?.role || 'estoque',
           ativo: profile.ativo,
           ultimo_login: profile.ultimo_login
@@ -93,6 +93,7 @@ export const HybridAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           tipo: usuarioAntigo.tipo,
           ativo: usuarioAntigo.ativo,
           ultimo_login: usuarioAntigo.ultimo_login
+          // Note: no google_email for old system users
         };
 
         console.log('Perfil carregado (sistema antigo):', userProfile.nome);
