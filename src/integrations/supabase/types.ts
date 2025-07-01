@@ -1285,6 +1285,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_loja_new: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_user_permissions: {
         Args: { _user_id: string }
         Returns: {
@@ -1305,6 +1309,10 @@ export type Database = {
           ultimo_login: string | null
         }
       }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           _user_id: string
@@ -1321,6 +1329,10 @@ export type Database = {
         Returns: boolean
       }
       is_master_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_user_master: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

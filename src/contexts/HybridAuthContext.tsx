@@ -45,7 +45,7 @@ export const HybridAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       console.log('Carregando perfil para usuário:', authUser.id);
       
-      // Tentar carregar do novo sistema (profiles + user_roles)
+      // Primeiro tentar carregar do novo sistema (profiles + user_roles)
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -65,11 +65,17 @@ export const HybridAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           nome: profile.nome,
           loja: profile.loja,
           codigo_acesso: profile.codigo_acesso,
-          google_email: authUser.email, // Use email from auth user
+          google_email: authUser.email,
           tipo: roleData?.role || 'estoque',
           ativo: profile.ativo,
           ultimo_login: profile.ultimo_login
         };
+
+        // Atualizar último login
+        await supabase
+          .from('profiles')
+          .update({ ultimo_login: new Date().toISOString() })
+          .eq('id', profile.id);
 
         console.log('Perfil carregado (novo sistema):', userProfile.nome);
         setUser(userProfile);
@@ -93,8 +99,13 @@ export const HybridAuthProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           tipo: usuarioAntigo.tipo,
           ativo: usuarioAntigo.ativo,
           ultimo_login: usuarioAntigo.ultimo_login
-          // Note: no google_email for old system users
         };
+
+        // Atualizar último login no sistema antigo
+        await supabase
+          .from('usuarios')
+          .update({ ultimo_login: new Date().toISOString() })
+          .eq('id', usuarioAntigo.id);
 
         console.log('Perfil carregado (sistema antigo):', userProfile.nome);
         setUser(userProfile);
