@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSecureAuth } from '@/hooks/useSecureAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useSecureOperations } from '@/hooks/useSecureOperations';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -19,7 +19,8 @@ const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY = 2000; // 2 segundos
 
 export const useCotacaoPersistence = () => {
-  const { user, isAuthenticated } = useSecureAuth();
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
   const { secureInsert, secureUpdate } = useSecureOperations();
   const { 
     syncStatus, 

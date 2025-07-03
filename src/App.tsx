@@ -1,12 +1,10 @@
-
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { HybridAuthProvider } from "@/contexts/HybridAuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
-import HybridAuth from "./pages/HybridAuth";
 import Auth from "./pages/Auth";
 import Estoque from "./pages/Estoque";
 import Requisicoes from "./pages/Requisicoes";
@@ -19,7 +17,7 @@ import GestaoCd from "./pages/GestaoCd";
 import TransferenciasCD from "./pages/TransferenciasCD";
 import Transferencias from "./pages/Transferencias";
 import AdminPermissions from "./pages/AdminPermissions";
-import HybridProtectedRoute from "./components/HybridProtectedRoute";
+import ProtectedRoute from "./components/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 import RecebimentoDashboard from "@/pages/RecebimentoDashboard";
 import NovoRecebimento from "@/pages/NovoRecebimento";
@@ -30,139 +28,138 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <HybridAuthProvider>
+      <AuthProvider>
         <TooltipProvider>
           <Toaster />
           <Router>
             <Routes>
               <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<HybridAuth />} />
-              <Route path="/auth-old" element={<Auth />} />
+              <Route path="/auth" element={<Auth />} />
               <Route 
                 path="/dashboard" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <Dashboard />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/estoque" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <Estoque />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/requisicoes" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <Requisicoes />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/cotacao" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <Cotacao />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/resumo-pedido" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <ResumoPedido />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/configuracoes" 
                 element={
-                  <HybridProtectedRoute requiredRole="master">
+                  <ProtectedRoute requiredRole="master">
                     <Configuracoes />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/historico-requisicoes" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <HistoricoRequisicoes />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/historico-pedidos" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <HistoricoPedidos />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/gestao-cd" 
                 element={
-                  <HybridProtectedRoute allowedTypes={['master', 'cd']}>
+                  <ProtectedRoute allowedTypes={['master', 'cd']}>
                     <GestaoCd />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/transferencias-cd" 
                 element={
-                  <HybridProtectedRoute allowedTypes={['master', 'cd']}>
+                  <ProtectedRoute allowedTypes={['master', 'cd']}>
                     <TransferenciasCD />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/transferencias/:lojaDestino" 
                 element={
-                  <HybridProtectedRoute allowedTypes={['master', 'cd']}>
+                  <ProtectedRoute allowedTypes={['master', 'cd']}>
                     <Transferencias />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/admin/permissions" 
                 element={
-                  <HybridProtectedRoute requiredRole="master">
+                  <ProtectedRoute requiredRole="master">
                     <AdminPermissions />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/recebimento" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <RecebimentoDashboard />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/recebimento/novo" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <NovoRecebimento />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route 
                 path="/recebimento/:id" 
                 element={
-                  <HybridProtectedRoute>
+                  <ProtectedRoute>
                     <RecebimentoAtivo />
-                  </HybridProtectedRoute>
+                  </ProtectedRoute>
                 } 
               />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>
         </TooltipProvider>
-      </HybridAuthProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

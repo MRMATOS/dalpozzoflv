@@ -1,13 +1,13 @@
 
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useHybridAuth } from "@/contexts/HybridAuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useHybridAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {
@@ -70,8 +70,8 @@ const Index = () => {
               <div className="space-y-2">
                 <h3 className="font-semibold text-gray-800">Acesso:</h3>
                 <ul className="space-y-1">
-                  <li>• Login com Google (Master)</li>
-                  <li>• Código de acesso (Funcionários)</li>
+                  <li>• Login unificado com Google</li>
+                  <li>• Acesso por convite via email</li>
                   <li>• Interface responsiva</li>
                   <li>• Segurança avançada</li>
                 </ul>

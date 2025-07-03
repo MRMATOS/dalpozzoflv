@@ -1,19 +1,16 @@
-
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Chrome } from "lucide-react";
+import { useState } from "react";
 
 const Auth = () => {
-  const [codigoAcesso, setCodigoAcesso] = useState('');
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
-  const { user, signIn } = useAuth();
+  const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already logged in
@@ -22,28 +19,20 @@ const Auth = () => {
     return null;
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
     setError("");
     setLoading(true);
 
-    if (!codigoAcesso.trim()) {
-      setError("Código de acesso é obrigatório");
-      setLoading(false);
-      return;
-    }
-
     try {
-      const result = await signIn(codigoAcesso.trim());
+      const result = await signInWithGoogle();
       
-      if (result.success) {
-        navigate("/dashboard");
-      } else {
-        setError(result.error || "Erro ao fazer login");
+      if (!result.success && result.error) {
+        setError(result.error);
       }
+      // Se sucesso, o redirecionamento será automático via callback
     } catch (error: any) {
-      console.error('Erro no login:', error);
-      setError("Erro interno. Tente novamente.");
+      console.error('Erro no login Google:', error);
+      setError("Erro ao conectar com Google. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -64,41 +53,32 @@ const Auth = () => {
           <CardHeader>
             <CardTitle className="text-center">Acesso ao Sistema</CardTitle>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="codigoAcesso" className="text-sm font-medium text-gray-700">
-                  Código de Acesso
-                </label>
-                <Input
-                  id="codigoAcesso"
-                  type="text"
-                  value={codigoAcesso}
-                  onChange={(e) => setCodigoAcesso(e.target.value)}
-                  placeholder="Digite seu código de acesso"
-                  autoComplete="username"
-                  autoFocus
-                />
-              </div>
-
+          <CardContent className="space-y-6">
+            <div className="space-y-3">
               <Button
-                type="submit"
+                type="button"
+                onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full bg-green-600 hover:bg-green-700"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center space-x-2"
               >
-                {loading ? "Entrando..." : "Entrar"}
+                <Chrome className="w-4 h-4" />
+                <span>{loading ? "Conectando..." : "Entrar com Google"}</span>
               </Button>
-            </form>
+              <p className="text-xs text-gray-500 text-center">
+                Sistema unificado com Google Auth
+              </p>
+            </div>
 
             {error && (
-              <Alert variant="destructive" className="mt-4">
+              <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
-            <div className="mt-4 text-xs text-gray-500">
-              <p>Use o código de acesso cadastrado na tabela 'usuarios'</p>
+            <div className="text-xs text-gray-500 space-y-1">
+              <p><strong>Para funcionários:</strong> Entre em contato com o TI para receber o convite por email</p>
+              <p><strong>Master:</strong> Use o email dalpozzo.ti@gmail.com</p>
             </div>
           </CardContent>
         </Card>

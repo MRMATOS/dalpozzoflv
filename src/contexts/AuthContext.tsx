@@ -1,13 +1,12 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { validateInput } from '@/utils/inputValidation';
+import { User, Session } from '@supabase/supabase-js';
 
 interface UserProfile {
   id: string;
   nome: string;
   loja: string;
-  codigo_acesso: string;
+  google_email?: string;
   tipo: string;
   ativo: boolean;
   ultimo_login?: string;
@@ -16,11 +15,11 @@ interface UserProfile {
 interface AuthContextType {
   user: UserProfile | null;
   profile: UserProfile | null;
-  session: any;
-  signOut: () => Promise<void>;
+  session: Session | null;
   loading: boolean;
   hasRole: (role: string) => boolean;
-  signIn: (codigoAcesso: string) => Promise<{ success: boolean; error?: string }>;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,117 +34,111 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Carregar usuário do localStorage na inicialização
-  useEffect(() => {
-    const initializeAuth = async () => {
-      console.log('=== INICIALIZANDO AUTENTICAÇÃO ORIGINAL ===');
-      
-      const storedUser = localStorage.getItem('flv_user');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          console.log('Usuário encontrado no localStorage:', userData.nome);
-          
-          // Validar dados básicos
-          if (!userData.id || !userData.nome || !userData.loja) {
-            console.log('Dados inválidos, removendo do localStorage');
-            localStorage.removeItem('flv_user');
-            setLoading(false);
-            return;
-          }
-          
-          // Verificar se ainda está ativo no banco
-          const { data: usuarioAtivo, error } = await supabase
-            .from('usuarios')
-            .select('*')
-            .eq('id', userData.id)
-            .eq('ativo', true)
-            .maybeSingle();
-
-          if (error || !usuarioAtivo) {
-            console.log('Usuário não encontrado ou inativo, removendo sessão');
-            localStorage.removeItem('flv_user');
-            setLoading(false);
-            return;
-          }
-
-          // Dados atualizados do banco
-          const userDataAtualizado = {
-            id: usuarioAtivo.id,
-            nome: validateInput.text(usuarioAtivo.nome),
-            loja: validateInput.text(usuarioAtivo.loja),
-            codigo_acesso: usuarioAtivo.codigo_acesso,
-            tipo: validateInput.text(usuarioAtivo.tipo),
-            ativo: usuarioAtivo.ativo,
-            ultimo_login: usuarioAtivo.ultimo_login
-          };
-
-          setUser(userDataAtualizado);
-          setProfile(userDataAtualizado);
-          console.log('Usuário autenticado:', userDataAtualizado.nome);
-        } catch (error) {
-          console.error('Erro ao inicializar autenticação:', error);
-          localStorage.removeItem('flv_user');
-        }
-      }
-      setLoading(false);
-    };
-
-    initializeAuth();
-  }, []);
-
-  const signIn = async (codigoAcesso: string): Promise<{ success: boolean; error?: string }> => {
+  // Função para carregar perfil do usuário autenticado
+  const loadUserProfile = async (authUser: User) => {
     try {
-      console.log('=== PROCESSO DE LOGIN ORIGINAL ===');
+      console.log('Carregando perfil para usuário:', authUser.id);
       
-      // Validar entrada
-      const validatedCode = validateInput.codigoAcesso(codigoAcesso);
-      console.log('Código validado, buscando usuário...');
-      
-      // Buscar usuário na tabela usuarios
-      const { data: usuario, error: usuarioError } = await supabase
-        .from('usuarios')
+      // Carregar do novo sistema (profiles + user_roles)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('*')
-        .eq('codigo_acesso', validatedCode)
-        .eq('ativo', true)
+        .eq('id', authUser.id)
         .maybeSingle();
 
-      if (usuarioError || !usuario) {
-        console.error('Erro ao buscar usuário:', usuarioError);
-        return { success: false, error: "Código de acesso inválido ou usuário inativo" };
+      if (!profileError && profile) {
+        // Carregar role do usuário
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
+
+        const userProfile: UserProfile = {
+          id: profile.id,
+          nome: profile.nome,
+          loja: profile.loja,
+          google_email: authUser.email,
+          tipo: roleData?.role || 'estoque',
+          ativo: profile.ativo,
+          ultimo_login: profile.ultimo_login
+        };
+
+        // Atualizar último login
+        await supabase
+          .from('profiles')
+          .update({ ultimo_login: new Date().toISOString() })
+          .eq('id', profile.id);
+
+        console.log('Perfil carregado:', userProfile.nome);
+        setUser(userProfile);
+        return;
       }
 
-      console.log('Usuário encontrado:', usuario.nome);
+      console.error('Nenhum perfil encontrado para o usuário');
+      setUser(null);
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+      setUser(null);
+    }
+  };
 
-      // Preparar dados do usuário
-      const userData = {
-        id: validateInput.uuid(usuario.id),
-        nome: validateInput.text(usuario.nome),
-        loja: validateInput.text(usuario.loja),
-        codigo_acesso: usuario.codigo_acesso,
-        tipo: validateInput.text(usuario.tipo),
-        ativo: usuario.ativo,
-        ultimo_login: new Date().toISOString()
-      };
+  // Inicializar autenticação
+  useEffect(() => {
+    console.log('=== INICIALIZANDO AUTENTICAÇÃO GOOGLE ===');
 
-      // Atualizar último login na base
-      await supabase
-        .from('usuarios')
-        .update({ ultimo_login: userData.ultimo_login })
-        .eq('id', userData.id);
+    // Configurar listener de mudanças de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
+        
+        setSession(session);
+        
+        if (session?.user) {
+          await loadUserProfile(session.user);
+        } else {
+          setUser(null);
+        }
+        
+        setLoading(false);
+      }
+    );
 
-      // Definir estados
-      setUser(userData);
-      setProfile(userData);
-      localStorage.setItem('flv_user', JSON.stringify(userData));
+    // Verificar sessão existente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setSession(session);
+        loadUserProfile(session.user);
+      } else {
+        setLoading(false);
+      }
+    });
 
-      console.log('Login realizado com sucesso:', userData.nome);
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('=== LOGIN COM GOOGLE ===');
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+
+      if (error) {
+        console.error('Erro no login Google:', error);
+        return { success: false, error: error.message };
+      }
+
       return { success: true };
     } catch (error: any) {
-      console.error('Erro no login:', error);
+      console.error('Erro no login Google:', error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : "Erro interno. Tente novamente." 
@@ -158,10 +151,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('=== FAZENDO LOGOUT ===');
       
-      // Limpar dados locais
-      localStorage.removeItem('flv_user');
+      // Logout do Supabase Auth
+      await supabase.auth.signOut();
+      
       setUser(null);
-      setProfile(null);
+      setSession(null);
       
       console.log('Logout realizado com sucesso');
     } catch (error) {
@@ -172,27 +166,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const hasRole = (role: string): boolean => {
-    if (!profile?.tipo) return false;
+    if (!user?.tipo) return false;
     
     // Usuários master têm acesso a todos os roles
-    if (profile.tipo === 'master') {
+    if (user.tipo === 'master') {
       console.log('Usuário master tem acesso total ao role:', role);
       return true;
     }
     
     // Para outros usuários, verificar igualdade exata
-    return profile.tipo === role;
+    return user.tipo === role;
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      profile,
-      session: user ? { user } : null,
-      signOut,
+      profile: user,
+      session,
       loading,
       hasRole,
-      signIn
+      signInWithGoogle,
+      signOut
     }}>
       {children}
     </AuthContext.Provider>
