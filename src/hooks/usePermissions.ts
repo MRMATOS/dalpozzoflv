@@ -28,7 +28,13 @@ export const usePermissions = () => {
 
   useEffect(() => {
     const loadPermissions = async () => {
+      console.log('🔍 [PERMISSIONS DEBUG] Iniciando carregamento de permissões...');
+      console.log('🔍 [PERMISSIONS DEBUG] User ID:', user?.id);
+      console.log('🔍 [PERMISSIONS DEBUG] User tipo:', user?.tipo);
+      console.log('🔍 [PERMISSIONS DEBUG] User nome:', user?.nome);
+      
       if (!user?.id) {
+        console.log('🔍 [PERMISSIONS DEBUG] Sem user ID, limpando permissões');
         setPermissions([]);
         setLoading(false);
         return;
@@ -36,6 +42,7 @@ export const usePermissions = () => {
 
       // Master tem todas as permissões
       if (hasRole('master') || user.tipo === 'master') {
+        console.log('🔍 [PERMISSIONS DEBUG] Usuário é MASTER, aplicando todas as permissões');
         const allPermissions: UserPermission[] = [
           { resource: 'dashboard', action: 'view', enabled: true },
           { resource: 'estoque', action: 'view', enabled: true },
@@ -59,38 +66,54 @@ export const usePermissions = () => {
       }
 
       try {
+        console.log('🔍 [PERMISSIONS DEBUG] Buscando permissões específicas na tabela user_permissions...');
+        
         // Buscar permissões específicas do usuário na tabela user_permissions
         const { data: userPermissions, error: permError } = await supabase
           .from('user_permissions')
           .select('resource, action, enabled')
           .eq('user_id', user.id);
 
+        console.log('🔍 [PERMISSIONS DEBUG] Resultado da query user_permissions:', {
+          data: userPermissions,
+          error: permError,
+          count: userPermissions?.length || 0
+        });
+
         if (permError) {
-          console.error('Erro ao carregar permissões:', permError);
+          console.error('❌ [PERMISSIONS DEBUG] Erro ao carregar permissões:', permError);
         }
 
         // Se há permissões específicas, usar essas + permissões básicas
         if (userPermissions && userPermissions.length > 0) {
+          console.log('🔍 [PERMISSIONS DEBUG] Encontradas permissões específicas, processando...');
+          
           const specificPermissions: UserPermission[] = userPermissions.map(p => ({
             resource: p.resource as SystemResource,
             action: p.action as PermissionAction,
             enabled: p.enabled
           }));
 
+          console.log('🔍 [PERMISSIONS DEBUG] Permissões específicas processadas:', specificPermissions);
+
           // Sempre incluir dashboard para todos
           const hasViewDashboard = specificPermissions.some(p => p.resource === 'dashboard' && p.action === 'view');
           if (!hasViewDashboard) {
+            console.log('🔍 [PERMISSIONS DEBUG] Adicionando permissão de dashboard automaticamente');
             specificPermissions.push({ resource: 'dashboard', action: 'view', enabled: true });
           }
 
+          console.log('🔍 [PERMISSIONS DEBUG] Permissões finais aplicadas:', specificPermissions);
           setPermissions(specificPermissions);
           setLoading(false);
           return;
         }
       } catch (error) {
-        console.error('Erro ao buscar permissões específicas:', error);
+        console.error('❌ [PERMISSIONS DEBUG] Erro ao buscar permissões específicas:', error);
       }
 
+      console.log('🔍 [PERMISSIONS DEBUG] Nenhuma permissão específica encontrada, usando permissões padrão baseadas no tipo');
+      
       // Fallback: usar permissões padrão baseadas no tipo de usuário
       const defaultPermissions: UserPermission[] = [];
       
@@ -102,6 +125,7 @@ export const usePermissions = () => {
       // Permissões específicas por tipo
       switch (user.tipo) {
         case 'comprador':
+          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para COMPRADOR');
           defaultPermissions.push(
             { resource: 'estoque', action: 'view', enabled: true },
             { resource: 'requisicoes', action: 'view', enabled: true },
@@ -114,6 +138,7 @@ export const usePermissions = () => {
           break;
         
         case 'estoque':
+          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para ESTOQUE');
           defaultPermissions.push(
             { resource: 'estoque', action: 'view', enabled: true },
             { resource: 'estoque', action: 'edit', enabled: true },
@@ -123,14 +148,19 @@ export const usePermissions = () => {
           break;
         
         case 'cd':
+          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para CD');
           defaultPermissions.push(
             { resource: 'gestao_cd', action: 'view', enabled: true },
             { resource: 'gestao_cd', action: 'edit', enabled: true },
             { resource: 'estoque', action: 'view', enabled: true }
           );
           break;
+          
+        default:
+          console.log('🔍 [PERMISSIONS DEBUG] Tipo de usuário não reconhecido:', user.tipo);
       }
 
+      console.log('🔍 [PERMISSIONS DEBUG] Permissões padrão finais aplicadas:', defaultPermissions);
       setPermissions(defaultPermissions);
       setLoading(false);
     };
@@ -149,8 +179,9 @@ export const usePermissions = () => {
             table: 'user_permissions',
             filter: `user_id=eq.${user.id}`
           },
-          () => {
-            console.log('Mudança detectada em permissões do usuário, recarregando...');
+          (payload) => {
+            console.log('🔔 [PERMISSIONS DEBUG] Mudança detectada em permissões do usuário:', payload);
+            console.log('🔔 [PERMISSIONS DEBUG] Recarregando permissões...');
             loadPermissions();
           }
         )
