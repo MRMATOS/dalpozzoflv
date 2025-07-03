@@ -75,6 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ultimo_login: profile.ultimo_login,
           pendingApproval: true
         } as UserProfile & { pendingApproval: boolean });
+        setLoading(false);
         return;
       }
 
@@ -96,6 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Perfil carregado:', userProfile.nome);
       setUser(userProfile);
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
       setUser(null);
