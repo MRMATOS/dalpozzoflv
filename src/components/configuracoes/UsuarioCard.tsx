@@ -74,6 +74,10 @@ const UsuarioCard = ({
       // Usuários CD só podem ser vinculados à loja que é CD
       return cdLoja ? [cdLoja] : [];
     }
+    if (editValues.tipo === 'master') {
+      // Masters podem se vincular a qualquer loja (incluindo CD)
+      return lojas;
+    }
     // Outros tipos podem ser vinculados a qualquer loja (exceto CD)
     return lojas.filter(loja => !loja.is_cd);
   };

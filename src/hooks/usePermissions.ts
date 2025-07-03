@@ -40,6 +40,12 @@ export const usePermissions = () => {
         return;
       }
 
+      // Timeout para evitar travamento durante renovação de token
+      const timeoutId = setTimeout(() => {
+        console.log('⚠️ [PERMISSIONS DEBUG] Timeout no carregamento, usando permissões em cache');
+        setLoading(false);
+      }, 8000);
+
       // Master tem todas as permissões
       if (hasRole('master') || user.tipo === 'master') {
         console.log('🔍 [PERMISSIONS DEBUG] Usuário é MASTER, aplicando todas as permissões');
@@ -62,6 +68,7 @@ export const usePermissions = () => {
         ];
         setPermissions(allPermissions);
         setLoading(false);
+        clearTimeout(timeoutId);
         return;
       }
 
@@ -106,6 +113,7 @@ export const usePermissions = () => {
           console.log('🔍 [PERMISSIONS DEBUG] Permissões finais aplicadas:', specificPermissions);
           setPermissions(specificPermissions);
           setLoading(false);
+          clearTimeout(timeoutId);
           return;
         }
       } catch (error) {
@@ -163,6 +171,7 @@ export const usePermissions = () => {
       console.log('🔍 [PERMISSIONS DEBUG] Permissões padrão finais aplicadas:', defaultPermissions);
       setPermissions(defaultPermissions);
       setLoading(false);
+      clearTimeout(timeoutId);
     };
 
     loadPermissions();

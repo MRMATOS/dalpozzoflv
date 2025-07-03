@@ -111,10 +111,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
+        // Para eventos TOKEN_REFRESHED, não recarregar perfil se já temos um usuário
+        if (event === 'TOKEN_REFRESHED' && user && session?.user?.id === user.id) {
+          console.log('Token renovado, mantendo perfil existente');
+          setSession(session);
+          setLoading(false);
+          return;
+        }
+        
         setSession(session);
         
         if (session?.user) {
-          await loadUserProfile(session.user);
+          // Só recarregar perfil se não temos usuário ou é usuário diferente
+          if (!user || session.user.id !== user.id) {
+            await loadUserProfile(session.user);
+          }
         } else {
           setUser(null);
         }
@@ -123,11 +134,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Verificar sessão existente com timeout
+    // Verificar sessão existente com timeout reduzido
     const sessionTimeout = setTimeout(() => {
       console.warn('Timeout no carregamento da sessão inicial');
       setLoading(false);
-    }, 15000);
+    }, 10000);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       clearTimeout(sessionTimeout);
@@ -144,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [user?.id]);
 
   const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
