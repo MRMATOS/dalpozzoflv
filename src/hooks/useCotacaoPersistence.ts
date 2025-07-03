@@ -43,7 +43,13 @@ export const useCotacaoPersistence = () => {
   // Auto-carregar última cotação ao inicializar
   useEffect(() => {
     const carregarUltimaCotacao = async () => {
-      if (!isAuthenticated || !user?.id) return;
+      if (!isAuthenticated || !user?.id) {
+        console.log('Usuário não autenticado, iniciando cotação limpa');
+        setIsLoadingCotacao(false);
+        setDadosCarregados(null);
+        completSync();
+        return;
+      }
 
       console.log('=== CARREGANDO ÚLTIMA COTAÇÃO AUTOMATICAMENTE ===');
       setIsLoadingCotacao(true);
@@ -62,7 +68,7 @@ export const useCotacaoPersistence = () => {
           console.error('Erro ao carregar cotação:', error);
           setDadosCarregados(null);
         } else if (data) {
-          console.log('Cotação encontrada para carregar:', data);
+          console.log('Rascunho encontrado para carregar:', data);
           setCotacaoId(data.id);
           setCotacaoRestaurada(new Date(data.data));
           setCotacaoSalva(true); // Marcar como salva para habilitar auto-save
@@ -75,21 +81,30 @@ export const useCotacaoPersistence = () => {
           setDadosCarregados(dadosRestaurados);
           console.log('Dados carregados automaticamente:', dadosRestaurados);
         } else {
-          console.log('Nenhuma cotação encontrada - iniciando limpa');
-          setDadosCarregados(null);
+          console.log('Nenhum rascunho encontrado - iniciando cotação nova');
+          // Inicializar estados limpos para nova cotação
+          setCotacaoId(null);
+          setCotacaoRestaurada(null);
+          setCotacaoSalva(false);
+          setDadosCarregados({
+            produtosExtraidos: [],
+            tabelaComparativa: []
+          });
         }
       } catch (error) {
         console.error('Erro ao carregar cotação:', error);
-        setDadosCarregados(null);
+        // Em caso de erro, inicializar cotação limpa
+        setDadosCarregados({
+          produtosExtraidos: [],
+          tabelaComparativa: []
+        });
       } finally {
         setIsLoadingCotacao(false);
         completSync();
       }
     };
 
-    if (isAuthenticated) {
-      carregarUltimaCotacao();
-    }
+    carregarUltimaCotacao();
   }, [isAuthenticated, user?.id, completSync]);
 
   // Implementar retry automático
