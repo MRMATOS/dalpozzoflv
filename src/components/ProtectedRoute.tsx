@@ -32,6 +32,11 @@ const ProtectedRoute = ({
     return <Navigate to="/auth" replace />;
   }
 
+  // Check if user is pending approval
+  if ((user as any).pendingApproval) {
+    return <Navigate to="/pending-approval" replace />;
+  }
+
   // Check if user is active
   if (!user.ativo) {
     return (

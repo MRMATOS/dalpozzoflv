@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { validateInput } from '@/utils/inputValidation';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   id: string;
@@ -39,74 +40,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   // Função para carregar perfil do usuário autenticado usando tabela usuarios
-  const loadUserProfile = async (authUser: User, retryCount = 0) => {
+  const loadUserProfile = async (authUser: User) => {
     try {
-      console.log('Carregando perfil para usuário:', authUser.id, 'tentativa:', retryCount + 1);
+      console.log('Carregando perfil para usuário:', authUser.id);
       
-      // Timeout para evitar carregamento infinito
-      const profilePromise = supabase
+      const { data: profile, error: profileError } = await supabase
         .from('usuarios')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle();
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout no carregamento do perfil')), 8000)
-      );
+      if (profileError) {
+        console.error('Erro ao carregar perfil:', profileError);
+        setUser(null);
+        return;
+      }
 
-      const { data: profile, error: profileError } = await Promise.race([
-        profilePromise,
-        timeoutPromise
-      ]) as any;
+      if (!profile) {
+        console.log('Perfil não encontrado. Usuário ainda não foi processado pelo trigger.');
+        setUser(null);
+        return;
+      }
 
-      if (!profileError && profile) {
-        // Verificar se usuário está aprovado (exceto masters)
-        if (profile.tipo !== 'master' && !profile.aprovado) {
-          console.log('Usuário não aprovado ainda');
-          setUser(null);
-          return;
-        }
-
-        const userProfile: UserProfile = {
+      // Verificar se usuário está aprovado
+      if (!profile.aprovado) {
+        console.log('Usuário aguardando aprovação');
+        setUser({
           id: profile.id,
           nome: profile.nome,
           loja: profile.loja,
           google_email: authUser.email,
           tipo: profile.tipo || 'estoque',
           ativo: profile.ativo,
-          ultimo_login: profile.ultimo_login
-        };
-
-        // Atualizar último login (sem aguardar para não atrasar)
-        supabase
-          .from('usuarios')
-          .update({ ultimo_login: new Date().toISOString() })
-          .eq('id', profile.id);
-
-        console.log('Perfil carregado:', userProfile.nome);
-        setUser(userProfile);
+          ultimo_login: profile.ultimo_login,
+          pendingApproval: true
+        } as UserProfile & { pendingApproval: boolean });
         return;
       }
 
-      // Se não encontrou perfil, aguardar o trigger criar
-      if (retryCount < 3) {
-        console.log('Perfil não encontrado, aguardando trigger criar...', retryCount + 1);
-        setTimeout(() => loadUserProfile(authUser, retryCount + 1), 2000);
-        return;
-      }
+      const userProfile: UserProfile = {
+        id: profile.id,
+        nome: profile.nome,
+        loja: profile.loja,
+        google_email: authUser.email,
+        tipo: profile.tipo || 'estoque',
+        ativo: profile.ativo,
+        ultimo_login: profile.ultimo_login
+      };
 
-      console.error('Perfil não foi criado pelo trigger após várias tentativas');
-      setUser(null);
+      // Atualizar último login (sem aguardar para não atrasar)
+      supabase
+        .from('usuarios')
+        .update({ ultimo_login: new Date().toISOString() })
+        .eq('id', profile.id);
+
+      console.log('Perfil carregado:', userProfile.nome);
+      setUser(userProfile);
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
-      
-      // Retry em caso de erro
-      if (retryCount < 2) {
-        console.log('Erro no carregamento, tentando novamente em 3s...');
-        setTimeout(() => loadUserProfile(authUser, retryCount + 1), 3000);
-        return;
-      }
-      
       setUser(null);
     }
   };
@@ -205,15 +196,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       console.log('=== FAZENDO LOGOUT ===');
       
+      // Limpar estado local primeiro
+      setUser(null);
+      setSession(null);
+      
       // Logout do Supabase Auth
       await supabase.auth.signOut();
       
-      setUser(null);
-      setSession(null);
+      // Limpar localStorage e sessionStorage
+      localStorage.removeItem('lastLoginAttempt');
+      sessionStorage.clear();
+      
+      // Redirecionar para página de login
+      window.location.href = '/auth';
       
       console.log('Logout realizado com sucesso');
     } catch (error) {
       console.error('Erro no logout:', error);
+      // Mesmo com erro, redirecionar
+      window.location.href = '/auth';
     } finally {
       setLoading(false);
     }

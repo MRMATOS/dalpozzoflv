@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import PendingApproval from "./pages/PendingApproval";
 import Estoque from "./pages/Estoque";
 import Requisicoes from "./pages/Requisicoes";
 import Cotacao from "./pages/Cotacao";
@@ -35,6 +36,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
               <Route 
                 path="/dashboard" 
                 element={
