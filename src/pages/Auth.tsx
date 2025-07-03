@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Chrome } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const Auth = () => {
   const [error, setError] = useState("");
@@ -14,25 +14,31 @@ const Auth = () => {
   const navigate = useNavigate();
 
   // Redirect if already logged in
-  if (user) {
-    navigate("/dashboard");
-    return null;
-  }
+  useEffect(() => {
+    if (user) {
+      console.log('Usuário autenticado, redirecionando para dashboard');
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleGoogleLogin = async () => {
     setError("");
     setLoading(true);
 
     try {
+      console.log('Iniciando login Google...');
       const result = await signInWithGoogle();
       
       if (!result.success && result.error) {
-        setError(result.error);
+        console.error('Erro no signInWithGoogle:', result.error);
+        setError(`Erro no login: ${result.error}`);
+      } else {
+        console.log('Login Google iniciado com sucesso');
+        // O redirecionamento será feito pelo Google OAuth
       }
-      // Se sucesso, o redirecionamento será automático via callback
     } catch (error: any) {
       console.error('Erro no login Google:', error);
-      setError("Erro ao conectar com Google. Tente novamente.");
+      setError("Erro ao conectar com Google. Verifique sua conexão e tente novamente.");
     } finally {
       setLoading(false);
     }
