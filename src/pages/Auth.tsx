@@ -5,23 +5,68 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Chrome } from "lucide-react";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isProcessingCallback, setIsProcessingCallback] = useState(false);
   
   const { user, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
+  // Process OAuth callback and clean URL
+  useEffect(() => {
+    const handleOAuthCallback = async () => {
+      const hash = window.location.hash;
+      
+      // Check if we have OAuth tokens in the URL
+      if (hash && hash.includes('access_token')) {
+        console.log('Processando callback do OAuth...');
+        setIsProcessingCallback(true);
+        
+        try {
+          // Let Supabase handle the session from URL
+          const { data, error } = await supabase.auth.getSession();
+          
+          if (error) {
+            console.error('Erro ao processar callback OAuth:', error);
+            setError('Erro na autenticação. Tente novamente.');
+          } else if (data.session) {
+            console.log('Session obtida com sucesso');
+            // Clean the URL by removing the hash
+            window.history.replaceState(null, '', window.location.pathname);
+            
+            // Small delay to ensure auth state is updated
+            setTimeout(() => {
+              navigate("/dashboard", { replace: true });
+            }, 100);
+            return;
+          }
+        } catch (err) {
+          console.error('Erro no processamento do callback:', err);
+          setError('Erro na autenticação. Tente novamente.');
+        } finally {
+          setIsProcessingCallback(false);
+        }
+      }
+    };
+
+    handleOAuthCallback();
+  }, [navigate]);
+
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
+    if (user && !isProcessingCallback) {
       console.log('Usuário autenticado, redirecionando para dashboard');
       navigate("/dashboard", { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, isProcessingCallback]);
 
   const handleGoogleLogin = async () => {
+    // Don't allow new login attempts while processing callback
+    if (isProcessingCallback) return;
+    
     setError("");
     setLoading(true);
 
@@ -64,11 +109,13 @@ const Auth = () => {
               <Button
                 type="button"
                 onClick={handleGoogleLogin}
-                disabled={loading}
+                disabled={loading || isProcessingCallback}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center space-x-2"
               >
                 <Chrome className="w-4 h-4" />
-                <span>{loading ? "Conectando..." : "Entrar com Google"}</span>
+                <span>
+                  {isProcessingCallback ? "Processando..." : loading ? "Conectando..." : "Entrar com Google"}
+                </span>
               </Button>
               <p className="text-xs text-gray-500 text-center">
                 Sistema unificado com Google Auth
