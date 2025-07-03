@@ -1,0 +1,8 @@
+-- FASE 3: HABILITAR RLS NAS TABELAS RESTANTES
+
+-- Habilitar RLS nas 5 tabelas que ainda não têm
+ALTER TABLE public.escala_abastecimento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.estoque_cotacao ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fornecedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lojas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.transferencias ENABLE ROW LEVEL SECURITY;
