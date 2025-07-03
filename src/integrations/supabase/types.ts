@@ -1170,6 +1170,7 @@ export type Database = {
       }
       usuarios: {
         Row: {
+          aprovado: boolean | null
           ativo: boolean | null
           codigo_acesso: string
           criado_em: string | null
@@ -1180,6 +1181,7 @@ export type Database = {
           ultimo_login: string | null
         }
         Insert: {
+          aprovado?: boolean | null
           ativo?: boolean | null
           codigo_acesso: string
           criado_em?: string | null
@@ -1190,6 +1192,7 @@ export type Database = {
           ultimo_login?: string | null
         }
         Update: {
+          aprovado?: boolean | null
           ativo?: boolean | null
           codigo_acesso?: string
           criado_em?: string | null
@@ -1245,6 +1248,10 @@ export type Database = {
       }
     }
     Functions: {
+      aprovar_usuario: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
       calcular_tara_pallets: {
         Args: { _recebimento_id: string; _pallets_utilizados: number[] }
         Returns: number

@@ -50,8 +50,8 @@ const UsuariosTab = () => {
     },
   });
 
-  // Contar novos usuários (sem código de acesso)
-  const novosUsuarios = usuarios?.filter(u => !u.codigo_acesso || u.codigo_acesso === '').length || 0;
+  // Contar novos usuários (sem aprovação)
+  const novosUsuarios = usuarios?.filter(u => !u.aprovado).length || 0;
 
   const createUserMutation = useMutation({
     mutationFn: async (user: any) => {
@@ -91,6 +91,20 @@ const UsuariosTab = () => {
     },
     onError: (error) => {
       toast.error('Erro ao atualizar usuário: ' + error.message);
+    },
+  });
+
+  const approveUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.rpc('aprovar_usuario', { user_uuid: userId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
+      toast.success('Usuário aprovado com sucesso!');
+    },
+    onError: (error) => {
+      toast.error('Erro ao aprovar usuário: ' + error.message);
     },
   });
 
@@ -252,6 +266,7 @@ const UsuariosTab = () => {
                 onEdit={(usuario) => setEditingUser(usuario.id)}
                 onDelete={handleDeleteClick}
                 onUpdate={(id, updates) => updateUserMutation.mutate({ id, updates })}
+                onApprove={(id) => approveUserMutation.mutate(id)}
                 editingUser={editingUser}
                 setEditingUser={setEditingUser}
               />

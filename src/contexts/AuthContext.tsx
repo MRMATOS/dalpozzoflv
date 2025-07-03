@@ -60,6 +60,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ]) as any;
 
       if (!profileError && profile) {
+        // Verificar se usuário está aprovado (exceto masters)
+        if (profile.tipo !== 'master' && !profile.aprovado) {
+          console.log('Usuário não aprovado ainda');
+          setUser(null);
+          return;
+        }
+
         const userProfile: UserProfile = {
           id: profile.id,
           nome: profile.nome,
@@ -81,54 +88,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Se não encontrou perfil, tentar criar um padrão
-      if (retryCount === 0) {
-        console.log('Perfil não encontrado, tentando criar perfil padrão...');
-        
-        // Buscar primeira loja ativa
-        const { data: lojas } = await supabase
-          .from('lojas')
-          .select('nome')
-          .eq('ativo', true)
-          .eq('is_cd', false)
-          .order('criado_em', { ascending: true })
-          .limit(1);
-        
-        const defaultLoja = lojas?.[0]?.nome || 'Loja 1';
-        
-        // Criar perfil padrão
-        const { error: insertError } = await supabase
-          .from('usuarios')
-          .insert({
-            id: authUser.id,
-            nome: authUser.email?.split('@')[0] || 'Usuário',
-            loja: defaultLoja,
-            codigo_acesso: '',
-            ativo: true,
-            tipo: 'estoque'
-          });
-        
-        if (!insertError) {
-          console.log('Perfil padrão criado, recarregando...');
-          setTimeout(() => loadUserProfile(authUser, retryCount + 1), 1000);
-          return;
-        }
-      }
-
-      // Se não encontrou perfil e ainda pode tentar novamente
-      if (retryCount < 1) {
-        console.log('Perfil não encontrado, tentando novamente em 2s...');
+      // Se não encontrou perfil, aguardar o trigger criar
+      if (retryCount < 3) {
+        console.log('Perfil não encontrado, aguardando trigger criar...', retryCount + 1);
         setTimeout(() => loadUserProfile(authUser, retryCount + 1), 2000);
         return;
       }
 
-      console.error('Nenhum perfil encontrado para o usuário após todas as tentativas');
+      console.error('Perfil não foi criado pelo trigger após várias tentativas');
       setUser(null);
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
       
       // Retry em caso de erro
-      if (retryCount < 1) {
+      if (retryCount < 2) {
         console.log('Erro no carregamento, tentando novamente em 3s...');
         setTimeout(() => loadUserProfile(authUser, retryCount + 1), 3000);
         return;

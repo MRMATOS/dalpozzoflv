@@ -18,6 +18,7 @@ interface Usuario {
   loja: string;
   codigo_acesso: string;
   ativo: boolean;
+  aprovado?: boolean;
   criado_em?: string;
   ultimo_login?: string;
 }
@@ -27,6 +28,7 @@ interface UsuarioCardProps {
   onEdit: (usuario: Usuario) => void;
   onDelete: (usuario: Usuario) => void;
   onUpdate: (id: string, updates: any) => void;
+  onApprove: (id: string) => void;
   editingUser: string | null;
   setEditingUser: (id: string | null) => void;
 }
@@ -36,6 +38,7 @@ const UsuarioCard = ({
   onEdit,
   onDelete,
   onUpdate,
+  onApprove,
   editingUser,
   setEditingUser
 }: UsuarioCardProps) => {
@@ -102,7 +105,7 @@ const UsuarioCard = ({
 
   const availableLojas = getAvailableLojas();
 
-  const isNewUser = !usuario.codigo_acesso || usuario.codigo_acesso === '';
+  const isNewUser = !usuario.aprovado;
 
   return (
     <Card className={`mb-3 ${isNewUser ? 'border-orange-200 bg-orange-50' : ''}`}>
@@ -118,15 +121,15 @@ const UsuarioCard = ({
                   className="font-medium"
                 />
               ) : (
-                 <div className="flex items-center space-x-2">
-                   <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
-                   {isNewUser && (
-                     <Badge className="bg-orange-500 text-white text-xs">NOVO</Badge>
-                   )}
-                   {usuario.tipo === 'cd' && (
-                     <Truck className="w-4 h-4 text-orange-600" />
-                   )}
-                 </div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
+                    {isNewUser && (
+                      <Badge className="bg-orange-500 text-white text-xs">PENDENTE</Badge>
+                    )}
+                    {usuario.tipo === 'cd' && (
+                      <Truck className="w-4 h-4 text-orange-600" />
+                    )}
+                  </div>
               )}
             </div>
 
@@ -239,6 +242,11 @@ const UsuarioCard = ({
               </>
             ) : (
               <>
+                {isNewUser && (
+                  <Button size="sm" onClick={() => onApprove(usuario.id)} className="bg-green-600 hover:bg-green-700 h-8">
+                    Aprovar
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => {
                   setEditValues({
                     nome: usuario.nome,
