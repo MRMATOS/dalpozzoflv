@@ -58,7 +58,40 @@ export const usePermissions = () => {
         return;
       }
 
-      // Permissões padrão baseadas no tipo de usuário
+      try {
+        // Buscar permissões específicas do usuário na tabela user_permissions
+        const { data: userPermissions, error: permError } = await supabase
+          .from('user_permissions')
+          .select('resource, action, enabled')
+          .eq('user_id', user.id);
+
+        if (permError) {
+          console.error('Erro ao carregar permissões:', permError);
+        }
+
+        // Se há permissões específicas, usar essas + permissões básicas
+        if (userPermissions && userPermissions.length > 0) {
+          const specificPermissions: UserPermission[] = userPermissions.map(p => ({
+            resource: p.resource as SystemResource,
+            action: p.action as PermissionAction,
+            enabled: p.enabled
+          }));
+
+          // Sempre incluir dashboard para todos
+          const hasViewDashboard = specificPermissions.some(p => p.resource === 'dashboard' && p.action === 'view');
+          if (!hasViewDashboard) {
+            specificPermissions.push({ resource: 'dashboard', action: 'view', enabled: true });
+          }
+
+          setPermissions(specificPermissions);
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error('Erro ao buscar permissões específicas:', error);
+      }
+
+      // Fallback: usar permissões padrão baseadas no tipo de usuário
       const defaultPermissions: UserPermission[] = [];
       
       // Permissões básicas para todos os usuários
@@ -103,6 +136,30 @@ export const usePermissions = () => {
     };
 
     loadPermissions();
+
+    // Configurar listener para mudanças em permissões
+    if (user?.id) {
+      const channel = supabase
+        .channel('user-permissions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_permissions',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            console.log('Mudança detectada em permissões do usuário, recarregando...');
+            loadPermissions();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user?.id, user?.tipo, hasRole]);
 
   const hasPermission = (resource: SystemResource, action: PermissionAction): boolean => {

@@ -177,7 +177,18 @@ export const useTransferencias = () => {
         throw transferError;
       }
 
-      console.log('Transferências criadas com sucesso! Requisição permanece pendente.');
+      // Atualizar status da requisição para 'enviado'
+      const { error: updateError } = await supabase
+        .from('requisicoes')
+        .update({ status: 'enviado' })
+        .eq('id', requisicaoId);
+
+      if (updateError) {
+        console.error('Erro ao atualizar status da requisição:', updateError);
+        // Não falhar aqui, pois as transferências já foram criadas
+      }
+
+      console.log('Transferências criadas e requisição atualizada para status "enviado"!');
       
       await fetchTransferencias(); // Recarregar lista
       
