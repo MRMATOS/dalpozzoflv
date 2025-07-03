@@ -1348,6 +1348,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_user_role_access: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "master" | "comprador" | "estoque" | "cd"

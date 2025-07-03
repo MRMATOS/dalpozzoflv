@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Save, X, Phone } from 'lucide-react';
+import { validateInput } from '@/utils/inputValidation';
+import { toast } from 'sonner';
 
 interface Fornecedor {
   id: string;
@@ -35,6 +37,17 @@ const FornecedorCard = ({
   });
 
   const handleSave = () => {
+    try {
+      // Validate inputs using security utility
+      validateInput.text(editValues.nome || '', 100);
+      if (editValues.telefone) {
+        validateInput.text(editValues.telefone, 20);
+      }
+    } catch (error: any) {
+      toast.error(`Erro de validação: ${error.message}`);
+      return;
+    }
+
     onUpdate(fornecedor.id, editValues);
     setEditingFornecedor(null);
   };

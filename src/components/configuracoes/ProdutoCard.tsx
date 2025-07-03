@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Save, X, ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { validateInput } from '@/utils/inputValidation';
+import { toast } from 'sonner';
 
 const unidades = ['Bandeja', 'Caixa', 'Gaiola', 'Gr', 'Kg', 'Maço', 'Pacote', 'Saco', 'Unidade'];
 
@@ -62,6 +64,19 @@ const ProdutoCard = ({
   };
 
   const handleSave = () => {
+    try {
+      // Validate inputs using security utility
+      if (!produto.produto_pai_id) {
+        validateInput.text(editValues.produto || '', 100);
+      } else {
+        validateInput.text(editValues.nome_variacao || '', 100);
+      }
+      validateInput.number(editValues.media_por_caixa || 0, 0.1, 1000);
+    } catch (error: any) {
+      toast.error(`Erro de validação: ${error.message}`);
+      return;
+    }
+
     console.log('Salvando produto:', produto.id, editValues);
     
     const updates: any = {

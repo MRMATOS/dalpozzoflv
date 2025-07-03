@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { validateInput } from '@/utils/inputValidation';
 
 interface UserProfile {
   id: string;
@@ -122,6 +123,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Rate limiting check (simple client-side implementation)
+      const lastAttempt = localStorage.getItem('lastLoginAttempt');
+      const now = Date.now();
+      if (lastAttempt && (now - parseInt(lastAttempt)) < 2000) { // 2 second cooldown
+        return { success: false, error: 'Muitas tentativas. Aguarde um momento.' };
+      }
+      localStorage.setItem('lastLoginAttempt', now.toString());
+
       console.log('=== LOGIN COM GOOGLE ===');
       
       const { error } = await supabase.auth.signInWithOAuth({
@@ -133,12 +142,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Erro no login Google:', error);
+        // Log security event for failed login
+        console.warn('Security Event: Failed Google OAuth attempt', { 
+          error: error.message, 
+          timestamp: new Date().toISOString(),
+          ip: 'client-side'
+        });
         return { success: false, error: error.message };
       }
 
       return { success: true };
     } catch (error: any) {
       console.error('Erro no login Google:', error);
+      console.warn('Security Event: Google OAuth exception', { 
+        error: error.message, 
+        timestamp: new Date().toISOString(),
+        ip: 'client-side'
+      });
       return { 
         success: false, 
         error: error instanceof Error ? error.message : "Erro interno. Tente novamente." 

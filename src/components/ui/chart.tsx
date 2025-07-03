@@ -74,28 +74,46 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(
-            ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
-${colorConfig
-  .map(([key, itemConfig]) => {
-    const color =
-      itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
-      itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
-  })
-  .join("\n")}
-}
-`
-          )
-          .join("\n"),
-      }}
-    />
-  )
+  // Generate CSS content safely
+  const cssContent = Object.entries(THEMES)
+    .map(([theme, prefix]) => {
+      const rules = colorConfig
+        .map(([key, itemConfig]) => {
+          const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+          // Sanitize CSS values to prevent injection
+          const sanitizedColor = color?.replace(/[<>\"']/g, '');
+          return sanitizedColor ? `  --color-${key}: ${sanitizedColor};` : null;
+        })
+        .filter(Boolean)
+        .join('\n');
+      
+      return `${prefix} [data-chart=${id}] {\n${rules}\n}`;
+    })
+    .join('\n');
+
+  // Create style element safely without dangerouslySetInnerHTML
+  React.useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = cssContent;
+    styleElement.setAttribute('data-chart-style', id);
+    
+    // Remove any existing style for this chart
+    const existingStyle = document.querySelector(`style[data-chart-style="${id}"]`);
+    if (existingStyle) {
+      existingStyle.remove();
+    }
+    
+    document.head.appendChild(styleElement);
+    
+    return () => {
+      const styleToRemove = document.querySelector(`style[data-chart-style="${id}"]`);
+      if (styleToRemove) {
+        styleToRemove.remove();
+      }
+    };
+  }, [cssContent, id]);
+
+  return null;
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip

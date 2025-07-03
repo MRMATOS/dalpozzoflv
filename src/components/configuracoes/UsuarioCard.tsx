@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Save, X, Truck } from 'lucide-react';
 import { useLojas } from '@/hooks/useLojas';
+import { validateInput } from '@/utils/inputValidation';
+import { toast } from 'sonner';
 
 interface Usuario {
   id: string;
@@ -47,6 +49,16 @@ const UsuarioCard = ({
   });
 
   const handleSave = () => {
+    try {
+      // Validate inputs using security utility
+      validateInput.text(editValues.nome || '', 100);
+      validateInput.codigoAcesso(editValues.codigo_acesso || '');
+      validateInput.text(editValues.loja || '', 50);
+    } catch (error: any) {
+      toast.error(`Erro de validação: ${error.message}`);
+      return;
+    }
+
     onUpdate(usuario.id, editValues);
     setEditingUser(null);
   };
