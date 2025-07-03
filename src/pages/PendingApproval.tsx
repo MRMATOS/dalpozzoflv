@@ -1,10 +1,29 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Mail } from "lucide-react";
+import { Clock, Mail, AlertCircle, CheckCircle } from "lucide-react";
+import { useEffect } from "react";
 
 const PendingApproval = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
+
+  useEffect(() => {
+    // Se usuário não está pendente, redirecionar
+    if (!loading && user && !(user as any).pendingApproval) {
+      window.location.href = '/dashboard';
+    }
+  }, [user, loading]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
@@ -22,40 +41,49 @@ const PendingApproval = () => {
             <CardTitle className="text-center text-lg">Acesso Pendente</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-4">
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                 <div className="flex items-center justify-center space-x-2 mb-2">
-                  <Mail className="w-5 h-5 text-orange-600" />
-                  <span className="font-medium text-orange-800">Conta Criada</span>
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <span className="font-medium text-orange-800">Aguardando Aprovação</span>
                 </div>
                 <p className="text-sm text-orange-700">
-                  Olá <strong>{user?.nome}</strong>! Sua conta foi criada com sucesso.
-                </p>
-              </div>
-              
-              <div className="text-sm text-gray-600 space-y-2">
-                <p>
-                  Seu acesso ao sistema está <strong>aguardando aprovação</strong> pelo administrador.
-                </p>
-                <p>
-                  Você receberá uma notificação por email quando seu acesso for liberado.
+                  Olá <strong>{user?.nome}</strong>! Sua conta foi criada com sucesso, mas ainda precisa ser aprovada por um administrador.
                 </p>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-xs text-blue-700">
-                  <strong>Dúvidas?</strong> Entre em contato com o TI em dalpozzo.ti@gmail.com
-                </p>
+              <div className="space-y-3 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span>Conta criada com sucesso</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span>Aguardando aprovação do administrador</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-gray-300 rounded-full" />
+                  <span>Acesso ao sistema liberado</span>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+                <h3 className="font-semibold text-blue-800 mb-2">Próximos passos:</h3>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Aguarde a aprovação do administrador</li>
+                  <li>• Você receberá acesso em breve</li>
+                  <li>• Em caso de dúvidas, entre em contato com o TI</li>
+                </ul>
               </div>
             </div>
 
-            <div className="flex space-x-2">
+            <div className="pt-4 border-t">
               <Button
                 onClick={signOut}
                 variant="outline"
                 className="w-full"
               >
-                Fazer Logout
+                Sair da Conta
               </Button>
             </div>
           </CardContent>
@@ -63,6 +91,7 @@ const PendingApproval = () => {
 
         <div className="text-center mt-6 text-sm text-gray-500">
           <p>© 2024 Super Dal Pozzo - Sistema FLV</p>
+          <p>Para suporte, entre em contato com dalpozzo.ti@gmail.com</p>
         </div>
       </div>
     </div>

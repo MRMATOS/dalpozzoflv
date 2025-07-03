@@ -58,8 +58,14 @@ const Auth = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isProcessingCallback) {
-      console.log('Usuário autenticado, redirecionando para dashboard');
-      navigate("/dashboard", { replace: true });
+      // Verificar se usuário está pendente de aprovação
+      if ((user as any).pendingApproval) {
+        console.log('Usuário pendente de aprovação, redirecionando');
+        navigate("/pending-approval", { replace: true });
+      } else {
+        console.log('Usuário autenticado, redirecionando para dashboard');
+        navigate("/dashboard", { replace: true });
+      }
     }
   }, [user, navigate, isProcessingCallback]);
 
