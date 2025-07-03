@@ -18,6 +18,7 @@ interface DeleteConfirmDialogProps {
   title: string;
   description: string;
   isLoading?: boolean;
+  customContent?: React.ReactNode;
 }
 
 const DeleteConfirmDialog = ({ 
@@ -26,25 +27,30 @@ const DeleteConfirmDialog = ({
   onConfirm, 
   title, 
   description, 
-  isLoading = false 
+  isLoading = false,
+  customContent 
 }: DeleteConfirmDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction 
-            onClick={onConfirm} 
-            disabled={isLoading}
-            className="bg-red-600 hover:bg-red-700"
-          >
-            {isLoading ? 'Excluindo...' : 'Excluir'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
+        {customContent ? (
+          customContent
+        ) : (
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoading}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={onConfirm} 
+              disabled={isLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isLoading ? 'Excluindo...' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        )}
       </AlertDialogContent>
     </AlertDialog>
   );

@@ -1270,6 +1270,14 @@ export type Database = {
         Args: { produto_uuid: string }
         Returns: boolean
       }
+      force_delete_fornecedor: {
+        Args: { fornecedor_uuid: string }
+        Returns: boolean
+      }
+      force_delete_produto: {
+        Args: { produto_uuid: string }
+        Returns: boolean
+      }
       get_cd_loja: {
         Args: Record<PropertyKey, never>
         Returns: string

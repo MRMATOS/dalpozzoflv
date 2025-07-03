@@ -23,6 +23,7 @@ import NotFound from "./pages/NotFound";
 import RecebimentoDashboard from "@/pages/RecebimentoDashboard";
 import NovoRecebimento from "@/pages/NovoRecebimento";
 import RecebimentoAtivo from "@/pages/RecebimentoAtivo";
+import HistoricoRecebimentos from "@/pages/HistoricoRecebimentos";
 
 const queryClient = new QueryClient();
 
@@ -154,6 +155,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RecebimentoAtivo />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/recebimento/historico" 
+                element={
+                  <ProtectedRoute>
+                    <HistoricoRecebimentos />
                   </ProtectedRoute>
                 } 
               />

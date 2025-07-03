@@ -102,6 +102,11 @@ const ProductDeletionHandler: React.FC<ProductDeletionHandlerProps> = ({
 
       if (error) {
         console.error('Erro ao excluir produto:', error);
+        // Se houver erro de foreign key constraint, tentar exclusão forçada
+        if (error.message.includes('foreign key constraint') || error.message.includes('violates foreign key')) {
+          await forceDeleteProduto();
+          return;
+        }
         toast.error(`Erro ao excluir produto: ${error.message}`);
         return;
       }
@@ -113,6 +118,33 @@ const ProductDeletionHandler: React.FC<ProductDeletionHandlerProps> = ({
       toast.error('Erro interno ao excluir produto');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const forceDeleteProduto = async () => {
+    try {
+      console.log('Tentando exclusão forçada do produto:', produtoId);
+
+      const { data, error } = await supabase.rpc('force_delete_produto', {
+        produto_uuid: produtoId
+      });
+
+      if (error) {
+        console.error('Erro na exclusão forçada:', error);
+        toast.error(`Erro ao excluir produto: ${error.message}`);
+        return;
+      }
+
+      if (!data) {
+        toast.error('Você não tem permissão para exclusão forçada');
+        return;
+      }
+
+      toast.success(`Produto "${produtoNome}" e suas dependências foram excluídos!`);
+      onDeleteSuccess();
+    } catch (error) {
+      console.error('Erro na exclusão forçada:', error);
+      toast.error('Erro interno durante a exclusão forçada');
     }
   };
 

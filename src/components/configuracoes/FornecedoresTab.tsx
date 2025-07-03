@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Loader2, Plus, Save } from 'lucide-react';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
+import FornecedorDeletionHandler from './FornecedorDeletionHandler';
 import FornecedorCard from './FornecedorCard';
 
 const FornecedoresTab = () => {
@@ -18,17 +19,7 @@ const FornecedoresTab = () => {
   });
   const [showNewFornecedor, setShowNewFornecedor] = useState(false);
   const [editingFornecedor, setEditingFornecedor] = useState<string | null>(null);
-  const [deleteDialog, setDeleteDialog] = useState<{
-    open: boolean;
-    fornecedor: any;
-    title: string;
-    description: string;
-  }>({
-    open: false,
-    fornecedor: null,
-    title: '',
-    description: ''
-  });
+  const [fornecedorToDelete, setFornecedorToDelete] = useState<any>(null);
 
   const { data: fornecedores, isLoading } = useQuery({
     queryKey: ['fornecedores'],
@@ -84,39 +75,8 @@ const FornecedoresTab = () => {
     },
   });
 
-  const deleteFornecedorMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('fornecedores')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
-      toast.success('Fornecedor excluído com sucesso!');
-      setDeleteDialog({ open: false, fornecedor: null, title: '', description: '' });
-    },
-    onError: (error) => {
-      toast.error('Erro ao excluir fornecedor: ' + error.message);
-      setDeleteDialog({ open: false, fornecedor: null, title: '', description: '' });
-    },
-  });
-
   const handleDeleteClick = (fornecedor: any) => {
-    setDeleteDialog({
-      open: true,
-      fornecedor,
-      title: 'Confirmar exclusão',
-      description: `Tem certeza que deseja excluir o fornecedor "${fornecedor.nome}"? Esta ação não pode ser desfeita.`
-    });
-  };
-
-  const handleConfirmDelete = () => {
-    if (deleteDialog.fornecedor) {
-      deleteFornecedorMutation.mutate(deleteDialog.fornecedor.id);
-    }
+    setFornecedorToDelete(fornecedor);
   };
 
   if (isLoading) {
@@ -185,14 +145,26 @@ const FornecedoresTab = () => {
         </CardContent>
       </Card>
 
-      <DeleteConfirmDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
-        onConfirm={handleConfirmDelete}
-        title={deleteDialog.title}
-        description={deleteDialog.description}
-        isLoading={deleteFornecedorMutation.isPending}
-      />
+      {fornecedorToDelete && (
+        <DeleteConfirmDialog
+          open={!!fornecedorToDelete}
+          onOpenChange={(open) => !open && setFornecedorToDelete(null)}
+          onConfirm={() => {}}
+          title="Excluir Fornecedor"
+          description=""
+          customContent={
+            <FornecedorDeletionHandler
+              fornecedorId={fornecedorToDelete.id}
+              fornecedorNome={fornecedorToDelete.nome}
+              onDeleteSuccess={() => {
+                queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
+                setFornecedorToDelete(null);
+              }}
+              onCancel={() => setFornecedorToDelete(null)}
+            />
+          }
+        />
+      )}
     </>
   );
 };
