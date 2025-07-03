@@ -21,6 +21,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     retrySync,
     isLoadingCotacao,
     cotacaoRestaurada,
+    tipoCotacao,
     dadosCarregados,
     syncStatus,
     formatLastSyncTime
@@ -85,26 +86,27 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar somente quando há produtos e já foi inicializado
+  // Auto-salvar quando há mudanças significativas
   useEffect(() => {
     // Só tentar auto-save se:
-    // 1. Não está carregando
-    // 2. Não está sincronizando  
-    // 3. Há produtos extraídos
-    // 4. Dados já foram inicializados (dadosCarregados não é null)
+    // 1. Dados foram inicializados (dadosCarregados não é null)
+    // 2. Não está carregando cotação
+    // 3. Não está sincronizando
+    // 4. Há produtos extraídos
     if (dadosCarregados !== null && 
-        produtosExtraidos.length > 0 && 
         !isLoadingCotacao && 
-        !syncStatus.isSyncing) {
+        !syncStatus.isSyncing && 
+        produtosExtraidos.length > 0) {
       
       const timeoutId = setTimeout(() => {
-        console.log('=== TENTANDO AUTO-SAVE ===');
+        console.log('=== AUTO-SAVE ATIVADO ===');
+        console.log('Produtos:', produtosExtraidos.length, 'Tabela:', tabelaComparativa.length);
         salvarCotacao({
           produtosExtraidos,
           tabelaComparativa,
           fornecedoresProcessados,
         });
-      }, 2000); // Aumentar timeout para evitar saves desnecessários
+      }, 3000); // 3 segundos para evitar saves excessivos
       
       return () => clearTimeout(timeoutId);
     }
@@ -259,6 +261,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     fornecedorSelecionado,
     mensagemAtual,
     cotacaoRestaurada,
+    tipoCotacao,
     syncStatus,
     isProcessing,
     setMensagemAtual,

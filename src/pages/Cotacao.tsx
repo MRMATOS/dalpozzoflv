@@ -43,6 +43,7 @@ const Cotacao = () => {
     fornecedorSelecionado,
     mensagemAtual,
     cotacaoRestaurada,
+    tipoCotacao,
     syncStatus,
     setMensagemAtual,
     selecionarFornecedor,
@@ -92,10 +93,10 @@ const Cotacao = () => {
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {cotacaoRestaurada ? 'Carregando Cotação' : 'Inicializando Nova Cotação'}
+              Carregando Cotação
             </h2>
             <p className="text-sm text-gray-600">
-              {cotacaoRestaurada ? 'Restaurando última cotação...' : 'Preparando interface...'}
+              Buscando última cotação para continuar de onde parou...
             </p>
           </CardContent>
         </Card>
@@ -136,7 +137,10 @@ const Cotacao = () => {
             />
 
             {cotacaoRestaurada && (
-              <CotacaoRestauradaMessage dataRestauracao={cotacaoRestaurada} />
+              <CotacaoRestauradaMessage 
+                dataRestauracao={cotacaoRestaurada} 
+                tipoRestauracao={tipoCotacao || 'rascunho'}
+              />
             )}
 
             {tabelaComparativa.length > 0 && (

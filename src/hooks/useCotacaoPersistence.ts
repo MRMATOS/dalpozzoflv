@@ -33,6 +33,7 @@ export const useCotacaoPersistence = () => {
   
   const [cotacaoId, setCotacaoId] = useState<string | null>(null);
   const [cotacaoRestaurada, setCotacaoRestaurada] = useState<Date | null>(null);
+  const [tipoCotacao, setTipoCotacao] = useState<'rascunho' | 'enviada' | null>(null);
   const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
   const [cotacaoSalva, setCotacaoSalva] = useState(false);
   const [dadosCarregados, setDadosCarregados] = useState<RestauracaoData | null>(null);
@@ -55,23 +56,38 @@ export const useCotacaoPersistence = () => {
       setIsLoadingCotacao(true);
 
       try {
+        // PRIMEIRO: Buscar a última cotação (enviada ou não) para carregar
         const { data, error } = await supabase
           .from('cotacoes')
           .select('*')
           .eq('user_id', user.id)
-          .is('enviado_em', null) // Buscar apenas rascunhos não enviados
           .order('data', { ascending: false })
           .limit(1)
           .maybeSingle();
 
         if (error) {
           console.error('Erro ao carregar cotação:', error);
-          setDadosCarregados(null);
+          setDadosCarregados({
+            produtosExtraidos: [],
+            tabelaComparativa: []
+          });
         } else if (data) {
-          console.log('Rascunho encontrado para carregar:', data);
-          setCotacaoId(data.id);
-          setCotacaoRestaurada(new Date(data.data));
-          setCotacaoSalva(true); // Marcar como salva para habilitar auto-save
+          console.log('Última cotação encontrada para carregar:', data);
+          
+          // Se a cotação foi enviada, criar uma nova baseada nela
+          if (data.enviado_em) {
+            console.log('Cotação foi enviada, criando nova baseada na anterior');
+            setCotacaoId(null); // Nova cotação
+            setCotacaoRestaurada(new Date(data.data));
+            setTipoCotacao('enviada');
+            setCotacaoSalva(false); // Precisa salvar para criar nova
+          } else {
+            console.log('Carregando rascunho existente');
+            setCotacaoId(data.id); // Continuar editando
+            setCotacaoRestaurada(new Date(data.data));
+            setTipoCotacao('rascunho');
+            setCotacaoSalva(true); // Já existe, pode auto-salvar
+          }
           
           const dadosRestaurados = {
             produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
@@ -81,10 +97,11 @@ export const useCotacaoPersistence = () => {
           setDadosCarregados(dadosRestaurados);
           console.log('Dados carregados automaticamente:', dadosRestaurados);
         } else {
-          console.log('Nenhum rascunho encontrado - iniciando cotação nova');
+          console.log('Nenhuma cotação encontrada - iniciando cotação nova');
           // Inicializar estados limpos para nova cotação
           setCotacaoId(null);
           setCotacaoRestaurada(null);
+          setTipoCotacao(null);
           setCotacaoSalva(false);
           setDadosCarregados({
             produtosExtraidos: [],
@@ -252,18 +269,17 @@ export const useCotacaoPersistence = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [syncStatus.hasUnsavedChanges]);
 
-  // Restaurar último rascunho (não enviado)
+  // Restaurar última cotação (enviada ou não)
   const restaurarUltimaCotacao = useCallback(async (): Promise<RestauracaoData | null> => {
     if (!isAuthenticated || !user?.id) return null;
 
-    console.log('=== RESTAURANDO ÚLTIMO RASCUNHO ===');
+    console.log('=== RESTAURANDO ÚLTIMA COTAÇÃO ===');
 
     try {
       const { data, error } = await supabase
         .from('cotacoes')
         .select('*')
         .eq('user_id', user.id)
-        .is('enviado_em', null) // Buscar apenas rascunhos não enviados
         .order('data', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -275,12 +291,22 @@ export const useCotacaoPersistence = () => {
       }
 
       if (data) {
-        console.log('Rascunho encontrado para restaurar:', data);
-        setCotacaoId(data.id);
-        setCotacaoRestaurada(new Date(data.data));
-        setCotacaoSalva(true); // Marcar como salva para habilitar auto-save
+        console.log('Última cotação encontrada para restaurar:', data);
         
-        toast.success(`Rascunho restaurado do dia ${new Date(data.data).toLocaleDateString('pt-BR')}`);
+        // Se a cotação foi enviada, criar uma nova baseada nela
+        if (data.enviado_em) {
+          console.log('Cotação foi enviada, criando nova baseada na anterior');
+          setCotacaoId(null); // Nova cotação
+          setCotacaoSalva(false); // Precisa salvar para criar nova
+          toast.success(`Cotação do dia ${new Date(data.data).toLocaleDateString('pt-BR')} carregada como base para nova cotação`);
+        } else {
+          console.log('Carregando rascunho existente');
+          setCotacaoId(data.id); // Continuar editando
+          setCotacaoSalva(true); // Já existe, pode auto-salvar
+          toast.success(`Rascunho restaurado do dia ${new Date(data.data).toLocaleDateString('pt-BR')}`);
+        }
+        
+        setCotacaoRestaurada(new Date(data.data));
         
         return {
           produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
@@ -288,7 +314,7 @@ export const useCotacaoPersistence = () => {
         };
       }
 
-      toast.info('Nenhum rascunho encontrado');
+      toast.info('Nenhuma cotação encontrada');
       return null;
     } catch (error) {
       console.error('Erro ao restaurar cotação:', error);
@@ -370,7 +396,7 @@ export const useCotacaoPersistence = () => {
     toast.info('Tentando sincronizar novamente...');
   }, []);
 
-  return {
+    return {
     salvarCotacao,
     salvarRascunho,
     restaurarUltimaCotacao,
@@ -378,6 +404,7 @@ export const useCotacaoPersistence = () => {
     marcarComoEnviada,
     retrySync,
     cotacaoRestaurada,
+    tipoCotacao,
     isLoadingCotacao,
     dadosCarregados, // Dados carregados automaticamente
     syncStatus,

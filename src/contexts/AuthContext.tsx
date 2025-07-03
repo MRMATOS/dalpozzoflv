@@ -38,17 +38,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função para carregar perfil do usuário autenticado
-  const loadUserProfile = async (authUser: User) => {
+  // Função para carregar perfil do usuário autenticado com timeout e retry
+  const loadUserProfile = async (authUser: User, retryCount = 0) => {
     try {
-      console.log('Carregando perfil para usuário:', authUser.id);
+      console.log('Carregando perfil para usuário:', authUser.id, 'tentativa:', retryCount + 1);
       
-      // Carregar do novo sistema (profiles + user_roles)
-      const { data: profile, error: profileError } = await supabase
+      // Timeout para evitar carregamento infinito
+      const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle();
+
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout no carregamento do perfil')), 10000)
+      );
+
+      const { data: profile, error: profileError } = await Promise.race([
+        profilePromise,
+        timeoutPromise
+      ]) as any;
 
       if (!profileError && profile) {
         // Carregar role do usuário
@@ -68,8 +77,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ultimo_login: profile.ultimo_login
         };
 
-        // Atualizar último login
-        await supabase
+        // Atualizar último login (sem aguardar para não atrasar)
+        supabase
           .from('profiles')
           .update({ ultimo_login: new Date().toISOString() })
           .eq('id', profile.id);
@@ -79,10 +88,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      console.error('Nenhum perfil encontrado para o usuário');
+      // Se não encontrou perfil e ainda pode tentar novamente
+      if (retryCount < 2) {
+        console.log('Perfil não encontrado, tentando novamente em 2s...');
+        setTimeout(() => loadUserProfile(authUser, retryCount + 1), 2000);
+        return;
+      }
+
+      console.error('Nenhum perfil encontrado para o usuário após todas as tentativas');
       setUser(null);
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
+      
+      // Retry em caso de erro
+      if (retryCount < 2) {
+        console.log('Erro no carregamento, tentando novamente em 3s...');
+        setTimeout(() => loadUserProfile(authUser, retryCount + 1), 3000);
+        return;
+      }
+      
       setUser(null);
     }
   };
@@ -108,14 +132,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Verificar sessão existente
+    // Verificar sessão existente com timeout
+    const sessionTimeout = setTimeout(() => {
+      console.warn('Timeout no carregamento da sessão inicial');
+      setLoading(false);
+    }, 15000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(sessionTimeout);
       if (session?.user) {
         setSession(session);
         loadUserProfile(session.user);
       } else {
         setLoading(false);
       }
+    }).catch(error => {
+      clearTimeout(sessionTimeout);
+      console.error('Erro ao carregar sessão inicial:', error);
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
