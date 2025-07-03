@@ -105,57 +105,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Inicializar autenticação
   useEffect(() => {
     console.log('=== INICIALIZANDO AUTENTICAÇÃO GOOGLE ===');
+    let mounted = true;
 
     // Configurar listener de mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
-        // Para eventos TOKEN_REFRESHED, não recarregar perfil se já temos um usuário
-        if (event === 'TOKEN_REFRESHED' && user && session?.user?.id === user.id) {
-          console.log('Token renovado, mantendo perfil existente');
-          setSession(session);
-          setLoading(false);
-          return;
-        }
+        if (!mounted) return;
         
+        // Atualizar sessão sempre
         setSession(session);
         
         if (session?.user) {
-          // Só recarregar perfil se não temos usuário ou é usuário diferente
-          if (!user || session.user.id !== user.id) {
-            await loadUserProfile(session.user);
-          }
+          // Defer async operations to prevent deadlock
+          setTimeout(() => {
+            if (mounted) {
+              loadUserProfile(session.user);
+            }
+          }, 0);
         } else {
           setUser(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
     // Verificar sessão existente com timeout reduzido
     const sessionTimeout = setTimeout(() => {
-      console.warn('Timeout no carregamento da sessão inicial');
-      setLoading(false);
-    }, 10000);
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(sessionTimeout);
-      if (session?.user) {
-        setSession(session);
-        loadUserProfile(session.user);
-      } else {
+      if (mounted) {
+        console.warn('Timeout no carregamento da sessão inicial');
         setLoading(false);
       }
-    }).catch(error => {
-      clearTimeout(sessionTimeout);
-      console.error('Erro ao carregar sessão inicial:', error);
-      setLoading(false);
-    });
+    }, 5000);
 
-    return () => subscription.unsubscribe();
-  }, [user?.id]);
+    // Carregar sessão inicial
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        clearTimeout(sessionTimeout);
+        
+        if (!mounted) return;
+        
+        if (error) {
+          console.error('Erro ao carregar sessão:', error);
+          setLoading(false);
+          return;
+        }
+        
+        if (session?.user) {
+          setSession(session);
+          await loadUserProfile(session.user);
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        clearTimeout(sessionTimeout);
+        console.error('Erro na inicialização da auth:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(sessionTimeout);
+    };
+  }, []); // Removed user dependency to prevent infinite loops
 
   const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
     try {
