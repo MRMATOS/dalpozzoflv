@@ -38,20 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Função para carregar perfil do usuário autenticado com timeout e retry
+  // Função para carregar perfil do usuário autenticado usando tabela usuarios
   const loadUserProfile = async (authUser: User, retryCount = 0) => {
     try {
       console.log('Carregando perfil para usuário:', authUser.id, 'tentativa:', retryCount + 1);
       
       // Timeout para evitar carregamento infinito
       const profilePromise = supabase
-        .from('profiles')
+        .from('usuarios')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle();
 
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout no carregamento do perfil')), 10000)
+        setTimeout(() => reject(new Error('Timeout no carregamento do perfil')), 8000)
       );
 
       const { data: profile, error: profileError } = await Promise.race([
@@ -60,26 +60,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ]) as any;
 
       if (!profileError && profile) {
-        // Carregar role do usuário
-        const { data: roleData } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', authUser.id)
-          .maybeSingle();
-
         const userProfile: UserProfile = {
           id: profile.id,
           nome: profile.nome,
           loja: profile.loja,
           google_email: authUser.email,
-          tipo: roleData?.role || 'estoque',
+          tipo: profile.tipo || 'estoque',
           ativo: profile.ativo,
           ultimo_login: profile.ultimo_login
         };
 
         // Atualizar último login (sem aguardar para não atrasar)
         supabase
-          .from('profiles')
+          .from('usuarios')
           .update({ ultimo_login: new Date().toISOString() })
           .eq('id', profile.id);
 
@@ -88,8 +81,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
+      // Se não encontrou perfil, tentar criar um padrão
+      if (retryCount === 0) {
+        console.log('Perfil não encontrado, tentando criar perfil padrão...');
+        
+        // Buscar primeira loja ativa
+        const { data: lojas } = await supabase
+          .from('lojas')
+          .select('nome')
+          .eq('ativo', true)
+          .eq('is_cd', false)
+          .order('criado_em', { ascending: true })
+          .limit(1);
+        
+        const defaultLoja = lojas?.[0]?.nome || 'Loja 1';
+        
+        // Criar perfil padrão
+        const { error: insertError } = await supabase
+          .from('usuarios')
+          .insert({
+            id: authUser.id,
+            nome: authUser.email?.split('@')[0] || 'Usuário',
+            loja: defaultLoja,
+            codigo_acesso: '',
+            ativo: true,
+            tipo: 'estoque'
+          });
+        
+        if (!insertError) {
+          console.log('Perfil padrão criado, recarregando...');
+          setTimeout(() => loadUserProfile(authUser, retryCount + 1), 1000);
+          return;
+        }
+      }
+
       // Se não encontrou perfil e ainda pode tentar novamente
-      if (retryCount < 2) {
+      if (retryCount < 1) {
         console.log('Perfil não encontrado, tentando novamente em 2s...');
         setTimeout(() => loadUserProfile(authUser, retryCount + 1), 2000);
         return;
@@ -101,7 +128,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Erro ao carregar perfil:', error);
       
       // Retry em caso de erro
-      if (retryCount < 2) {
+      if (retryCount < 1) {
         console.log('Erro no carregamento, tentando novamente em 3s...');
         setTimeout(() => loadUserProfile(authUser, retryCount + 1), 3000);
         return;

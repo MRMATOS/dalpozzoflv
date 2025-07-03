@@ -35,7 +35,7 @@ export const usePermissions = () => {
       }
 
       // Master tem todas as permissões
-      if (hasRole('master')) {
+      if (hasRole('master') || user.tipo === 'master') {
         const allPermissions: UserPermission[] = [
           { resource: 'dashboard', action: 'view', enabled: true },
           { resource: 'estoque', action: 'view', enabled: true },
@@ -58,26 +58,52 @@ export const usePermissions = () => {
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .rpc('get_user_permissions', { _user_id: user.id });
+      // Permissões padrão baseadas no tipo de usuário
+      const defaultPermissions: UserPermission[] = [];
+      
+      // Permissões básicas para todos os usuários
+      defaultPermissions.push(
+        { resource: 'dashboard', action: 'view', enabled: true }
+      );
 
-        if (error) {
-          console.error('Erro ao carregar permissões:', error);
-          setPermissions([]);
-        } else {
-          setPermissions(data || []);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar permissões:', error);
-        setPermissions([]);
-      } finally {
-        setLoading(false);
+      // Permissões específicas por tipo
+      switch (user.tipo) {
+        case 'comprador':
+          defaultPermissions.push(
+            { resource: 'estoque', action: 'view', enabled: true },
+            { resource: 'requisicoes', action: 'view', enabled: true },
+            { resource: 'cotacao', action: 'view', enabled: true },
+            { resource: 'cotacao', action: 'create', enabled: true },
+            { resource: 'cotacao', action: 'edit', enabled: true },
+            { resource: 'historico_requisicoes', action: 'view', enabled: true },
+            { resource: 'historico_pedidos', action: 'view', enabled: true }
+          );
+          break;
+        
+        case 'estoque':
+          defaultPermissions.push(
+            { resource: 'estoque', action: 'view', enabled: true },
+            { resource: 'estoque', action: 'edit', enabled: true },
+            { resource: 'requisicoes', action: 'view', enabled: true },
+            { resource: 'requisicoes', action: 'create', enabled: true }
+          );
+          break;
+        
+        case 'cd':
+          defaultPermissions.push(
+            { resource: 'gestao_cd', action: 'view', enabled: true },
+            { resource: 'gestao_cd', action: 'edit', enabled: true },
+            { resource: 'estoque', action: 'view', enabled: true }
+          );
+          break;
       }
+
+      setPermissions(defaultPermissions);
+      setLoading(false);
     };
 
     loadPermissions();
-  }, [user?.id, hasRole]);
+  }, [user?.id, user?.tipo, hasRole]);
 
   const hasPermission = (resource: SystemResource, action: PermissionAction): boolean => {
     // Master sempre tem permissão

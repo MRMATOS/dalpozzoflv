@@ -8,7 +8,7 @@ import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users,
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, hasRole, signOut } = useAuth();
+  const { user, profile, hasRole, signOut } = useAuth();
   const { canView, loading: permissionsLoading } = usePermissions();
 
   const handleLogout = async () => {
@@ -113,11 +113,13 @@ const Dashboard = () => {
                   <Badge variant="outline" className="text-xs">
                     {profile?.loja}
                   </Badge>
-                  {hasRole('master') && (
-                    <Badge variant="default" className="text-xs bg-red-600">
-                      Master
-                    </Badge>
-                  )}
+                  <Badge variant="default" className={`text-xs ${
+                    user?.tipo === 'master' ? 'bg-red-600' : 
+                    user?.tipo === 'comprador' ? 'bg-blue-600' :
+                    user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
+                  }`}>
+                    {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
+                  </Badge>
                 </div>
               </div>
               

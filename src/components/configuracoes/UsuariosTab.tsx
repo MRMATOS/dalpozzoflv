@@ -43,12 +43,15 @@ const UsuariosTab = () => {
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
-        .order('nome');
+        .order('criado_em', { ascending: false });
       
       if (error) throw error;
       return data;
     },
   });
+
+  // Contar novos usuários (sem código de acesso)
+  const novosUsuarios = usuarios?.filter(u => !u.codigo_acesso || u.codigo_acesso === '').length || 0;
 
   const createUserMutation = useMutation({
     mutationFn: async (user: any) => {
@@ -162,7 +165,14 @@ const UsuariosTab = () => {
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base md:text-lg">Usuários</CardTitle>
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base md:text-lg">Usuários</CardTitle>
+            {novosUsuarios > 0 && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                {novosUsuarios} novo{novosUsuarios !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
           <Button onClick={() => setShowNewUser(true)} disabled={showNewUser} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" />
             Novo

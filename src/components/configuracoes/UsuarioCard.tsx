@@ -102,8 +102,10 @@ const UsuarioCard = ({
 
   const availableLojas = getAvailableLojas();
 
+  const isNewUser = !usuario.codigo_acesso || usuario.codigo_acesso === '';
+
   return (
-    <Card className="mb-3">
+    <Card className={`mb-3 ${isNewUser ? 'border-orange-200 bg-orange-50' : ''}`}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex-1 space-y-3">
@@ -116,12 +118,15 @@ const UsuarioCard = ({
                   className="font-medium"
                 />
               ) : (
-                <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
-                  {usuario.tipo === 'cd' && (
-                    <Truck className="w-4 h-4 text-orange-600" />
-                  )}
-                </div>
+                 <div className="flex items-center space-x-2">
+                   <h3 className="font-semibold text-lg text-gray-900">{usuario.nome}</h3>
+                   {isNewUser && (
+                     <Badge className="bg-orange-500 text-white text-xs">NOVO</Badge>
+                   )}
+                   {usuario.tipo === 'cd' && (
+                     <Truck className="w-4 h-4 text-orange-600" />
+                   )}
+                 </div>
               )}
             </div>
 
