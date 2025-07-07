@@ -21,11 +21,28 @@ const TipoCaixaModal: React.FC<TipoCaixaModalProps> = ({
   tipoParaEditar
 }) => {
   const [formData, setFormData] = useState({
-    nome: tipoParaEditar?.nome || '',
-    tara_kg: tipoParaEditar?.tara_kg?.toString() || '',
-    descricao: tipoParaEditar?.descricao || ''
+    nome: '',
+    tara_kg: '',
+    descricao: ''
   });
   const [loading, setLoading] = useState(false);
+
+  // Sincronizar formData com tipoParaEditar quando mudar
+  React.useEffect(() => {
+    if (tipoParaEditar) {
+      setFormData({
+        nome: tipoParaEditar.nome || '',
+        tara_kg: tipoParaEditar.tara_kg?.toString() || '',
+        descricao: tipoParaEditar.descricao || ''
+      });
+    } else {
+      setFormData({
+        nome: '',
+        tara_kg: '',
+        descricao: ''
+      });
+    }
+  }, [tipoParaEditar, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

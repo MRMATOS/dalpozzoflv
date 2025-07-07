@@ -19,6 +19,7 @@ import PesagemPallets from '@/components/recebimento/PesagemPallets';
 import RecebimentoProduto from '@/components/recebimento/RecebimentoProduto';
 import { toast } from 'sonner';
 import CancelRecebimentoButton from '@/components/recebimento/CancelRecebimentoButton';
+import TiposCaixasRecebimento from '@/components/recebimento/TiposCaixasRecebimento';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const RecebimentoAtivo = () => {
@@ -153,12 +154,15 @@ const RecebimentoAtivo = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="pallets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="pallets">
               Pallets ({pallets.length})
             </TabsTrigger>
             <TabsTrigger value="produtos">
               Produtos ({produtos.length})
+            </TabsTrigger>
+            <TabsTrigger value="configuracao">
+              Configuração
             </TabsTrigger>
             <TabsTrigger value="resumo">
               Resumo
@@ -180,6 +184,10 @@ const RecebimentoAtivo = () => {
               produtos={produtos}
               onProdutoAdded={() => refetch()}
             />
+          </TabsContent>
+
+          <TabsContent value="configuracao">
+            <TiposCaixasRecebimento />
           </TabsContent>
 
           <TabsContent value="resumo">
