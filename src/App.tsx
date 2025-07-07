@@ -8,7 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import PendingApproval from "./pages/PendingApproval";
 import Estoque from "./pages/Estoque";
-import Requisicoes from "./pages/Requisicoes";
+import RequisicoesCompleta from "./pages/RequisicoesCompleta";
 import Cotacao from "./pages/Cotacao";
 import ResumoPedido from "./pages/ResumoPedido";
 import Configuracoes from "./pages/Configuracoes";
@@ -60,7 +60,7 @@ function App() {
                 path="/requisicoes" 
                 element={
                   <ProtectedRoute>
-                    <Requisicoes />
+                    <RequisicoesCompleta />
                   </ProtectedRoute>
                 } 
               />

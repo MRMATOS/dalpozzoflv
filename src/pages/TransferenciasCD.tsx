@@ -267,14 +267,11 @@ const TransferenciasCD = () => {
     }));
   };
 
-  const handleConfirmadoChange = (key: string, confirmado: boolean) => {
-    setProdutosSeparacao(prev => ({
-      ...prev,
-      [key]: {
-        ...prev[key],
-        confirmado
-      }
-    }));
+  // Remover função de confirmado pois agora usamos apenas quantidade
+  const isProdutoSelecionado = (produto: ProdutoRequisitado) => {
+    const key = `${produto.loja}-${produto.produto_id}`;
+    const produtoAtual = produtosSeparacao[key] || produto;
+    return produtoAtual.quantidade_separar > 0;
   };
 
   const inicializarProduto = (produto: ProdutoRequisitado) => {
@@ -295,12 +292,13 @@ const TransferenciasCD = () => {
   const executarSeparacao = () => {
     if (!modalConfirmacao.loja) return;
 
+    // Produtos da loja com quantidade > 0
     const produtosDaLoja = Object.values(produtosSeparacao).filter(
-      p => p.loja === modalConfirmacao.loja && p.confirmado
+      p => p.loja === modalConfirmacao.loja && p.quantidade_separar > 0
     );
 
     if (produtosDaLoja.length === 0) {
-      toast.error('Selecione pelo menos um produto para separar');
+      toast.error('Defina uma quantidade maior que zero para pelo menos um produto');
       return;
     }
 
@@ -344,28 +342,29 @@ const TransferenciasCD = () => {
               </div>
             </div>
             
-            <div className="space-y-2">
-              <div>
-                <span className="text-gray-500 text-sm block mb-1">Quantidade a Separar</span>
-                <Input
-                  type="number"
-                  min="0"
-                  max={produto.estoque_cd}
-                  value={produtoAtual.quantidade_separar}
-                  onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
-                  className="w-full"
-                />
+              <div className="space-y-2">
+                <div>
+                  <span className="text-gray-500 text-sm block mb-1">Quantidade a Separar (kg)</span>
+                  <Input
+                    type="number"
+                    min="0"
+                    max={produto.estoque_cd}
+                    step="0.1"
+                    value={produtoAtual.quantidade_separar}
+                    onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
+                    className="w-full"
+                    placeholder="Digite 0 para não transferir"
+                  />
+                </div>
+                
+                <div className="text-xs text-gray-500">
+                  {produtoAtual.quantidade_separar > 0 ? (
+                    <span className="text-green-600 font-medium">✓ Será separado</span>
+                  ) : (
+                    <span className="text-gray-400">Não será transferido</span>
+                  )}
+                </div>
               </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={produtoAtual.confirmado}
-                  onCheckedChange={(checked) => handleConfirmadoChange(key, checked as boolean)}
-                  disabled={!temEstoque || produtoAtual.quantidade_separar <= 0}
-                />
-                <span className="text-sm">Confirmar separação</span>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -379,8 +378,8 @@ const TransferenciasCD = () => {
           <TableHead>Produto</TableHead>
           <TableHead>Requisitado (Kg)</TableHead>
           <TableHead>Estoque CD</TableHead>
-          <TableHead>Quantidade a Separar</TableHead>
-          <TableHead>Confirmar</TableHead>
+          <TableHead>Quantidade a Separar (kg)</TableHead>
+          <TableHead>Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -411,17 +410,19 @@ const TransferenciasCD = () => {
                   type="number"
                   min="0"
                   max={produto.estoque_cd}
+                  step="0.1"
                   value={produtoAtual.quantidade_separar}
                   onChange={(e) => handleQuantidadeChange(key, parseFloat(e.target.value) || 0)}
                   className="w-24"
+                  placeholder="0"
                 />
               </TableCell>
               <TableCell>
-                <Checkbox
-                  checked={produtoAtual.confirmado}
-                  onCheckedChange={(checked) => handleConfirmadoChange(key, checked as boolean)}
-                  disabled={!temEstoque || produtoAtual.quantidade_separar <= 0}
-                />
+                {produtoAtual.quantidade_separar > 0 ? (
+                  <span className="text-green-600 font-medium text-sm">✓ Separar</span>
+                ) : (
+                  <span className="text-gray-400 text-sm">Não transferir</span>
+                )}
               </TableCell>
             </TableRow>
           );

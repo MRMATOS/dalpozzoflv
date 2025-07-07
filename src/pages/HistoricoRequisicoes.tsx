@@ -27,7 +27,11 @@ interface HistoricoRequisicao {
   }>;
 }
 
-const HistoricoRequisicoes = () => {
+interface HistoricoRequisicoesProps {
+  embedded?: boolean;
+}
+
+const HistoricoRequisicoes = ({ embedded = false }: HistoricoRequisicoesProps) => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
@@ -114,30 +118,32 @@ const HistoricoRequisicoes = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
-              </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Histórico de Requisições
-                </h1>
+    <div className={embedded ? "" : "min-h-screen bg-gray-50"}>
+      {/* Header - Only show if not embedded */}
+      {!embedded && (
+        <header className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Voltar
+                </Button>
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <Calendar className="h-5 w-5 mr-2" />
+                    Histórico de Requisições
+                  </h1>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
