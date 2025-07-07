@@ -33,7 +33,7 @@ interface ItemPedido {
 }
 
 const HistoricoPedidos = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const [pedidos, setPedidos] = useState<PedidoHistorico[]>([]);
@@ -46,13 +46,25 @@ const HistoricoPedidos = () => {
 
   useEffect(() => {
     const buscarPedidos = async () => {
-      if (!user?.id) return;
+      // Se não há usuário autenticado, não buscar (exceto se loading ainda)
+      if (!user?.id && !authLoading) {
+        console.log('Usuário não autenticado, não buscando pedidos');
+        setIsLoading(false);
+        return;
+      }
+
+      // Se ainda está carregando dados de autenticação, aguardar
+      if (authLoading) {
+        console.log('Aguardando autenticação...');
+        return;
+      }
 
       try {
         console.log('Buscando pedidos...', { 
           userId: user?.id, 
           isMaster, 
-          visualizarTodos 
+          visualizarTodos,
+          authLoading 
         });
 
         let query = supabase
@@ -67,9 +79,11 @@ const HistoricoPedidos = () => {
             usuarios(nome, loja, tipo)
           `);
 
-        // Se não é master ou não está visualizando todos, filtrar por usuário
+        // Aplicar filtro apenas se necessário
         if (!isMaster || !visualizarTodos) {
-          query = query.eq('user_id', user?.id);
+          if (user?.id) {
+            query = query.eq('user_id', user.id);
+          }
         }
 
         const { data: pedidosData, error } = await query.order('criado_em', { ascending: false });
@@ -113,7 +127,7 @@ const HistoricoPedidos = () => {
     };
 
     buscarPedidos();
-  }, [user?.id, fornecedores, isMaster, visualizarTodos]);
+  }, [user?.id, fornecedores, isMaster, visualizarTodos, authLoading]);
 
   const buscarItensPedido = async (pedidoId: string) => {
     try {
