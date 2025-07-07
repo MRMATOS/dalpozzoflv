@@ -24,6 +24,8 @@ import RecebimentoDashboard from "@/pages/RecebimentoDashboard";
 import NovoRecebimento from "@/pages/NovoRecebimento";
 import RecebimentoAtivo from "@/pages/RecebimentoAtivo";
 import HistoricoRecebimentos from "@/pages/HistoricoRecebimentos";
+import PoliticaPrivacidade from "@/pages/PoliticaPrivacidade";
+import TermosUso from "@/pages/TermosUso";
 
 const queryClient = new QueryClient();
 
@@ -166,6 +168,8 @@ function App() {
                   </ProtectedRoute>
                 } 
               />
+              <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
+              <Route path="/termos-uso" element={<TermosUso />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Router>

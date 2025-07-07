@@ -83,6 +83,21 @@ const Index = () => {
         <div className="text-center mt-6 text-sm text-gray-500">
           <p>© 2024 Super Dal Pozzo - Sistema FLV v2.0</p>
           <p>Desenvolvido com segurança e praticidade</p>
+          <div className="flex justify-center space-x-4 mt-2">
+            <button
+              onClick={() => navigate("/politica-privacidade")}
+              className="text-gray-400 hover:text-gray-600 underline"
+            >
+              Política de Privacidade
+            </button>
+            <span className="text-gray-300">•</span>
+            <button
+              onClick={() => navigate("/termos-uso")}
+              className="text-gray-400 hover:text-gray-600 underline"
+            >
+              Termos de Uso
+            </button>
+          </div>
         </div>
       </div>
     </div>
