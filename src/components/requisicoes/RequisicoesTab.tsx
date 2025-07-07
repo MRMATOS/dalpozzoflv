@@ -259,7 +259,48 @@ const RequisicoesTab = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="flex flex-col h-full">
+      {/* Controles Fixos */}
+      <div className="bg-white border-b sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          {/* Busca e Criar Nova */}
+          <div className="mb-4 flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Buscar produto..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <Button 
+              onClick={handleSubmitRequisition}
+              disabled={totalItems === 0 || createRequisitionMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+            >
+              {createRequisitionMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              Criar Requisição
+            </Button>
+          </div>
+
+          {/* Resumo Nova Requisição */}
+          {totalItems > 0 && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-sm text-blue-800">
+                <span className="font-medium">{totalItems} produtos selecionados</span>
+                <span className="ml-4">{totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Requisições Pendentes */}
       {requisicoesPendentes && requisicoesPendentes.length > 0 && (
         <div className="bg-yellow-50 border-b border-yellow-200">
@@ -318,47 +359,6 @@ const RequisicoesTab = () => {
           </div>
         </div>
       )}
-
-      {/* Controles Fixos */}
-      <div className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Busca e Criar Nova */}
-          <div className="mb-4 flex gap-3 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar produto..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            
-            <Button 
-              onClick={handleSubmitRequisition}
-              disabled={totalItems === 0 || createRequisitionMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
-            >
-              {createRequisitionMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Criar Requisição
-            </Button>
-          </div>
-
-          {/* Resumo Nova Requisição */}
-          {totalItems > 0 && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="text-sm text-blue-800">
-                <span className="font-medium">{totalItems} produtos selecionados</span>
-                <span className="ml-4">{totalCaixas} caixas • {totalQuilos.toFixed(1)}kg</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
 
       {/* Lista de Produtos - Scrollável */}
       <main className="flex-1 overflow-auto">

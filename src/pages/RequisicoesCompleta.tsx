@@ -70,6 +70,7 @@ const RequisicoesCompleta = () => {
         </div>
       </div>
 
+
       {/* Content */}
       <div className="flex-1">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
