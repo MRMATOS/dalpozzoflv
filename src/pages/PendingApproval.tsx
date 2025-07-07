@@ -1,18 +1,71 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Mail, AlertCircle, CheckCircle } from "lucide-react";
-import { useEffect } from "react";
+import { Clock, Mail, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const PendingApproval = () => {
   const { user, signOut, loading } = useAuth();
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
+  // Verificar status de aprovação periodicamente
   useEffect(() => {
-    // Se usuário não está pendente, redirecionar
+    if (!user?.id) return;
+
+    const checkApprovalStatus = async () => {
+      try {
+        const { data: profile } = await supabase
+          .from('usuarios')
+          .select('aprovado')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (profile?.aprovado) {
+          console.log('Usuário foi aprovado! Redirecionando...');
+          window.location.href = '/dashboard';
+        }
+      } catch (error) {
+        console.error('Erro ao verificar status:', error);
+      }
+    };
+
+    // Verificar imediatamente
+    checkApprovalStatus();
+
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkApprovalStatus, 30000);
+
+    return () => clearInterval(interval);
+  }, [user?.id]);
+
+  // Se usuário não está pendente, redirecionar
+  useEffect(() => {
     if (!loading && user && !(user as any).pendingApproval) {
       window.location.href = '/dashboard';
     }
   }, [user, loading]);
+
+  const handleCheckStatus = async () => {
+    if (!user?.id) return;
+    
+    setCheckingStatus(true);
+    try {
+      const { data: profile } = await supabase
+        .from('usuarios')
+        .select('aprovado')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (profile?.aprovado) {
+        window.location.href = '/dashboard';
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -77,7 +130,24 @@ const PendingApproval = () => {
               </div>
             </div>
 
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t space-y-3">
+              <Button
+                onClick={handleCheckStatus}
+                disabled={checkingStatus}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                {checkingStatus ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Verificar Status
+                  </>
+                )}
+              </Button>
               <Button
                 onClick={signOut}
                 variant="outline"

@@ -182,8 +182,8 @@ const UsuariosTab = () => {
           <div className="flex items-center gap-3">
             <CardTitle className="text-base md:text-lg">Usuários</CardTitle>
             {novosUsuarios > 0 && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                {novosUsuarios} novo{novosUsuarios !== 1 ? 's' : ''}
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 animate-pulse">
+                {novosUsuarios} aguardando aprovação
               </span>
             )}
           </div>

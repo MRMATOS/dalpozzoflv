@@ -57,8 +57,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!profile) {
-        console.log('Perfil não encontrado. Usuário ainda não foi processado pelo trigger.');
-        setUser(null);
+        console.log('Perfil não encontrado. Criando usuário pendente temporário.');
+        // Criar usuário temporário para mostrar página de pending
+        setUser({
+          id: authUser.id,
+          nome: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+          loja: 'Aguardando',
+          google_email: authUser.email,
+          tipo: 'estoque',
+          ativo: false,
+          ultimo_login: null,
+          pendingApproval: true
+        } as UserProfile & { pendingApproval: boolean });
+        setLoading(false);
         return;
       }
 
