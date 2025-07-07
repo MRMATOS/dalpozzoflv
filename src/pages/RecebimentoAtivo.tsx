@@ -148,6 +148,9 @@ const RecebimentoAtivo = () => {
             {recebimento.fornecedor && (
               <span className="text-sm text-gray-500">{recebimento.fornecedor}</span>
             )}
+            <Badge variant="outline" className="text-xs">
+              {recebimento.modo_pesagem === 'media' ? 'Pesagem por média' : 'Pesagem individual'}
+            </Badge>
           </div>
         </div>
       </div>
@@ -174,6 +177,7 @@ const RecebimentoAtivo = () => {
               recebimentoId={id!} 
               pallets={pallets}
               onPalletAdded={() => refetch()}
+              recebimento={recebimento}
             />
           </TabsContent>
 
@@ -183,6 +187,7 @@ const RecebimentoAtivo = () => {
               pallets={pallets}
               produtos={produtos}
               onProdutoAdded={() => refetch()}
+              recebimento={recebimento}
             />
           </TabsContent>
 

@@ -22,6 +22,7 @@ interface Pallet {
 
 interface Produto {
   id: string;
+  produto_id: string;
   produto_nome: string;
   peso_bruto_kg: number;
   peso_liquido_kg: number;
@@ -37,13 +38,15 @@ interface RecebimentoProdutoProps {
   pallets: Pallet[];
   produtos: Produto[];
   onProdutoAdded: () => void;
+  recebimento?: any;
 }
 
 const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   recebimentoId,
   pallets,
   produtos,
-  onProdutoAdded
+  onProdutoAdded,
+  recebimento
 }) => {
   const [formData, setFormData] = useState({
     produto_id: '',
@@ -55,6 +58,10 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const [palletsUtilizados, setPalletsUtilizados] = useState<number[]>([]);
   const [palletsIndisponiveis, setPalletsIndisponiveis] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const isModoMedia = recebimento?.modo_pesagem === 'media';
+  const primeiroProdutoRegistrado = produtos.length > 0;
+  const produtoTravado = isModoMedia && primeiroProdutoRegistrado ? produtos[0].produto_nome : null;
 
   const { produtos: produtosDisponiveis } = useProdutosComPai();
 
@@ -119,7 +126,9 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const adicionarProduto = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.produto_id || !formData.peso_bruto || pesoBruto <= 0) {
+    // Validações básicas
+    const produtoId = produtoTravado ? produtos[0].produto_id : formData.produto_id;
+    if (!produtoId || !formData.peso_bruto || pesoBruto <= 0) {
       toast.error('Preencha os campos obrigatórios');
       return;
     }
@@ -131,14 +140,14 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
     setLoading(true);
     try {
-      const produto = produtosDisponiveis?.find(p => p.id === formData.produto_id);
+      const produto = produtosDisponiveis?.find(p => p.id === produtoId);
       const tipoCaixa = tiposCaixa?.find(t => t.id === formData.tipo_caixa_id);
 
       const { error } = await supabase
         .from('recebimentos_produtos')
         .insert({
           recebimento_id: recebimentoId,
-          produto_id: formData.produto_id,
+          produto_id: produtoId,
           produto_nome: produto?.display_name || produto?.produto || '',
           peso_bruto_kg: pesoBruto,
           peso_liquido_kg: pesoLiquido,
@@ -239,21 +248,33 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Produto *</Label>
-                <Select
-                  value={formData.produto_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, produto_id: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {produtosDisponiveis?.map((produto) => (
-                      <SelectItem key={produto.id} value={produto.id}>
-                        {produto.display_name || produto.produto}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {produtoTravado ? (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-yellow-600" />
+                      <span className="font-medium text-yellow-800">{produtoTravado}</span>
+                    </div>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Modo média ativo: todos os pallets devem ser usados para o mesmo produto
+                    </p>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.produto_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, produto_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {produtosDisponiveis?.map((produto) => (
+                        <SelectItem key={produto.id} value={produto.id}>
+                          {produto.display_name || produto.produto}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               <div className="space-y-2">

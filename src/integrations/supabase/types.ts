@@ -707,8 +707,12 @@ export type Database = {
           fornecedor: string | null
           id: string
           iniciado_por: string | null
+          modo_pesagem: string | null
           observacoes: string | null
           origem: string | null
+          peso_medio_calculado: number | null
+          peso_total_informado: number | null
+          quantidade_pallets_informada: number | null
           status: string
           total_peso_bruto: number | null
           total_peso_liquido: number | null
@@ -721,8 +725,12 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           iniciado_por?: string | null
+          modo_pesagem?: string | null
           observacoes?: string | null
           origem?: string | null
+          peso_medio_calculado?: number | null
+          peso_total_informado?: number | null
+          quantidade_pallets_informada?: number | null
           status?: string
           total_peso_bruto?: number | null
           total_peso_liquido?: number | null
@@ -735,8 +743,12 @@ export type Database = {
           fornecedor?: string | null
           id?: string
           iniciado_por?: string | null
+          modo_pesagem?: string | null
           observacoes?: string | null
           origem?: string | null
+          peso_medio_calculado?: number | null
+          peso_total_informado?: number | null
+          quantidade_pallets_informada?: number | null
           status?: string
           total_peso_bruto?: number | null
           total_peso_liquido?: number | null

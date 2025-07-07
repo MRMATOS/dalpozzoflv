@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { Scale, Plus, Trash2 } from "lucide-react";
+import { Scale, Plus, Trash2, Users } from "lucide-react";
 import { toast } from 'sonner';
 
 interface Pallet {
@@ -21,12 +21,14 @@ interface PesagemPalletsProps {
   recebimentoId: string;
   pallets: Pallet[];
   onPalletAdded: () => void;
+  recebimento?: any;
 }
 
 const PesagemPallets: React.FC<PesagemPalletsProps> = ({ 
   recebimentoId, 
   pallets, 
-  onPalletAdded 
+  onPalletAdded,
+  recebimento 
 }) => {
   const [peso, setPeso] = useState('');
   const [observacoes, setObservacoes] = useState('');
@@ -84,11 +86,81 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
   };
 
   const pesoTotal = pallets.reduce((acc, pallet) => acc + pallet.peso_kg, 0);
+  const isModoMedia = recebimento?.modo_pesagem === 'media';
+
+  const gerarPalletsMedia = async () => {
+    if (!recebimento || !recebimento.quantidade_pallets_informada || !recebimento.peso_medio_calculado) return;
+    
+    setLoading(true);
+    try {
+      const palletsToCreate = [];
+      for (let i = 1; i <= recebimento.quantidade_pallets_informada; i++) {
+        palletsToCreate.push({
+          recebimento_id: recebimentoId,
+          ordem: i,
+          peso_kg: recebimento.peso_medio_calculado,
+          observacoes: 'Peso médio calculado'
+        });
+      }
+
+      const { error } = await supabase
+        .from('recebimentos_pallets')
+        .insert(palletsToCreate);
+
+      if (error) throw error;
+
+      onPalletAdded();
+      toast.success(`${recebimento.quantidade_pallets_informada} pallets criados com peso médio!`);
+    } catch (error) {
+      console.error('Erro ao criar pallets por média:', error);
+      toast.error('Erro ao criar pallets por média');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Formulário para adicionar pallet */}
-      <Card>
+      {/* Modo média - Informações */}
+      {isModoMedia && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardHeader>
+            <CardTitle className="flex items-center text-blue-800">
+              <Users className="h-5 w-5 mr-2" />
+              Modo Pesagem por Média
+            </CardTitle>
+            <CardDescription className="text-blue-700">
+              Pallets serão criados automaticamente com peso médio calculado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="text-center p-3 bg-white rounded border">
+                <div className="text-sm text-gray-600">Quantidade</div>
+                <div className="text-lg font-bold">{recebimento?.quantidade_pallets_informada} pallets</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <div className="text-sm text-gray-600">Peso Total</div>
+                <div className="text-lg font-bold">{recebimento?.peso_total_informado?.toFixed(1)} kg</div>
+              </div>
+              <div className="text-center p-3 bg-white rounded border">
+                <div className="text-sm text-gray-600">Peso Médio</div>
+                <div className="text-lg font-bold text-green-600">{recebimento?.peso_medio_calculado?.toFixed(1)} kg</div>
+              </div>
+            </div>
+            {pallets.length === 0 && (
+              <Button onClick={gerarPalletsMedia} disabled={loading} className="w-full">
+                {loading ? 'Gerando...' : 'Gerar Pallets com Peso Médio'}
+                <Plus className="h-4 w-4 ml-2" />
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Formulário para adicionar pallet - apenas modo individual */}
+      {!isModoMedia && (
+        <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
             <Scale className="h-5 w-5 mr-2" />
@@ -132,6 +204,7 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
           </form>
         </CardContent>
       </Card>
+      )}
 
       {/* Lista de pallets registrados */}
       <Card>
