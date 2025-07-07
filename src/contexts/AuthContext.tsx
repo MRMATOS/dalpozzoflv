@@ -194,7 +194,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       });
 
@@ -233,8 +236,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setSession(null);
       
-      // Logout do Supabase Auth
-      await supabase.auth.signOut();
+      // Logout do Supabase Auth com escopo para forçar revogação do Google
+      await supabase.auth.signOut({
+        scope: 'global'
+      });
       
       // Limpar localStorage e sessionStorage
       localStorage.removeItem('lastLoginAttempt');
