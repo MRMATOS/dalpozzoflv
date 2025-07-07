@@ -5,8 +5,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Calendar, Package, MapPin } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Calendar, Package, MapPin, Users, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -15,6 +18,8 @@ interface HistoricoRequisicao {
   data_requisicao: string;
   loja: string;
   status: string;
+  usuario_nome?: string;
+  usuario_tipo?: string;
   itens: Array<{
     produto_nome: string;
     quantidade_calculada: number;
@@ -24,18 +29,24 @@ interface HistoricoRequisicao {
 
 const HistoricoRequisicoes = () => {
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [lojaFiltro, setLojaFiltro] = useState<string>('');
+  const [visualizarTodas, setVisualizarTodas] = useState<boolean>(false);
+
+  const isMaster = profile?.tipo === 'master';
 
   const { data: requisicoes, isLoading } = useQuery({
-    queryKey: ['historico-requisicoes'],
+    queryKey: ['historico-requisicoes', visualizarTodas],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const query = supabase
         .from('requisicoes')
         .select(`
           id,
           data_requisicao,
           loja,
           status,
+          usuario_id,
+          usuarios!inner(nome, tipo),
           itens_requisicao (
             quantidade_calculada,
             produtos (
@@ -43,8 +54,14 @@ const HistoricoRequisicoes = () => {
               unidade
             )
           )
-        `)
-        .order('data_requisicao', { ascending: false });
+        `);
+
+      // Se não é master ou não está visualizando todas, filtrar por loja do usuário
+      if (!isMaster || !visualizarTodas) {
+        query.eq('loja', profile?.loja || '');
+      }
+
+      const { data, error } = await query.order('data_requisicao', { ascending: false });
 
       if (error) throw error;
 
@@ -53,6 +70,8 @@ const HistoricoRequisicoes = () => {
         data_requisicao: req.data_requisicao,
         loja: req.loja,
         status: req.status,
+        usuario_nome: (req.usuarios as any)?.nome || 'Usuário não identificado',
+        usuario_tipo: (req.usuarios as any)?.tipo || '',
         itens: req.itens_requisicao?.map(item => ({
           produto_nome: (item.produtos as any)?.produto || 'Produto não encontrado',
           quantidade_calculada: item.quantidade_calculada || 0,
@@ -128,7 +147,24 @@ const HistoricoRequisicoes = () => {
             <CardTitle className="text-base">Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-6 items-center flex-wrap">
+              {/* Toggle para Masters */}
+              {isMaster && (
+                <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <Eye className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Visualizar todas as requisições</span>
+                  <Switch
+                    checked={visualizarTodas}
+                    onCheckedChange={setVisualizarTodas}
+                  />
+                  {visualizarTodas && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                      Modo Admin
+                    </Badge>
+                  )}
+                </div>
+              )}
+              
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 text-gray-500" />
                 <select
@@ -160,12 +196,27 @@ const HistoricoRequisicoes = () => {
               <Card key={requisicao.id}>
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-base flex items-center">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
-                        {requisicao.loja}
-                      </CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CardTitle className="text-base flex items-center">
+                          <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                          {requisicao.loja}
+                        </CardTitle>
+                        {visualizarTodas && requisicao.usuario_nome && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              <Users className="h-3 w-3 mr-1" />
+                              {requisicao.usuario_nome}
+                            </Badge>
+                            {requisicao.usuario_tipo && (
+                              <Badge variant="secondary" className="text-xs">
+                                {requisicao.usuario_tipo}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
                         {format(new Date(requisicao.data_requisicao), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
                       </p>
                     </div>

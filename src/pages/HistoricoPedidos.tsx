@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Package, Calendar, DollarSign } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { ArrowLeft, Package, Calendar, DollarSign, Users, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useFornecedores } from '@/hooks/useFornecedores';
 
@@ -17,6 +18,9 @@ interface PedidoHistorico {
   fornecedor_nome?: string;
   quantidade_itens: number;
   cotacao_id?: string;
+  usuario_nome?: string;
+  usuario_loja?: string;
+  usuario_tipo?: string;
 }
 
 interface ItemPedido {
@@ -29,20 +33,23 @@ interface ItemPedido {
 }
 
 const HistoricoPedidos = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const { fornecedores } = useFornecedores();
   const [pedidos, setPedidos] = useState<PedidoHistorico[]>([]);
   const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoHistorico | null>(null);
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [visualizarTodos, setVisualizarTodos] = useState<boolean>(false);
+
+  const isMaster = profile?.tipo === 'master';
 
   useEffect(() => {
     const buscarPedidos = async () => {
-      if (!user?.id) return;
+      if (!user?.id && !isMaster) return;
 
       try {
-        const { data, error } = await supabase
+        const query = supabase
           .from('pedidos_compra')
           .select(`
             id,
@@ -50,10 +57,17 @@ const HistoricoPedidos = () => {
             total,
             fornecedor_id,
             cotacao_id,
+            user_id,
+            usuarios!inner(nome, loja, tipo),
             itens_pedido(id)
-          `)
-          .eq('user_id', user.id)
-          .order('criado_em', { ascending: false });
+          `);
+
+        // Se não é master ou não está visualizando todos, filtrar por usuário
+        if (!isMaster || !visualizarTodos) {
+          query.eq('user_id', user?.id);
+        }
+
+        const { data, error } = await query.order('criado_em', { ascending: false });
 
         if (error) {
           console.error('Erro ao buscar pedidos:', error);
@@ -62,10 +76,15 @@ const HistoricoPedidos = () => {
 
         const pedidosComDetalhes = data.map(pedido => {
           const fornecedor = fornecedores.find(f => f.id === pedido.fornecedor_id);
+          const usuario = pedido.usuarios as any;
+          
           return {
             ...pedido,
             fornecedor_nome: fornecedor?.nome || 'Fornecedor não encontrado',
-            quantidade_itens: pedido.itens_pedido?.length || 0
+            quantidade_itens: pedido.itens_pedido?.length || 0,
+            usuario_nome: usuario?.nome || 'Usuário não identificado',
+            usuario_loja: usuario?.loja || '',
+            usuario_tipo: usuario?.tipo || ''
           };
         });
 
@@ -78,7 +97,7 @@ const HistoricoPedidos = () => {
     };
 
     buscarPedidos();
-  }, [user?.id, fornecedores]);
+  }, [user?.id, fornecedores, isMaster, visualizarTodos]);
 
   const buscarItensPedido = async (pedidoId: string) => {
     try {
@@ -165,14 +184,26 @@ const HistoricoPedidos = () => {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Voltar
                 </Button>
-                <div>
-                  <h1 className="text-lg font-semibold text-gray-900">
-                    Pedido - {pedidoSelecionado.fornecedor_nome}
-                  </h1>
-                  <p className="text-sm text-gray-500">
-                    {new Date(pedidoSelecionado.criado_em).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
+                 <div>
+                   <h1 className="text-lg font-semibold text-gray-900">
+                     Pedido - {pedidoSelecionado.fornecedor_nome}
+                   </h1>
+                   <div className="flex items-center gap-2 text-sm text-gray-500">
+                     <span>{new Date(pedidoSelecionado.criado_em).toLocaleDateString('pt-BR')}</span>
+                     {visualizarTodos && pedidoSelecionado.usuario_nome && (
+                       <>
+                         <span>•</span>
+                         <span>Por: {pedidoSelecionado.usuario_nome}</span>
+                         {pedidoSelecionado.usuario_loja && (
+                           <>
+                             <span>•</span>
+                             <span>Loja: {pedidoSelecionado.usuario_loja}</span>
+                           </>
+                         )}
+                       </>
+                     )}
+                   </div>
+                 </div>
               </div>
             </div>
           </div>
@@ -250,6 +281,30 @@ const HistoricoPedidos = () => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Filtros para Masters */}
+        {isMaster && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base">Opções de Visualização</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 bg-blue-50 p-3 rounded-lg border border-blue-200">
+                <Eye className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">Visualizar pedidos de todos os usuários</span>
+                <Switch
+                  checked={visualizarTodos}
+                  onCheckedChange={setVisualizarTodos}
+                />
+                {visualizarTodos && (
+                  <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                    Modo Admin
+                  </Badge>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {pedidos.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center">
@@ -268,26 +323,44 @@ const HistoricoPedidos = () => {
             {pedidos.map((pedido) => (
               <Card key={pedido.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => selecionarPedido(pedido)}>
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-center">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="font-semibold text-gray-900">{pedido.fornecedor_nome}</h3>
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <Package className="h-3 w-3" />
-                          {pedido.quantidade_itens} itens
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(pedido.criado_em).toLocaleDateString('pt-BR')}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <DollarSign className="h-4 w-4" />
-                          R$ {pedido.total.toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
+                   <div className="flex justify-between items-center">
+                     <div className="flex-1">
+                       <div className="flex items-center gap-3 mb-2 flex-wrap">
+                         <h3 className="font-semibold text-gray-900">{pedido.fornecedor_nome}</h3>
+                         <Badge variant="outline" className="flex items-center gap-1">
+                           <Package className="h-3 w-3" />
+                           {pedido.quantidade_itens} itens
+                         </Badge>
+                         {visualizarTodos && pedido.usuario_nome && (
+                           <div className="flex items-center gap-2">
+                             <Badge variant="outline" className="text-xs">
+                               <Users className="h-3 w-3 mr-1" />
+                               {pedido.usuario_nome}
+                             </Badge>
+                             {pedido.usuario_loja && (
+                               <Badge variant="secondary" className="text-xs">
+                                 {pedido.usuario_loja}
+                               </Badge>
+                             )}
+                             {pedido.usuario_tipo && (
+                               <Badge variant="secondary" className="text-xs">
+                                 {pedido.usuario_tipo}
+                               </Badge>
+                             )}
+                           </div>
+                         )}
+                       </div>
+                       <div className="flex items-center gap-4 text-sm text-gray-600">
+                         <div className="flex items-center gap-1">
+                           <Calendar className="h-4 w-4" />
+                           {new Date(pedido.criado_em).toLocaleDateString('pt-BR')}
+                         </div>
+                         <div className="flex items-center gap-1">
+                           <DollarSign className="h-4 w-4" />
+                           R$ {pedido.total.toFixed(2)}
+                         </div>
+                       </div>
+                     </div>
                     <ArrowLeft className="h-5 w-5 text-gray-400 rotate-180" />
                   </div>
                 </CardContent>
