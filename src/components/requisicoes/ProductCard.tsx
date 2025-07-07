@@ -70,7 +70,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuantityChange }) 
               type="number"
               value={caixas}
               onChange={(e) => handleInputChange(e.target.value)}
-              className="w-16 text-center h-8 flex-shrink-0"
+              className="w-20 text-center h-8 flex-shrink-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
               min="0"
             />
             

@@ -28,31 +28,7 @@ const Dashboard = () => {
   }
 
   const cards = [
-    // Gestão CD - disponível se puder ver gestao_cd
-    canView('gestao_cd') && {
-      title: "Gestão CD",
-      description: "Gerenciar requisições e transferências",
-      icon: Building2,
-      color: "bg-cyan-500",
-      onClick: () => navigate("/gestao-cd")
-    },
-    // Estoque - disponível se puder ver estoque
-    canView('estoque') && {
-      title: "Estoque",
-      description: "Gerenciar estoque de produtos",
-      icon: Package,
-      color: "bg-blue-500",
-      onClick: () => navigate("/estoque")
-    },
-    // Requisições - disponível se puder ver requisicoes
-    canView('requisicoes') && {
-      title: "Requisições",
-      description: "Criar e gerenciar requisições",
-      icon: ShoppingCart,
-      color: "bg-green-500",
-      onClick: () => navigate("/requisicoes")
-    },
-    // Cotação - disponível se puder ver cotacao
+    // Primeira linha: Cotação, Gestão CD, Recebimento
     canView('cotacao') && {
       title: "Cotação",
       description: "Comparar preços e criar pedidos",
@@ -60,15 +36,35 @@ const Dashboard = () => {
       color: "bg-purple-500",
       onClick: () => navigate("/cotacao")
     },
-    // Histórico de Requisições - disponível se puder ver historico_requisicoes
-    canView('historico_requisicoes') && {
-      title: "Histórico de Requisições",
-      description: "Visualizar requisições anteriores",
-      icon: History,
-      color: "bg-orange-500",
-      onClick: () => navigate("/historico-requisicoes")
+    canView('gestao_cd') && {
+      title: "Gestão CD",
+      description: "Gerenciar requisições e transferências",
+      icon: Building2,
+      color: "bg-cyan-500",
+      onClick: () => navigate("/gestao-cd")
     },
-    // Histórico de Pedidos - disponível se puder ver historico_pedidos
+    (profile?.tipo === 'cd' || profile?.tipo === 'master') && {
+      title: "Recebimento",
+      description: "Registrar recebimento de mercadorias no CD",
+      icon: Package,
+      color: "bg-purple-500",
+      onClick: () => navigate("/recebimento")
+    },
+    // Segunda linha: Requisições, Estoque, Histórico de Pedidos
+    canView('requisicoes') && {
+      title: "Requisições",
+      description: "Criar e gerenciar requisições",
+      icon: ShoppingCart,
+      color: "bg-green-500",
+      onClick: () => navigate("/requisicoes")
+    },
+    canView('estoque') && {
+      title: "Estoque",
+      description: "Gerenciar estoque de produtos",
+      icon: Package,
+      color: "bg-blue-500",
+      onClick: () => navigate("/estoque")
+    },
     canView('historico_pedidos') && {
       title: "Histórico de Pedidos",
       description: "Visualizar pedidos de compra",
@@ -76,21 +72,27 @@ const Dashboard = () => {
       color: "bg-indigo-500",
       onClick: () => navigate("/historico-pedidos")
     },
-    // Configurações - disponível se puder ver configuracoes
-    canView('configuracoes') && {
-      title: "Configurações",
-      description: "Gerenciar produtos e fornecedores",
-      icon: Settings,
-      color: "bg-gray-500",
-      onClick: () => navigate("/configuracoes")
+    // Terceira linha: Histórico de Requisições, Admin de Permissões, Configurações
+    canView('historico_requisicoes') && {
+      title: "Histórico de Requisições",
+      description: "Visualizar requisições anteriores",
+      icon: History,
+      color: "bg-orange-500",
+      onClick: () => navigate("/historico-requisicoes")
     },
-    // Admin de Permissões - apenas para master
     hasRole('master') && {
       title: "Administração de Permissões",
       description: "Gerenciar permissões de usuários",
       icon: Shield,
       color: "bg-red-500",
       onClick: () => navigate("/admin/permissions")
+    },
+    canView('configuracoes') && {
+      title: "Configurações",
+      description: "Gerenciar produtos e fornecedores",
+      icon: Settings,
+      color: "bg-gray-500",
+      onClick: () => navigate("/configuracoes")
     }
   ].filter(Boolean);
 
@@ -106,31 +108,36 @@ const Dashboard = () => {
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline" className="text-xs">
-                    {profile?.loja}
-                  </Badge>
-                  <Badge variant="default" className={`text-xs ${
-                    user?.tipo === 'master' ? 'bg-red-600' : 
-                    user?.tipo === 'comprador' ? 'bg-blue-600' :
-                    user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
-                  }`}>
-                    {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
-                  </Badge>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center space-x-2">
-                <LogOut className="h-4 w-4" />
-                <span>Sair</span>
-              </Button>
-            </div>
+            <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center space-x-2">
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
+            </Button>
           </div>
         </div>
       </header>
+
+      {/* Seção de informações do usuário */}
+      <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
+              <div className="flex items-center space-x-2 mt-1">
+                <Badge variant="outline" className="text-xs">
+                  {profile?.loja}
+                </Badge>
+                <Badge variant="default" className={`text-xs ${
+                  user?.tipo === 'master' ? 'bg-red-600' : 
+                  user?.tipo === 'comprador' ? 'bg-blue-600' :
+                  user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
+                }`}>
+                  {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -166,30 +173,6 @@ const Dashboard = () => {
           })}
         </div>
 
-        {(profile?.tipo === 'cd' || profile?.tipo === 'master') && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            <Card className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate('/recebimento')}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-purple-500">
-                    <Package className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">Recebimento</CardTitle>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="mb-4 text-sm">
-                  Registrar recebimento de mercadorias no CD
-                </CardDescription>
-                <Button className="w-full bg-blue-600 hover:bg-blue-700" variant="default">
-                  Acessar
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {cards.length === 0 && (
           <Card className="text-center py-8">

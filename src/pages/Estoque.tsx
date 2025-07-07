@@ -347,7 +347,7 @@ const Estoque = () => {
                         min="0"
                         value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
                         onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
-                        className="w-16 text-center h-8"
+                        className="w-20 text-center h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                       />
                       <Button 
                         variant="outline" 
