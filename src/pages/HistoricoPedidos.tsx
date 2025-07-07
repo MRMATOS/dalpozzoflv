@@ -46,10 +46,16 @@ const HistoricoPedidos = () => {
 
   useEffect(() => {
     const buscarPedidos = async () => {
-      if (!user?.id && !isMaster) return;
+      if (!user?.id) return;
 
       try {
-        const query = supabase
+        console.log('Buscando pedidos...', { 
+          userId: user?.id, 
+          isMaster, 
+          visualizarTodos 
+        });
+
+        let query = supabase
           .from('pedidos_compra')
           .select(`
             id,
@@ -58,36 +64,46 @@ const HistoricoPedidos = () => {
             fornecedor_id,
             cotacao_id,
             user_id,
-            usuarios!inner(nome, loja, tipo),
-            itens_pedido(id)
+            usuarios(nome, loja, tipo)
           `);
 
         // Se não é master ou não está visualizando todos, filtrar por usuário
         if (!isMaster || !visualizarTodos) {
-          query.eq('user_id', user?.id);
+          query = query.eq('user_id', user?.id);
         }
 
-        const { data, error } = await query.order('criado_em', { ascending: false });
+        const { data: pedidosData, error } = await query.order('criado_em', { ascending: false });
 
         if (error) {
           console.error('Erro ao buscar pedidos:', error);
           return;
         }
 
-        const pedidosComDetalhes = data.map(pedido => {
-          const fornecedor = fornecedores.find(f => f.id === pedido.fornecedor_id);
-          const usuario = pedido.usuarios as any;
-          
-          return {
-            ...pedido,
-            fornecedor_nome: fornecedor?.nome || 'Fornecedor não encontrado',
-            quantidade_itens: pedido.itens_pedido?.length || 0,
-            usuario_nome: usuario?.nome || 'Usuário não identificado',
-            usuario_loja: usuario?.loja || '',
-            usuario_tipo: usuario?.tipo || ''
-          };
-        });
+        console.log('Pedidos encontrados:', pedidosData);
 
+        // Buscar contagem de itens para cada pedido
+        const pedidosComDetalhes = await Promise.all(
+          (pedidosData || []).map(async (pedido) => {
+            const { data: itensData } = await supabase
+              .from('itens_pedido')
+              .select('id')
+              .eq('pedido_id', pedido.id);
+
+            const fornecedor = fornecedores.find(f => f.id === pedido.fornecedor_id);
+            const usuario = pedido.usuarios as any;
+            
+            return {
+              ...pedido,
+              fornecedor_nome: fornecedor?.nome || 'Fornecedor não encontrado',
+              quantidade_itens: itensData?.length || 0,
+              usuario_nome: usuario?.nome || 'Usuário não identificado',
+              usuario_loja: usuario?.loja || '',
+              usuario_tipo: usuario?.tipo || ''
+            };
+          })
+        );
+
+        console.log('Pedidos com detalhes:', pedidosComDetalhes);
         setPedidos(pedidosComDetalhes);
       } catch (error) {
         console.error('Erro ao buscar pedidos:', error);
