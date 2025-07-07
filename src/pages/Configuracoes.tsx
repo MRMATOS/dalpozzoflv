@@ -9,7 +9,7 @@ import ProdutosTab from '@/components/configuracoes/ProdutosTab';
 import UsuariosTab from '@/components/configuracoes/UsuariosTab';
 import FornecedoresTab from '@/components/configuracoes/FornecedoresTab';
 import LojasTab from '@/components/configuracoes/LojasTab';
-import TiposCaixasTab from '@/components/configuracoes/TiposCaixasTab';
+
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -19,8 +19,8 @@ const Configuracoes = () => {
   const isComprador = hasRole('comprador');
 
   const availableTabs = isMaster 
-    ? ['produtos', 'usuarios', 'fornecedores', 'lojas', 'tipos-caixas']
-    : ['produtos', 'fornecedores', 'tipos-caixas'];
+    ? ['produtos', 'usuarios', 'fornecedores', 'lojas']
+    : ['produtos', 'fornecedores'];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -46,7 +46,7 @@ const Configuracoes = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="produtos" className="w-full">
-          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-5' : 'grid-cols-3'}`}>
+          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-4' : 'grid-cols-2'}`}>
             {availableTabs.includes('produtos') && (
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
             )}
@@ -58,9 +58,6 @@ const Configuracoes = () => {
             )}
             {availableTabs.includes('lojas') && (
               <TabsTrigger value="lojas">Lojas</TabsTrigger>
-            )}
-            {availableTabs.includes('tipos-caixas') && (
-              <TabsTrigger value="tipos-caixas">Tipos de Caixas</TabsTrigger>
             )}
           </TabsList>
           
@@ -85,12 +82,6 @@ const Configuracoes = () => {
           {availableTabs.includes('lojas') && (
             <TabsContent value="lojas" className="mt-6">
               <LojasTab />
-            </TabsContent>
-          )}
-          
-          {availableTabs.includes('tipos-caixas') && (
-            <TabsContent value="tipos-caixas" className="mt-6">
-              <TiposCaixasTab />
             </TabsContent>
           )}
         </Tabs>

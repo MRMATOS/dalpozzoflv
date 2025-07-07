@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Loader2, Plus, Save } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import DeleteConfirmDialog from './DeleteConfirmDialog';
+import ProductDeletionHandler from './ProductDeletionHandler';
 import ProdutoFilters from './ProdutoFilters';
 import ProdutoCard from './ProdutoCard';
 
@@ -41,13 +41,9 @@ const ProdutosTab = () => {
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
     produto: Produto | null;
-    title: string;
-    description: string;
   }>({
     open: false,
-    produto: null,
-    title: '',
-    description: ''
+    produto: null
   });
   const [newProduct, setNewProduct] = useState({
     produto: '',
@@ -256,12 +252,12 @@ const ProdutosTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['produtos-hierarquicos'] });
       toast.success('Produto excluído com sucesso!');
-      setDeleteDialog({ open: false, produto: null, title: '', description: '' });
+      setDeleteDialog({ open: false, produto: null });
     },
     onError: (error) => {
       console.error('Erro ao excluir produto:', error);
       toast.error('Erro ao excluir produto: ' + error.message);
-      setDeleteDialog({ open: false, produto: null, title: '', description: '' });
+      setDeleteDialog({ open: false, produto: null });
     },
   });
 
@@ -310,30 +306,19 @@ const ProdutosTab = () => {
     const temVariacoes = produtoPrincipal?.variacoes && produtoPrincipal.variacoes.length > 0;
 
     if (!isVariacao && temVariacoes) {
-      setDeleteDialog({
-        open: true,
-        produto,
-        title: 'Não é possível excluir',
-        description: `O produto "${produto.produto}" possui ${produtoPrincipal?.variacoes?.length} variação(ões) ativa(s). Exclua todas as variações primeiro.`
-      });
+      toast.error(`O produto "${produto.produto}" possui ${produtoPrincipal?.variacoes?.length} variação(ões). Exclua todas as variações primeiro.`);
       return;
     }
 
-    const nomeExibicao = isVariacao ? produto.nome_variacao : produto.produto;
-    const tipo = isVariacao ? 'variação' : 'produto';
-
     setDeleteDialog({
       open: true,
-      produto,
-      title: `Confirmar exclusão`,
-      description: `Tem certeza que deseja excluir ${tipo} "${nomeExibicao}"? Esta ação não pode ser desfeita.`
+      produto
     });
   };
 
-  const handleConfirmDelete = () => {
-    if (deleteDialog.produto) {
-      deleteProductMutation.mutate(deleteDialog.produto.id);
-    }
+  const handleDeleteSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['produtos-hierarquicos'] });
+    setDeleteDialog({ open: false, produto: null });
   };
 
   if (isLoading) {
@@ -530,14 +515,18 @@ const ProdutosTab = () => {
         </CardContent>
       </Card>
 
-      <DeleteConfirmDialog
-        open={deleteDialog.open}
-        onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
-        onConfirm={handleConfirmDelete}
-        title={deleteDialog.title}
-        description={deleteDialog.description}
-        isLoading={deleteProductMutation.isPending}
-      />
+      {deleteDialog.open && deleteDialog.produto && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
+            <ProductDeletionHandler
+              produtoId={deleteDialog.produto.id}
+              produtoNome={deleteDialog.produto.produto_pai_id ? deleteDialog.produto.nome_variacao || '' : deleteDialog.produto.produto}
+              onDeleteSuccess={handleDeleteSuccess}
+              onCancel={() => setDeleteDialog({ open: false, produto: null })}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -261,7 +261,7 @@ const RequisicoesTab = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Controles Fixos */}
-      <div className="bg-white border-b sticky top-0 z-30">
+      <div className="bg-white border-b sticky top-32 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Busca e Criar Nova */}
           <div className="mb-4 flex gap-3 items-center">

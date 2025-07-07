@@ -264,7 +264,12 @@ const ProdutoCard = ({
                       <Plus className="w-4 h-4" />
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => onDelete(produto)} className="h-8 text-red-600 hover:text-red-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => onDelete(produto)} 
+                    className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </>
