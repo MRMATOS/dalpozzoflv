@@ -72,15 +72,17 @@ const RequisicoesCompleta = () => {
 
       {/* Content */}
       <div className="flex-1">
-        <TabsContent value="requisicao" className="mt-0 h-full">
-          <RequisicoesTab />
-        </TabsContent>
-        <TabsContent value="confirmacao" className="mt-0 h-full">
-          <ConfirmacaoTab />
-        </TabsContent>
-        <TabsContent value="historico" className="mt-0 h-full">
-          <HistoricoRequisicoes embedded={true} />
-        </TabsContent>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full h-full">
+          <TabsContent value="requisicao" className="mt-0 h-full">
+            <RequisicoesTab />
+          </TabsContent>
+          <TabsContent value="confirmacao" className="mt-0 h-full">
+            <ConfirmacaoTab />
+          </TabsContent>
+          <TabsContent value="historico" className="mt-0 h-full">
+            <HistoricoRequisicoes embedded={true} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
