@@ -277,7 +277,7 @@ const Requisicoes = () => {
       {/* Requisições Pendentes */}
       {requisicoesPendentes && requisicoesPendentes.length > 0 && (
         <div className="bg-yellow-50 border-b border-yellow-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-4">
             <h2 className="text-sm font-medium text-yellow-800 mb-3">Requisições Pendentes</h2>
             <div className="space-y-2">
               {requisicoesPendentes.map((req) => {
