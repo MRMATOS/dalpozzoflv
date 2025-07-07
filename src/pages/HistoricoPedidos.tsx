@@ -46,27 +46,26 @@ const HistoricoPedidos = () => {
 
   useEffect(() => {
     const buscarPedidos = async () => {
-      // Se não há usuário autenticado, não buscar (exceto se loading ainda)
+      // Se ainda está carregando autenticação, aguardar
+      if (authLoading) {
+        console.log('Aguardando autenticação...');
+        return;
+      }
+
+      // Se não há usuário autenticado após loading, não buscar
       if (!user?.id && !authLoading) {
         console.log('Usuário não autenticado, não buscando pedidos');
         setIsLoading(false);
         return;
       }
 
-      // Se ainda está carregando dados de autenticação, aguardar
-      if (authLoading) {
-        console.log('Aguardando autenticação...');
-        return;
-      }
-
       try {
-        console.log('Buscando pedidos...', { 
-          userId: user?.id, 
-          isMaster, 
-          visualizarTodos,
-          authLoading 
-        });
+        console.log('=== INICIANDO BUSCA DE PEDIDOS ===');
+        console.log('User ID:', user?.id);
+        console.log('É Master:', isMaster);
+        console.log('Visualizar Todos:', visualizarTodos);
 
+        // 1. BUSCAR PEDIDOS (consulta simplificada)
         let query = supabase
           .from('pedidos_compra')
           .select(`
@@ -75,52 +74,94 @@ const HistoricoPedidos = () => {
             total,
             fornecedor_id,
             cotacao_id,
-            user_id,
-            usuarios(nome, loja, tipo)
+            user_id
           `);
 
-        // Aplicar filtro apenas se necessário
+        // Aplicar filtro de usuário se necessário
         if (!isMaster || !visualizarTodos) {
           if (user?.id) {
             query = query.eq('user_id', user.id);
+            console.log('Aplicando filtro por user_id:', user.id);
           }
+        } else {
+          console.log('Master visualizando todos os pedidos');
         }
 
-        const { data: pedidosData, error } = await query.order('criado_em', { ascending: false });
+        const { data: pedidosData, error: pedidosError } = await query.order('criado_em', { ascending: false });
 
-        if (error) {
-          console.error('Erro ao buscar pedidos:', error);
+        if (pedidosError) {
+          console.error('ERRO ao buscar pedidos:', pedidosError);
+          setIsLoading(false);
           return;
         }
 
-        console.log('Pedidos encontrados:', pedidosData);
+        console.log('PEDIDOS encontrados:', pedidosData?.length || 0, pedidosData);
 
-        // Buscar contagem de itens para cada pedido
+        if (!pedidosData || pedidosData.length === 0) {
+          console.log('Nenhum pedido encontrado');
+          setPedidos([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // 2. BUSCAR DADOS DOS USUÁRIOS (se necessário)
+        const userIds = [...new Set(pedidosData.map(p => p.user_id).filter(id => id))];
+        let usuariosMap = new Map();
+
+        if (userIds.length > 0) {
+          const { data: usuariosData, error: usuariosError } = await supabase
+            .from('usuarios')
+            .select('id, nome, loja, tipo')
+            .in('id', userIds);
+
+          if (usuariosError) {
+            console.error('Erro ao buscar usuários:', usuariosError);
+          } else {
+            usuariosData?.forEach(usuario => {
+              usuariosMap.set(usuario.id, usuario);
+            });
+            console.log('USUÁRIOS carregados:', usuariosData?.length || 0);
+          }
+        }
+
+        // 3. BUSCAR CONTAGEM DE ITENS PARA CADA PEDIDO
         const pedidosComDetalhes = await Promise.all(
-          (pedidosData || []).map(async (pedido) => {
-            const { data: itensData } = await supabase
-              .from('itens_pedido')
-              .select('id')
-              .eq('pedido_id', pedido.id);
+          pedidosData.map(async (pedido) => {
+            try {
+              const { data: itensData } = await supabase
+                .from('itens_pedido')
+                .select('id')
+                .eq('pedido_id', pedido.id);
 
-            const fornecedor = fornecedores.find(f => f.id === pedido.fornecedor_id);
-            const usuario = pedido.usuarios as any;
-            
-            return {
-              ...pedido,
-              fornecedor_nome: fornecedor?.nome || 'Fornecedor não encontrado',
-              quantidade_itens: itensData?.length || 0,
-              usuario_nome: usuario?.nome || 'Usuário não identificado',
-              usuario_loja: usuario?.loja || '',
-              usuario_tipo: usuario?.tipo || ''
-            };
+              const fornecedor = fornecedores.find(f => f.id === pedido.fornecedor_id);
+              const usuario = usuariosMap.get(pedido.user_id);
+              
+              return {
+                ...pedido,
+                fornecedor_nome: fornecedor?.nome || 'Fornecedor não encontrado',
+                quantidade_itens: itensData?.length || 0,
+                usuario_nome: usuario?.nome || 'Usuário não identificado',
+                usuario_loja: usuario?.loja || '',
+                usuario_tipo: usuario?.tipo || ''
+              };
+            } catch (error) {
+              console.error('Erro ao processar pedido:', pedido.id, error);
+              return {
+                ...pedido,
+                fornecedor_nome: 'Erro ao carregar',
+                quantidade_itens: 0,
+                usuario_nome: 'Erro ao carregar',
+                usuario_loja: '',
+                usuario_tipo: ''
+              };
+            }
           })
         );
 
-        console.log('Pedidos com detalhes:', pedidosComDetalhes);
+        console.log('=== PEDIDOS FINAIS ===', pedidosComDetalhes.length, pedidosComDetalhes);
         setPedidos(pedidosComDetalhes);
       } catch (error) {
-        console.error('Erro ao buscar pedidos:', error);
+        console.error('ERRO GERAL ao buscar pedidos:', error);
       } finally {
         setIsLoading(false);
       }
