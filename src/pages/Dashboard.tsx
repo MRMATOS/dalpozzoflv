@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, hasRole, signOut } = useAuth();
   const { canView, loading: permissionsLoading } = usePermissions();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await signOut();
@@ -106,6 +108,25 @@ const Dashboard = () => {
               <div>
                 <h1 className="text-lg font-semibold text-gray-900">FLV</h1>
               </div>
+              {!isMobile && (
+                <div className="flex items-center space-x-4 ml-8">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {profile?.loja}
+                      </Badge>
+                      <Badge variant="default" className={`text-xs ${
+                        user?.tipo === 'master' ? 'bg-red-600' : 
+                        user?.tipo === 'comprador' ? 'bg-blue-600' :
+                        user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
+                      }`}>
+                        {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <Button variant="outline" size="sm" onClick={handleLogout} className="flex items-center space-x-2">
@@ -116,28 +137,30 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* Seção de informações do usuário */}
-      <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <Badge variant="outline" className="text-xs">
-                  {profile?.loja}
-                </Badge>
-                <Badge variant="default" className={`text-xs ${
-                  user?.tipo === 'master' ? 'bg-red-600' : 
-                  user?.tipo === 'comprador' ? 'bg-blue-600' :
-                  user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
-                }`}>
-                  {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
-                </Badge>
+      {/* Seção de informações do usuário - apenas mobile */}
+      {isMobile && (
+        <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">{profile?.nome}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {profile?.loja}
+                  </Badge>
+                  <Badge variant="default" className={`text-xs ${
+                    user?.tipo === 'master' ? 'bg-red-600' : 
+                    user?.tipo === 'comprador' ? 'bg-blue-600' :
+                    user?.tipo === 'cd' ? 'bg-orange-600' : 'bg-green-600'
+                  }`}>
+                    {user?.tipo === 'cd' ? 'Centro de Distribuição' : user?.tipo || 'estoque'}
+                  </Badge>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
