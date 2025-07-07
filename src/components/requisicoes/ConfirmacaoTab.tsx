@@ -418,10 +418,11 @@ const ConfirmacaoTab = () => {
                 )}
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="flex gap-2">
+            <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:gap-2">
               <Button
                 variant="outline"
                 onClick={() => setModalConfirmacao({ aberto: false })}
+                className="w-full sm:w-auto"
               >
                 Cancelar
               </Button>
@@ -429,13 +430,14 @@ const ConfirmacaoTab = () => {
                 variant="outline"
                 onClick={confirmarSemDivergencia}
                 disabled={confirmarRecebimentoMutation.isPending}
+                className="w-full sm:w-auto"
               >
                 Confirmar Sem Divergência
               </Button>
               <Button
                 onClick={confirmarTudo}
                 disabled={confirmarRecebimentoMutation.isPending}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               >
                 {confirmarRecebimentoMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />

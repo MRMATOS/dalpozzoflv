@@ -66,21 +66,21 @@ const RequisicoesCompleta = () => {
                 {isMobile ? 'Histórico' : 'Histórico'}
               </TabsTrigger>
             </TabsList>
-            
-            {/* Content */}
-            <div className="flex-1">
-              <TabsContent value="requisicao" className="mt-0">
-                <RequisicoesTab />
-              </TabsContent>
-              <TabsContent value="confirmacao" className="mt-0">
-                <ConfirmacaoTab />
-              </TabsContent>
-              <TabsContent value="historico" className="mt-0">
-                <HistoricoRequisicoes embedded={true} />
-              </TabsContent>
-            </div>
           </Tabs>
         </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1">
+        <TabsContent value="requisicao" className="mt-0 h-full">
+          <RequisicoesTab />
+        </TabsContent>
+        <TabsContent value="confirmacao" className="mt-0 h-full">
+          <ConfirmacaoTab />
+        </TabsContent>
+        <TabsContent value="historico" className="mt-0 h-full">
+          <HistoricoRequisicoes embedded={true} />
+        </TabsContent>
       </div>
     </div>
   );

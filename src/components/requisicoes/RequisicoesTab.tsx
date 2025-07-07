@@ -259,7 +259,7 @@ const RequisicoesTab = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Requisições Pendentes */}
       {requisicoesPendentes && requisicoesPendentes.length > 0 && (
         <div className="bg-yellow-50 border-b border-yellow-200">
@@ -320,7 +320,7 @@ const RequisicoesTab = () => {
       )}
 
       {/* Controles Fixos */}
-      <div className="bg-white border-b sticky top-32 z-30">
+      <div className="bg-white border-b sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Busca e Criar Nova */}
           <div className="mb-4 flex gap-3 items-center">
@@ -361,27 +361,29 @@ const RequisicoesTab = () => {
       </div>
 
       {/* Lista de Produtos - Scrollável */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="space-y-3">
-          {filteredProducts.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-gray-500">
-                  {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onQuantityChange={handleQuantityChange}
-              />
-            ))
-          )}
+      <main className="flex-1 overflow-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="space-y-3">
+            {filteredProducts.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <p className="text-gray-500">
+                    {searchTerm ? 'Nenhum produto encontrado com esse nome' : 'Nenhum produto cadastrado'}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onQuantityChange={handleQuantityChange}
+                />
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
