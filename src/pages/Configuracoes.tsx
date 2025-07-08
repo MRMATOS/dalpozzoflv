@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,13 +12,15 @@ import LojasTab from '@/components/configuracoes/LojasTab';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
-  const { hasRole } = useAuth();
+  const { hasRole, user } = useAuth();
 
   const isMaster = hasRole('master');
-  const isComprador = hasRole('comprador');
+  const isComprador = hasRole('comprador') || user?.tipo === 'comprador';
 
   const availableTabs = isMaster 
     ? ['produtos', 'usuarios', 'fornecedores', 'lojas']
+    : isComprador 
+    ? ['produtos', 'fornecedores']
     : ['produtos', 'fornecedores'];
 
   return (

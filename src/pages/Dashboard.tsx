@@ -89,7 +89,7 @@ const Dashboard = () => {
       color: "bg-red-500",
       onClick: () => navigate("/admin/permissions")
     },
-    canView('configuracoes') && {
+    (canView('configuracoes') || hasRole('comprador')) && {
       title: "Configurações",
       description: "Gerenciar produtos e fornecedores",
       icon: Settings,
