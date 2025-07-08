@@ -6,12 +6,16 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw, ArrowLeft, Truck, CheckCircle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Package, Save, AlertCircle, Plus, Minus, Search, RefreshCw, ArrowLeft, Truck, CheckCircle, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEstoque } from '@/hooks/useEstoque';
 import { useProdutosComPai } from '@/hooks/useProdutosComPai';
+import { useLojas } from '@/hooks/useLojas';
 
 interface EstoqueProduto {
   id: string;
@@ -37,13 +41,16 @@ const Estoque = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { error: estoqueError, recarregarEstoque } = useEstoque();
+  const { estoqueProdutos, isLoading: loadingEstoqueGeral, error: estoqueError, recarregarEstoque } = useEstoque();
   const { produtos: produtosComPai, loading: loadingProdutos } = useProdutosComPai();
+  const { lojas } = useLojas();
   const [produtos, setProdutos] = useState<EstoqueProduto[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [buscaProduto, setBuscaProduto] = useState('');
+  const [buscaVisualizacao, setBuscaVisualizacao] = useState('');
+  const [lojaFiltro, setLojaFiltro] = useState<string>('todas');
 
   useEffect(() => {
     const carregarEstoque = async () => {
@@ -253,6 +260,20 @@ const Estoque = () => {
     );
   });
 
+  // Filtros para visualização multi-loja
+  const estoquesVisualizacao = estoqueProdutos.filter(produto => {
+    const termoBusca = buscaVisualizacao.toLowerCase();
+    const matchesBusca = produto.produto_nome.toLowerCase().includes(termoBusca);
+    
+    if (lojaFiltro === 'todas') {
+      return matchesBusca;
+    }
+    
+    return matchesBusca && produto.estoques_por_loja[lojaFiltro] !== undefined;
+  });
+
+  const lojasAtivas = lojas.filter(loja => loja.ativo).map(loja => loja.nome);
+
   if (loading || loadingProdutos) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -285,29 +306,6 @@ const Estoque = () => {
         </div>
       </header>
 
-      {/* Controles Fixos */}
-      <div className="bg-white border-b p-4 sticky top-16 z-40">
-        <div className="flex gap-3 items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Buscar produto..."
-              value={buscaProduto}
-              onChange={(e) => setBuscaProduto(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button 
-            onClick={salvarEstoque} 
-            disabled={saving} 
-            className="bg-green-600 hover:bg-green-700 flex-shrink-0"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {saving ? 'Salvando...' : 'Salvar'}
-          </Button>
-        </div>
-      </div>
-
       {/* Alertas */}
       {(error || estoqueError) && (
         <Alert variant="destructive" className="mx-4 mt-4">
@@ -316,99 +314,269 @@ const Estoque = () => {
         </Alert>
       )}
 
-      {/* Lista de Produtos - Scrollável */}
+      {/* Conteúdo Principal com Abas */}
       <main className="flex-1 overflow-auto p-4">
-        {produtosFiltrados.length === 0 ? (
-          <div className="text-center py-8">
-            <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-500">Nenhum produto encontrado.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {produtosFiltrados.map(produto => (
-              <Card key={produto.id} className="shadow-sm">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 truncate">{produto.display_name}</h3>
-                      <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
-                    </div>
-                    <div className="flex items-center space-x-2 ml-4">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => decrementarQuantidade(produto.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Minus className="w-4 h-4" />
-                      </Button>
-                      <Input
-                        type="number"
-                        min="0"
-                        value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
-                        onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
-                        className="w-20 text-center h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                      />
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => incrementarQuantidade(produto.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+        <Tabs defaultValue="meu-estoque" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="meu-estoque" className="flex items-center gap-2">
+              <Package className="w-4 h-4" />
+              Meu Estoque
+            </TabsTrigger>
+            <TabsTrigger value="visualizar-estoques" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Visualizar Estoques
+            </TabsTrigger>
+          </TabsList>
 
-                  {/* Seção de Transferências Pendentes */}
-                  {produto.transferencias_pendentes && produto.transferencias_pendentes.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex items-center mb-3">
-                        <Truck className="h-4 w-4 text-blue-600 mr-2" />
-                        <h4 className="text-sm font-medium text-gray-700">Transferências Pendentes</h4>
-                        <Badge variant="secondary" className="ml-2 text-xs">
-                          {produto.transferencias_pendentes.length}
-                        </Badge>
+          {/* Aba: Meu Estoque */}
+          <TabsContent value="meu-estoque" className="mt-4">
+            {/* Controles da Aba Meu Estoque */}
+            <div className="bg-white border rounded-lg p-4 mb-4 sticky top-0 z-30">
+              <div className="flex gap-3 items-center">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={buscaProduto}
+                    onChange={(e) => setBuscaProduto(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Button 
+                  onClick={salvarEstoque} 
+                  disabled={saving} 
+                  className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? 'Salvando...' : 'Salvar'}
+                </Button>
+              </div>
+            </div>
+
+            {/* Lista de Produtos Editável */}
+            {produtosFiltrados.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-500">Nenhum produto encontrado.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {produtosFiltrados.map(produto => (
+                  <Card key={produto.id} className="shadow-sm">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-gray-900 truncate">{produto.display_name}</h3>
+                          <p className="text-sm text-gray-500">{produto.unidade || 'N/D'}</p>
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => decrementarQuantidade(produto.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={produto.quantidade_atual === 0 ? '' : produto.quantidade_atual || ''}
+                            onChange={(e) => atualizarQuantidade(produto.id, parseFloat(e.target.value) || 0)}
+                            className="w-20 text-center h-8 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => incrementarQuantidade(produto.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                      
-                      <div className="space-y-2">
-                        {produto.transferencias_pendentes.map(transferencia => (
-                          <div key={transferencia.id} className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm font-medium text-blue-900">
-                                  {transferencia.quantidade_transferida} {produto.unidade?.toLowerCase()}
-                                </span>
-                                <span className="text-xs text-blue-600">
-                                  de {transferencia.loja_origem}
-                                </span>
-                              </div>
-                              <p className="text-xs text-blue-600 mt-1">
-                                {new Date(transferencia.criado_em).toLocaleDateString('pt-BR')} às{' '}
-                                {new Date(transferencia.criado_em).toLocaleTimeString('pt-BR', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => confirmarTransferencia(transferencia, produto.id)}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Confirmar
-                            </Button>
+
+                      {/* Seção de Transferências Pendentes */}
+                      {produto.transferencias_pendentes && produto.transferencias_pendentes.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-gray-200">
+                          <div className="flex items-center mb-3">
+                            <Truck className="h-4 w-4 text-blue-600 mr-2" />
+                            <h4 className="text-sm font-medium text-gray-700">Transferências Pendentes</h4>
+                            <Badge variant="secondary" className="ml-2 text-xs">
+                              {produto.transferencias_pendentes.length}
+                            </Badge>
                           </div>
-                        ))}
-                      </div>
+                          
+                          <div className="space-y-2">
+                            {produto.transferencias_pendentes.map(transferencia => (
+                              <div key={transferencia.id} className="bg-blue-50 rounded-lg p-3 flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-sm font-medium text-blue-900">
+                                      {transferencia.quantidade_transferida} {produto.unidade?.toLowerCase()}
+                                    </span>
+                                    <span className="text-xs text-blue-600">
+                                      de {transferencia.loja_origem}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    {new Date(transferencia.criado_em).toLocaleDateString('pt-BR')} às{' '}
+                                    {new Date(transferencia.criado_em).toLocaleTimeString('pt-BR', { 
+                                      hour: '2-digit', 
+                                      minute: '2-digit' 
+                                    })}
+                                  </p>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => confirmarTransferencia(transferencia, produto.id)}
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Confirmar
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Aba: Visualizar Estoques */}
+          <TabsContent value="visualizar-estoques" className="mt-4">
+            {/* Controles da Aba Visualização */}
+            <div className="bg-white border rounded-lg p-4 mb-4 sticky top-0 z-30">
+              <div className="flex gap-3 items-center flex-wrap">
+                <div className="relative flex-1 min-w-64">
+                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Buscar produto..."
+                    value={buscaVisualizacao}
+                    onChange={(e) => setBuscaVisualizacao(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={lojaFiltro} onValueChange={setLojaFiltro}>
+                  <SelectTrigger className="w-52">
+                    <SelectValue placeholder="Selecionar loja" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todas">Todas as Lojas</SelectItem>
+                    {lojasAtivas.map(loja => (
+                      <SelectItem key={loja} value={loja}>{loja}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {loadingEstoqueGeral ? (
+              <div className="text-center py-8">
+                <Package className="animate-spin w-8 h-8 mx-auto text-blue-600 mb-4" />
+                <p className="text-gray-500">Carregando estoques...</p>
+              </div>
+            ) : (
+              <>
+                {/* Visualização Desktop */}
+                {lojaFiltro === 'todas' ? (
+                  <div className="hidden md:block">
+                    <Card>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Produto</TableHead>
+                              <TableHead>Unidade</TableHead>
+                              {lojasAtivas.map(loja => (
+                                <TableHead key={loja}>{loja}</TableHead>
+                              ))}
+                              <TableHead>Total</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {estoquesVisualizacao.map(produto => (
+                              <TableRow key={produto.produto_id}>
+                                <TableCell className="font-medium">{produto.produto_nome}</TableCell>
+                                <TableCell>{produto.unidade}</TableCell>
+                                {lojasAtivas.map(loja => (
+                                  <TableCell key={loja}>
+                                    {produto.estoques_por_loja[loja] || 0}
+                                  </TableCell>
+                                ))}
+                                <TableCell className="font-semibold">
+                                  {produto.total_estoque}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : null}
+
+                {/* Visualização Mobile ou Loja Individual */}
+                <div className={lojaFiltro === 'todas' ? 'block md:hidden' : 'block'}>
+                  {estoquesVisualizacao.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Package className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                      <p className="text-gray-500">Nenhum produto encontrado.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {estoquesVisualizacao.map(produto => (
+                        <Card key={produto.produto_id} className="shadow-sm">
+                          <CardContent className="p-4">
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <h3 className="font-medium text-gray-900">{produto.produto_nome}</h3>
+                                  <p className="text-sm text-gray-500">Unidade: {produto.unidade}</p>
+                                </div>
+                                {lojaFiltro === 'todas' && (
+                                  <div className="text-right">
+                                    <p className="text-sm font-semibold text-blue-600">
+                                      Total: {produto.total_estoque}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 gap-2">
+                                {lojaFiltro === 'todas' ? (
+                                  lojasAtivas.map(loja => (
+                                    <div key={loja} className="flex justify-between items-center py-1 px-2 bg-gray-50 rounded">
+                                      <span className="text-sm text-gray-600">{loja}:</span>
+                                      <span className="font-medium">
+                                        {produto.estoques_por_loja[loja] || 0} {produto.unidade?.toLowerCase()}
+                                      </span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="flex justify-between items-center py-2 px-3 bg-blue-50 rounded">
+                                    <span className="text-sm text-blue-600">{lojaFiltro}:</span>
+                                    <span className="font-semibold text-blue-900">
+                                      {produto.estoques_por_loja[lojaFiltro] || 0} {produto.unidade?.toLowerCase()}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
