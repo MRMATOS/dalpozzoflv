@@ -270,6 +270,23 @@ const Estoque = () => {
     }
     
     return matchesBusca && produto.estoques_por_loja[lojaFiltro] !== undefined;
+  }).sort((a, b) => {
+    // Aplicar a mesma lógica de ordenação da aba "Meu Estoque"
+    const nomePaiA = a.produto_pai_nome || a.produto_nome || '';
+    const nomePaiB = b.produto_pai_nome || b.produto_nome || '';
+
+    const comparePai = nomePaiA.localeCompare(nomePaiB);
+    if (comparePai !== 0) return comparePai;
+
+    const ehVariacaoA = !!a.nome_variacao;
+    const ehVariacaoB = !!b.nome_variacao;
+
+    if (!ehVariacaoA && ehVariacaoB) return -1;
+    if (ehVariacaoA && !ehVariacaoB) return 1;
+
+    const nomeA = a.produto_nome || '';
+    const nomeB = b.produto_nome || '';
+    return nomeA.localeCompare(nomeB);
   });
 
   const lojasAtivas = lojas.filter(loja => loja.ativo).map(loja => loja.nome);
