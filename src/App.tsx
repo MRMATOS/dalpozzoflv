@@ -83,7 +83,7 @@ function App() {
               <Route 
                 path="/configuracoes" 
                 element={
-                  <ProtectedRoute requiredRole="master">
+                  <ProtectedRoute allowedTypes={['master', 'comprador']}>
                     <Configuracoes />
                   </ProtectedRoute>
                 } 
