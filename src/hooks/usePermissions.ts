@@ -21,6 +21,92 @@ interface UserPermission {
   enabled: boolean;
 }
 
+// Definir permissões padrão por tipo de usuário
+const getDefaultPermissionsByType = (userType: string): UserPermission[] => {
+  const basePermissions: UserPermission[] = [
+    { resource: 'dashboard', action: 'view', enabled: true }
+  ];
+
+  switch (userType) {
+    case 'master':
+      // Master tem todas as permissões (gerenciado pela função is_user_master)
+      return [
+        ...basePermissions,
+        { resource: 'estoque', action: 'view', enabled: true },
+        { resource: 'estoque', action: 'edit', enabled: true },
+        { resource: 'estoque', action: 'create', enabled: true },
+        { resource: 'estoque', action: 'delete', enabled: true },
+        { resource: 'requisicoes', action: 'view', enabled: true },
+        { resource: 'requisicoes', action: 'create', enabled: true },
+        { resource: 'requisicoes', action: 'edit', enabled: true },
+        { resource: 'requisicoes', action: 'delete', enabled: true },
+        { resource: 'cotacao', action: 'view', enabled: true },
+        { resource: 'cotacao', action: 'create', enabled: true },
+        { resource: 'cotacao', action: 'edit', enabled: true },
+        { resource: 'cotacao', action: 'delete', enabled: true },
+        { resource: 'gestao_cd', action: 'view', enabled: true },
+        { resource: 'gestao_cd', action: 'edit', enabled: true },
+        { resource: 'gestao_cd', action: 'create', enabled: true },
+        { resource: 'gestao_cd', action: 'delete', enabled: true },
+        { resource: 'configuracoes', action: 'view', enabled: true },
+        { resource: 'configuracoes', action: 'edit', enabled: true },
+        { resource: 'historico_requisicoes', action: 'view', enabled: true },
+        { resource: 'historico_pedidos', action: 'view', enabled: true },
+      ];
+
+    case 'cd':
+      // CD: Gestão CD, Recebimento, Estoque (C/R/U/D completo)
+      return [
+        ...basePermissions,
+        { resource: 'gestao_cd', action: 'view', enabled: true },
+        { resource: 'gestao_cd', action: 'create', enabled: true },
+        { resource: 'gestao_cd', action: 'edit', enabled: true },
+        { resource: 'gestao_cd', action: 'delete', enabled: true },
+        { resource: 'estoque', action: 'view', enabled: true },
+        { resource: 'estoque', action: 'create', enabled: true },
+        { resource: 'estoque', action: 'edit', enabled: true },
+        { resource: 'estoque', action: 'delete', enabled: true },
+      ];
+    
+    case 'comprador':
+      // Comprador: Cotação, Requisições, Estoque, Históricos (C/R/U/D completo)
+      return [
+        ...basePermissions,
+        { resource: 'cotacao', action: 'view', enabled: true },
+        { resource: 'cotacao', action: 'create', enabled: true },
+        { resource: 'cotacao', action: 'edit', enabled: true },
+        { resource: 'cotacao', action: 'delete', enabled: true },
+        { resource: 'requisicoes', action: 'view', enabled: true },
+        { resource: 'requisicoes', action: 'create', enabled: true },
+        { resource: 'requisicoes', action: 'edit', enabled: true },
+        { resource: 'requisicoes', action: 'delete', enabled: true },
+        { resource: 'estoque', action: 'view', enabled: true },
+        { resource: 'estoque', action: 'create', enabled: true },
+        { resource: 'estoque', action: 'edit', enabled: true },
+        { resource: 'estoque', action: 'delete', enabled: true },
+        { resource: 'historico_pedidos', action: 'view', enabled: true },
+        { resource: 'historico_requisicoes', action: 'view', enabled: true },
+      ];
+    
+    case 'estoque':
+      // Estoque: Requisições e Estoque (C/R/U/D completo)
+      return [
+        ...basePermissions,
+        { resource: 'requisicoes', action: 'view', enabled: true },
+        { resource: 'requisicoes', action: 'create', enabled: true },
+        { resource: 'requisicoes', action: 'edit', enabled: true },
+        { resource: 'requisicoes', action: 'delete', enabled: true },
+        { resource: 'estoque', action: 'view', enabled: true },
+        { resource: 'estoque', action: 'create', enabled: true },
+        { resource: 'estoque', action: 'edit', enabled: true },
+        { resource: 'estoque', action: 'delete', enabled: true },
+      ];
+      
+    default:
+      return basePermissions;
+  }
+};
+
 export const usePermissions = () => {
   const { user, hasRole } = useAuth();
   const [permissions, setPermissions] = useState<UserPermission[]>([]);
@@ -42,31 +128,17 @@ export const usePermissions = () => {
 
       // Timeout para evitar travamento durante renovação de token
       const timeoutId = setTimeout(() => {
-        console.log('⚠️ [PERMISSIONS DEBUG] Timeout no carregamento, usando permissões em cache');
+        console.log('⚠️ [PERMISSIONS DEBUG] Timeout no carregamento, usando permissões padrão');
+        const defaultPerms = getDefaultPermissionsByType(user.tipo || 'estoque');
+        setPermissions(defaultPerms);
         setLoading(false);
       }, 8000);
 
       // Master tem todas as permissões
       if (hasRole('master') || user.tipo === 'master') {
         console.log('🔍 [PERMISSIONS DEBUG] Usuário é MASTER, aplicando todas as permissões');
-        const allPermissions: UserPermission[] = [
-          { resource: 'dashboard', action: 'view', enabled: true },
-          { resource: 'estoque', action: 'view', enabled: true },
-          { resource: 'estoque', action: 'edit', enabled: true },
-          { resource: 'requisicoes', action: 'view', enabled: true },
-          { resource: 'requisicoes', action: 'create', enabled: true },
-          { resource: 'requisicoes', action: 'edit', enabled: true },
-          { resource: 'cotacao', action: 'view', enabled: true },
-          { resource: 'cotacao', action: 'create', enabled: true },
-          { resource: 'cotacao', action: 'edit', enabled: true },
-          { resource: 'gestao_cd', action: 'view', enabled: true },
-          { resource: 'gestao_cd', action: 'edit', enabled: true },
-          { resource: 'configuracoes', action: 'view', enabled: true },
-          { resource: 'configuracoes', action: 'edit', enabled: true },
-          { resource: 'historico_requisicoes', action: 'view', enabled: true },
-          { resource: 'historico_pedidos', action: 'view', enabled: true },
-        ];
-        setPermissions(allPermissions);
+        const masterPermissions = getDefaultPermissionsByType('master');
+        setPermissions(masterPermissions);
         setLoading(false);
         clearTimeout(timeoutId);
         return;
@@ -91,7 +163,7 @@ export const usePermissions = () => {
           console.error('❌ [PERMISSIONS DEBUG] Erro ao carregar permissões:', permError);
         }
 
-        // Se há permissões específicas, usar essas + permissões básicas
+        // Se há permissões específicas, usar essas, caso contrário usar padrões
         if (userPermissions && userPermissions.length > 0) {
           console.log('🔍 [PERMISSIONS DEBUG] Encontradas permissões específicas, processando...');
           
@@ -102,76 +174,23 @@ export const usePermissions = () => {
           }));
 
           console.log('🔍 [PERMISSIONS DEBUG] Permissões específicas processadas:', specificPermissions);
-
-          // Sempre incluir dashboard para todos
-          const hasViewDashboard = specificPermissions.some(p => p.resource === 'dashboard' && p.action === 'view');
-          if (!hasViewDashboard) {
-            console.log('🔍 [PERMISSIONS DEBUG] Adicionando permissão de dashboard automaticamente');
-            specificPermissions.push({ resource: 'dashboard', action: 'view', enabled: true });
-          }
-
-          console.log('🔍 [PERMISSIONS DEBUG] Permissões finais aplicadas:', specificPermissions);
           setPermissions(specificPermissions);
-          setLoading(false);
-          clearTimeout(timeoutId);
-          return;
+        } else {
+          console.log('🔍 [PERMISSIONS DEBUG] Nenhuma permissão específica encontrada, usando permissões padrão');
+          const defaultPermissions = getDefaultPermissionsByType(user.tipo || 'estoque');
+          setPermissions(defaultPermissions);
         }
+        
+        setLoading(false);
+        clearTimeout(timeoutId);
       } catch (error) {
         console.error('❌ [PERMISSIONS DEBUG] Erro ao buscar permissões específicas:', error);
+        console.log('🔍 [PERMISSIONS DEBUG] Fallback para permissões padrão devido ao erro');
+        const defaultPermissions = getDefaultPermissionsByType(user.tipo || 'estoque');
+        setPermissions(defaultPermissions);
+        setLoading(false);
+        clearTimeout(timeoutId);
       }
-
-      console.log('🔍 [PERMISSIONS DEBUG] Nenhuma permissão específica encontrada, usando permissões padrão baseadas no tipo');
-      
-      // Fallback: usar permissões padrão baseadas no tipo de usuário
-      const defaultPermissions: UserPermission[] = [];
-      
-      // Permissões básicas para todos os usuários
-      defaultPermissions.push(
-        { resource: 'dashboard', action: 'view', enabled: true }
-      );
-
-      // Permissões específicas por tipo
-      switch (user.tipo) {
-        case 'comprador':
-          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para COMPRADOR');
-          defaultPermissions.push(
-            { resource: 'estoque', action: 'view', enabled: true },
-            { resource: 'requisicoes', action: 'view', enabled: true },
-            { resource: 'cotacao', action: 'view', enabled: true },
-            { resource: 'cotacao', action: 'create', enabled: true },
-            { resource: 'cotacao', action: 'edit', enabled: true },
-            { resource: 'historico_requisicoes', action: 'view', enabled: true },
-            { resource: 'historico_pedidos', action: 'view', enabled: true }
-          );
-          break;
-        
-        case 'estoque':
-          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para ESTOQUE');
-          defaultPermissions.push(
-            { resource: 'estoque', action: 'view', enabled: true },
-            { resource: 'estoque', action: 'edit', enabled: true },
-            { resource: 'requisicoes', action: 'view', enabled: true },
-            { resource: 'requisicoes', action: 'create', enabled: true }
-          );
-          break;
-        
-        case 'cd':
-          console.log('🔍 [PERMISSIONS DEBUG] Aplicando permissões padrão para CD');
-          defaultPermissions.push(
-            { resource: 'gestao_cd', action: 'view', enabled: true },
-            { resource: 'gestao_cd', action: 'edit', enabled: true },
-            { resource: 'estoque', action: 'view', enabled: true }
-          );
-          break;
-          
-        default:
-          console.log('🔍 [PERMISSIONS DEBUG] Tipo de usuário não reconhecido:', user.tipo);
-      }
-
-      console.log('🔍 [PERMISSIONS DEBUG] Permissões padrão finais aplicadas:', defaultPermissions);
-      setPermissions(defaultPermissions);
-      setLoading(false);
-      clearTimeout(timeoutId);
     };
 
     loadPermissions();
@@ -204,7 +223,7 @@ export const usePermissions = () => {
 
   const hasPermission = (resource: SystemResource, action: PermissionAction): boolean => {
     // Master sempre tem permissão
-    if (hasRole('master')) return true;
+    if (hasRole('master') || user?.tipo === 'master') return true;
     
     return permissions.some(p => 
       p.resource === resource && 

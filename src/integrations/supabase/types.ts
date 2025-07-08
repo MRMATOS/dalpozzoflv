@@ -1299,6 +1299,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_default_permissions_for_type: {
+        Args: { user_type: string }
+        Returns: {
+          resource: Database["public"]["Enums"]["system_resource"]
+          action: Database["public"]["Enums"]["permission_action"]
+        }[]
+      }
       get_transferencia_historico: {
         Args: { transferencia_uuid: string }
         Returns: {
@@ -1367,6 +1374,10 @@ export type Database = {
       is_user_master: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      populate_default_permissions: {
+        Args: { target_user_id: string; user_type: string }
+        Returns: undefined
       }
       user_exists_in_usuarios: {
         Args: Record<PropertyKey, never>

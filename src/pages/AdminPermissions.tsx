@@ -1,64 +1,104 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Users, Settings } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, User, Shield, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
-interface Usuario {
+interface UserWithPermissions {
   id: string;
   nome: string;
-  loja: string;
   tipo: string;
-  ativo: boolean;
+  loja: string;
+  aprovado: boolean;
+  permissions: Array<{
+    resource: string;
+    action: string;
+    enabled: boolean;
+    is_default: boolean; // Indica se é uma permissão padrão
+  }>;
 }
 
-interface Permission {
-  resource: string;
-  action: string;
-  enabled: boolean;
-}
+type SystemResource = 
+  | 'dashboard'
+  | 'estoque' 
+  | 'requisicoes'
+  | 'cotacao'
+  | 'gestao_cd'
+  | 'configuracoes'
+  | 'historico_requisicoes'
+  | 'historico_pedidos';
 
-const RESOURCES = [
-  { key: 'dashboard', label: '📊 Dashboard', actions: ['view'] },
-  { key: 'estoque', label: '📦 Estoque', actions: ['view', 'edit'] },
-  { key: 'requisicoes', label: '🛒 Requisições', actions: ['view', 'create', 'edit'] },
-  { key: 'cotacao', label: '💰 Cotação', actions: ['view', 'create', 'edit'] },
-  { key: 'gestao_cd', label: '🚚 Gestão CD', actions: ['view', 'edit'] },
-  { key: 'configuracoes', label: '⚙️ Configurações', actions: ['view', 'edit'] },
-  { key: 'historico_requisicoes', label: '📋 Histórico Requisições', actions: ['view'] },
-  { key: 'historico_pedidos', label: '📈 Histórico Pedidos', actions: ['view'] }
-];
+type PermissionAction = 'view' | 'edit' | 'create' | 'delete';
 
-const ACTION_LABELS = {
-  view: 'Ver',
-  edit: 'Editar',
-  create: 'Criar',
-  delete: 'Excluir'
+// Definir permissões padrão por tipo
+const getDefaultPermissionsByType = (userType: string) => {
+  const defaults = {
+    cd: [
+      { resource: 'dashboard', action: 'view' },
+      { resource: 'gestao_cd', action: 'view' },
+      { resource: 'gestao_cd', action: 'create' },
+      { resource: 'gestao_cd', action: 'edit' },
+      { resource: 'gestao_cd', action: 'delete' },
+      { resource: 'estoque', action: 'view' },
+      { resource: 'estoque', action: 'create' },
+      { resource: 'estoque', action: 'edit' },
+      { resource: 'estoque', action: 'delete' },
+    ],
+    comprador: [
+      { resource: 'dashboard', action: 'view' },
+      { resource: 'cotacao', action: 'view' },
+      { resource: 'cotacao', action: 'create' },
+      { resource: 'cotacao', action: 'edit' },
+      { resource: 'cotacao', action: 'delete' },
+      { resource: 'requisicoes', action: 'view' },
+      { resource: 'requisicoes', action: 'create' },
+      { resource: 'requisicoes', action: 'edit' },
+      { resource: 'requisicoes', action: 'delete' },
+      { resource: 'estoque', action: 'view' },
+      { resource: 'estoque', action: 'create' },
+      { resource: 'estoque', action: 'edit' },
+      { resource: 'estoque', action: 'delete' },
+      { resource: 'historico_pedidos', action: 'view' },
+      { resource: 'historico_requisicoes', action: 'view' },
+    ],
+    estoque: [
+      { resource: 'dashboard', action: 'view' },
+      { resource: 'requisicoes', action: 'view' },
+      { resource: 'requisicoes', action: 'create' },
+      { resource: 'requisicoes', action: 'edit' },
+      { resource: 'requisicoes', action: 'delete' },
+      { resource: 'estoque', action: 'view' },
+      { resource: 'estoque', action: 'create' },
+      { resource: 'estoque', action: 'edit' },
+      { resource: 'estoque', action: 'delete' },
+    ]
+  };
+
+  return defaults[userType as keyof typeof defaults] || [{ resource: 'dashboard', action: 'view' }];
 };
 
 const AdminPermissions = () => {
   const navigate = useNavigate();
   const { hasRole } = useAuth();
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [permissions, setPermissions] = useState<Record<string, Permission[]>>({});
+  const [users, setUsers] = useState<UserWithPermissions[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   // Verificar se é master
   if (!hasRole('master')) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold text-red-600 mb-2">Acesso Negado</h2>
+        <Card className="w-96">
+          <CardContent className="pt-8 text-center">
+            <Shield className="w-16 h-16 mx-auto text-red-500 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Acesso Negado</h2>
             <p className="text-gray-600 mb-4">Apenas usuários master podem acessar esta página.</p>
             <Button onClick={() => navigate('/dashboard')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
               Voltar ao Dashboard
             </Button>
           </CardContent>
@@ -68,114 +108,168 @@ const AdminPermissions = () => {
   }
 
   useEffect(() => {
-    loadData();
+    loadUsers();
   }, []);
 
-  const loadData = async () => {
+  const loadUsers = async () => {
     try {
-      setLoading(true);
-      
-      // Carregar usuários (exceto master)
+      console.log('🔍 Carregando usuários e permissões...');
+
+      // Buscar usuários aprovados
       const { data: usuariosData, error: usuariosError } = await supabase
         .from('usuarios')
-        .select('id, nome, loja, tipo, ativo')
+        .select('id, nome, tipo, loja, aprovado')
+        .eq('aprovado', true)
         .neq('tipo', 'master')
-        .eq('ativo', true)
         .order('nome');
 
-      if (usuariosError) throw usuariosError;
+      if (usuariosError) {
+        console.error('Erro ao carregar usuários:', usuariosError);
+        toast.error('Erro ao carregar usuários');
+        return;
+      }
 
-      // Carregar permissões de todos os usuários
-      const { data: permissionsData, error: permissionsError } = await supabase
-        .from('user_permissions')
-        .select('user_id, resource, action, enabled');
+      console.log('✅ Usuários carregados:', usuariosData);
 
-      if (permissionsError) throw permissionsError;
+      // Para cada usuário, carregar suas permissões e combinar com padrões
+      const usersWithPermissions = await Promise.all(
+        usuariosData.map(async (usuario) => {
+          // Buscar permissões específicas do usuário
+          const { data: userPerms, error: permsError } = await supabase
+            .from('user_permissions')
+            .select('resource, action, enabled')
+            .eq('user_id', usuario.id);
 
-      setUsuarios(usuariosData || []);
+          if (permsError) {
+            console.error(`Erro ao carregar permissões do usuário ${usuario.nome}:`, permsError);
+          }
 
-      // Organizar permissões por usuário
-      const permissionsByUser: Record<string, Permission[]> = {};
-      (usuariosData || []).forEach(user => {
-        const userPermissions = permissionsData?.filter(p => p.user_id === user.id) || [];
-        permissionsByUser[user.id] = userPermissions;
-      });
+          // Obter permissões padrão para o tipo do usuário
+          const defaultPermissions = getDefaultPermissionsByType(usuario.tipo);
+          
+          // Combinar permissões padrão com específicas
+          const allPermissions = defaultPermissions.map(defaultPerm => {
+            const specificPerm = userPerms?.find(
+              p => p.resource === defaultPerm.resource && p.action === defaultPerm.action
+            );
 
-      setPermissions(permissionsByUser);
+            return {
+              resource: defaultPerm.resource,
+              action: defaultPerm.action,
+              enabled: specificPerm ? specificPerm.enabled : true, // Padrão é habilitado
+              is_default: !specificPerm // É padrão se não tem configuração específica
+            };
+          });
+
+          // Adicionar permissões específicas que não são padrão
+          const customPermissions = userPerms?.filter(perm => 
+            !defaultPermissions.some(def => 
+              def.resource === perm.resource && def.action === perm.action
+            )
+          ) || [];
+
+          customPermissions.forEach(customPerm => {
+            allPermissions.push({
+              resource: customPerm.resource,
+              action: customPerm.action,
+              enabled: customPerm.enabled,
+              is_default: false
+            });
+          });
+
+          return {
+            ...usuario,
+            permissions: allPermissions
+          };
+        })
+      );
+
+      console.log('✅ Usuários com permissões carregados:', usersWithPermissions);
+      setUsers(usersWithPermissions);
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       toast.error('Erro ao carregar dados');
-    } finally {
       setLoading(false);
     }
   };
 
-  const hasUserPermission = (userId: string, resource: string, action: string): boolean => {
-    const userPermissions = permissions[userId] || [];
-    const permission = userPermissions.find(p => p.resource === resource && p.action === action);
-    return permission?.enabled || false;
-  };
-
-  const togglePermission = async (userId: string, resource: string, action: string, enabled: boolean) => {
+  const togglePermission = async (
+    userId: string, 
+    resource: SystemResource, 
+    action: PermissionAction, 
+    currentEnabled: boolean
+  ) => {
     try {
-      setSaving(true);
+      console.log(`🔄 Alterando permissão: ${resource}.${action} para usuário ${userId}`);
 
-      // Verificar se a permissão já existe
-      const { data: existing } = await supabase
+      const { error } = await supabase
         .from('user_permissions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('resource', resource as any)
-        .eq('action', action as any)
-        .maybeSingle();
+        .upsert({
+          user_id: userId,
+          resource,
+          action,
+          enabled: !currentEnabled
+        }, {
+          onConflict: 'user_id,resource,action'
+        });
 
-      if (existing) {
-        // Update existing permission
-        const { error: updateError } = await supabase
-          .from('user_permissions')
-          .update({ enabled })
-          .eq('user_id', userId)
-          .eq('resource', resource as any)
-          .eq('action', action as any);
-
-        if (updateError) throw updateError;
-      } else {
-        // Insert new permission
-        const { error: insertError } = await supabase
-          .from('user_permissions')
-          .insert({
-            user_id: userId,
-            resource: resource as any,
-            action: action as any,
-            enabled: enabled
-          });
-
-        if (insertError) throw insertError;
+      if (error) {
+        console.error('Erro ao atualizar permissão:', error);
+        toast.error('Erro ao atualizar permissão');
+        return;
       }
 
-      // Atualizar estado local
-      setPermissions(prev => ({
-        ...prev,
-        [userId]: [
-          ...(prev[userId] || []).filter(p => !(p.resource === resource && p.action === action)),
-          { resource, action, enabled }
-        ]
-      }));
-
+      console.log('✅ Permissão atualizada com sucesso');
       toast.success('Permissão atualizada com sucesso');
+
+      // Recarregar dados
+      loadUsers();
     } catch (error) {
-      console.error('Erro ao atualizar permissão:', error);
-      toast.error('Erro ao atualizar permissão');
-    } finally {
-      setSaving(false);
+      console.error('Erro ao alterar permissão:', error);
+      toast.error('Erro ao alterar permissão');
     }
+  };
+
+  const getResourceLabel = (resource: string) => {
+    const labels = {
+      dashboard: 'Dashboard',
+      estoque: 'Estoque',
+      requisicoes: 'Requisições',
+      cotacao: 'Cotação',
+      gestao_cd: 'Gestão CD',
+      configuracoes: 'Configurações',
+      historico_requisicoes: 'Histórico Requisições',
+      historico_pedidos: 'Histórico Pedidos'
+    };
+    return labels[resource as keyof typeof labels] || resource;
+  };
+
+  const getActionLabel = (action: string) => {
+    const labels = {
+      view: 'Visualizar',
+      edit: 'Editar',
+      create: 'Criar',
+      delete: 'Excluir'
+    };
+    return labels[action as keyof typeof labels] || action;
+  };
+
+  const getTipoColor = (tipo: string) => {
+    const colors = {
+      master: 'bg-red-100 text-red-800',
+      comprador: 'bg-blue-100 text-blue-800',
+      estoque: 'bg-green-100 text-green-800',
+      cd: 'bg-purple-100 text-purple-800'
+    };
+    return colors[tipo as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <Settings className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
           <p className="text-gray-600">Carregando permissões...</p>
         </div>
       </div>
@@ -184,82 +278,100 @@ const AdminPermissions = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate('/dashboard')}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/configuracoes')}
               className="flex items-center space-x-2"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Voltar</span>
             </Button>
             <div className="ml-4">
-              <h1 className="text-lg font-semibold text-gray-900 flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Administração de Permissões
-              </h1>
-              <p className="text-sm text-gray-500">Controle granular de acesso por usuário</p>
+              <h1 className="text-lg font-semibold text-gray-900">Administração de Permissões</h1>
+              <p className="text-sm text-gray-500">Gerencie permissões de usuários do sistema</p>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {usuarios.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhum usuário encontrado para gerenciar</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-6">
-            {usuarios.map((usuario) => (
-              <Card key={usuario.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
+        <div className="space-y-6">
+          {users.map((user) => (
+            <Card key={user.id} className="w-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <User className="w-5 h-5 text-gray-500" />
                     <div>
-                      <span className="text-lg">{usuario.nome}</span>
-                      <div className="text-sm text-gray-500 mt-1">
-                        {usuario.loja} • {usuario.tipo}
+                      <CardTitle className="text-lg">{user.nome}</CardTitle>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge className={getTipoColor(user.tipo)}>
+                          {user.tipo.toUpperCase()}
+                        </Badge>
+                        <span className="text-sm text-gray-500">• {user.loja}</span>
                       </div>
                     </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {RESOURCES.map((resource) => (
-                      <div key={resource.key} className="space-y-3">
-                        <h4 className="font-medium text-gray-900">{resource.label}</h4>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Permissões:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from(new Set(user.permissions.map(p => p.resource))).map(resource => (
+                      <div key={resource} className="border rounded-lg p-4 space-y-3">
+                        <h5 className="font-medium text-sm text-gray-900 border-b pb-2">
+                          {getResourceLabel(resource)}
+                        </h5>
                         <div className="space-y-2">
-                          {resource.actions.map((action) => (
-                            <div key={action} className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">
-                                {ACTION_LABELS[action as keyof typeof ACTION_LABELS]}
-                              </span>
-                              <Switch
-                                checked={hasUserPermission(usuario.id, resource.key, action)}
-                                onCheckedChange={(checked) => 
-                                  togglePermission(usuario.id, resource.key, action, checked)
-                                }
-                                disabled={saving}
-                              />
-                            </div>
-                          ))}
+                          {user.permissions
+                            .filter(p => p.resource === resource)
+                            .map(permission => (
+                              <div key={`${resource}-${permission.action}`} className="flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-sm text-gray-600">
+                                    {getActionLabel(permission.action)}
+                                  </span>
+                                  {permission.is_default && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Padrão
+                                    </Badge>
+                                  )}
+                                </div>
+                                <Switch
+                                  checked={permission.enabled}
+                                  onCheckedChange={() => togglePermission(
+                                    user.id,
+                                    resource as SystemResource,
+                                    permission.action as PermissionAction,
+                                    permission.enabled
+                                  )}
+                                />
+                              </div>
+                            ))}
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+
+          {users.length === 0 && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <User className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum usuário encontrado</h3>
+                <p className="text-gray-600">Não há usuários aprovados para gerenciar permissões.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </main>
     </div>
   );
