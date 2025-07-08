@@ -115,6 +115,7 @@ export const usePermissions = () => {
   useEffect(() => {
     const loadPermissions = async () => {
       console.log('🔍 [PERMISSIONS DEBUG] Iniciando carregamento de permissões...');
+      console.log('🔍 [PERMISSIONS DEBUG] User objeto completo:', user);
       console.log('🔍 [PERMISSIONS DEBUG] User ID:', user?.id);
       console.log('🔍 [PERMISSIONS DEBUG] User tipo:', user?.tipo);
       console.log('🔍 [PERMISSIONS DEBUG] User nome:', user?.nome);
@@ -245,7 +246,14 @@ export const usePermissions = () => {
   };
 
   const canView = (resource: SystemResource): boolean => {
-    return hasPermission(resource, 'view');
+    const result = hasPermission(resource, 'view');
+    console.log(`🔍 [PERMISSIONS DEBUG] canView(${resource}) = ${result}`, {
+      userTipo: user?.tipo,
+      userNome: user?.nome,
+      permissionsCount: permissions.length,
+      specificPermission: permissions.find(p => p.resource === resource && p.action === 'view')
+    });
+    return result;
   };
 
   const canEdit = (resource: SystemResource): boolean => {
