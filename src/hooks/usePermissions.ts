@@ -225,11 +225,23 @@ export const usePermissions = () => {
     // Master sempre tem permissão
     if (hasRole('master') || user?.tipo === 'master') return true;
     
-    return permissions.some(p => 
-      p.resource === resource && 
-      p.action === action && 
-      p.enabled
+    // Buscar permissão específica primeiro
+    const specificPermission = permissions.find(p => 
+      p.resource === resource && p.action === action
     );
+    
+    // Se existe permissão específica, usar ela (mesmo se false)
+    if (specificPermission) {
+      return specificPermission.enabled;
+    }
+    
+    // Se não existe permissão específica, usar padrão do tipo
+    const defaultPermissions = getDefaultPermissionsByType(user?.tipo || 'estoque');
+    const defaultPermission = defaultPermissions.find(p => 
+      p.resource === resource && p.action === action
+    );
+    
+    return defaultPermission ? true : false; // Padrão é habilitado se existe na lista padrão
   };
 
   const canView = (resource: SystemResource): boolean => {
