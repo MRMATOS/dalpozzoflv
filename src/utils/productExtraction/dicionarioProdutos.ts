@@ -1,7 +1,7 @@
 export const dicionarioProdutos = {
   'abacaxi': {
-    'havaí': ['havaí', 'havai', 'hawai'],
-    'pérola': ['pérola', 'perola']
+    'havaí': ['havaí', 'havai', 'hawai','Abacaxi Havaí tp t 10','Abacaxi Hawai tipo 10', 'Abacaxi Hawai t10'],
+    'pérola': ['pérola', 'perola','Abacaxi pérola t 10','Abacaxi pérola 10','Abacaxi pérola tipo 10']
   },
   'abacate': {
     'breda': ['breda'],
