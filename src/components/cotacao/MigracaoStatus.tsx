@@ -34,6 +34,8 @@ const MigracaoStatus: React.FC<MigracaoStatusProps> = ({ onMigracaoCompleta }) =
   };
 
   const executarMigracao = async () => {
+    if (executandoMigracao) return;
+    
     setExecutandoMigracao(true);
     try {
       await migrarDicionarioParaSinonimos();

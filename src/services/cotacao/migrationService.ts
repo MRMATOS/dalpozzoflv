@@ -143,16 +143,16 @@ export const migrarDicionarioParaSinonimos = async (): Promise<void> => {
 // Função para verificar status da migração
 export const verificarStatusMigracao = async (): Promise<{ totalSinonimos: number; migracaoNecessaria: boolean }> => {
   try {
-    const { data, error } = await supabase
+    const { count, error } = await supabase
       .from('sinonimos_produto')
-      .select('id', { count: 'exact' });
+      .select('*', { count: 'exact', head: true });
     
     if (error) {
       console.error('Erro ao verificar status:', error);
       return { totalSinonimos: 0, migracaoNecessaria: true };
     }
     
-    const totalSinonimos = data?.length || 0;
+    const totalSinonimos = count || 0;
     return {
       totalSinonimos,
       migracaoNecessaria: totalSinonimos === 0

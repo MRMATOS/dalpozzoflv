@@ -199,7 +199,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
         aliasUsado: produtoEncontrado.alias,
         produtoId: refinamento.produtoId,
         origem: 'banco',
-        confianca: refinamento.confianca
+        confianca: refinamento.confianca,
+        id: `${nomeFornecedor}-${Date.now()}-${Math.random()}`
       };
     }
     
@@ -243,7 +244,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
       linhaOriginal: linha,
       aliasUsado: produtoEncontrado.alias,
       origem: 'dicionario',
-      confianca: 0.9
+      confianca: 0.9,
+      id: `${nomeFornecedor}-${Date.now()}-${Math.random()}`
     };
   }
   
@@ -259,7 +261,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
       aliasUsado: sinonimo.alias,
       produtoId: sinonimo.produtoId,
       origem: 'sinonimo',
-      confianca: 0.8
+      confianca: 0.8,
+      id: `${nomeFornecedor}-${Date.now()}-${Math.random()}`
     };
   }
   
@@ -280,21 +283,32 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
   return null;
 };
 
+// Variável para controlar se a migração já foi executada nesta sessão
+let migracaoExecutada = false;
+
 export const extrairProdutosAvancado = async (mensagem: string, nomeFornecedor: string): Promise<ProdutoExtraido[]> => {
   if (!mensagem || typeof mensagem !== 'string' || !nomeFornecedor) {
     console.log('❌ Mensagem ou fornecedor inválidos');
     return [];
   }
 
-  // Verificar se a migração foi feita
-  const { data: sinonimosCheck } = await supabase
-    .from('sinonimos_produto')
-    .select('id')
-    .limit(1);
-  
-  if (!sinonimosCheck || sinonimosCheck.length === 0) {
-    console.log('🔄 Executando migração do dicionário...');
-    await migrarDicionarioParaSinonimos();
+  // Verificar se a migração foi feita apenas uma vez por sessão
+  if (!migracaoExecutada) {
+    const { count } = await supabase
+      .from('sinonimos_produto')
+      .select('*', { count: 'exact', head: true });
+    
+    if (!count || count === 0) {
+      console.log('🔄 Executando migração do dicionário...');
+      try {
+        await migrarDicionarioParaSinonimos();
+        migracaoExecutada = true;
+      } catch (error) {
+        console.error('Erro na migração:', error);
+      }
+    } else {
+      migracaoExecutada = true;
+    }
   }
 
   const linhas = mensagem.split('\n').filter(linha => linha && linha.trim() !== '');
