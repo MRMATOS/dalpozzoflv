@@ -1,6 +1,8 @@
 import { supabase } from '@/integrations/supabase/client';
 import { dicionarioProdutos } from '@/utils/productExtraction/dicionarioProdutos';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
+import { refinarIdentificacaoProduto } from './refinementService';
+import { aplicarFallback, fallbackSystem } from './fallbackSystem';
 
 interface MapeamentoProduto {
   alias: string;
@@ -164,6 +166,29 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
   // 1. Busca no dicionário primeiro
   let produtoEncontrado = buscarNoDicionario(linhaNormalizada);
   if (produtoEncontrado) {
+    // Tenta refinar com consulta ao banco
+    const refinamento = await refinarIdentificacaoProduto(
+      produtoEncontrado.produto,
+      produtoEncontrado.tipo,
+      linha
+    );
+    
+    if (refinamento) {
+      console.log(`Refinamento aplicado: ${refinamento.produto} - ${refinamento.tipo} (confiança: ${refinamento.confianca.toFixed(2)})`);
+      return {
+        produto: refinamento.produto.charAt(0).toUpperCase() + refinamento.produto.slice(1),
+        tipo: refinamento.tipo.charAt(0).toUpperCase() + refinamento.tipo.slice(1),
+        preco,
+        fornecedor: nomeFornecedor,
+        linhaOriginal: linha,
+        aliasUsado: produtoEncontrado.alias,
+        produtoId: refinamento.produtoId,
+        origem: 'banco',
+        confianca: refinamento.confianca
+      };
+    }
+    
+    // Fallback para resultado do dicionário
     let infoAdicional = linha;
     if (precos) {
       precos.forEach(p => {
@@ -223,18 +248,18 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
     };
   }
   
-  // 3. Se tem preço mas não identificou produto, cria entrada para revisão manual
+  // 3. Se tem preço mas não identificou produto, tenta fallback
   if (preco !== null) {
-    return {
-      produto: 'Não identificado',
-      tipo: linha.trim(),
-      preco,
-      fornecedor: nomeFornecedor,
-      linhaOriginal: linha,
-      aliasUsado: '',
-      origem: 'manual',
-      confianca: 0.1
-    };
+    const fallbackResult = await aplicarFallback(linha, nomeFornecedor);
+    if (fallbackResult) {
+      return fallbackResult;
+    }
+  }
+  
+  // 4. Última tentativa - mesmo sem preço, tenta fallback
+  const ultimoFallback = await aplicarFallback(linha, nomeFornecedor);
+  if (ultimoFallback) {
+    return ultimoFallback;
   }
   
   return null;
@@ -258,6 +283,16 @@ export const extrairProdutosAvancado = async (mensagem: string, nomeFornecedor: 
   }
   
   console.log(`${produtos.length} produtos extraídos (incluindo não identificados)`);
+  
+  // Atualiza métricas de qualidade
+  fallbackSystem.updateQualityMetrics(produtos);
+  
+  // Verifica se precisa de alerta
+  if (fallbackSystem.shouldTriggerAlert()) {
+    console.warn('⚠️ Qualidade de extração abaixo do esperado');
+    console.log(fallbackSystem.generateQualityReport());
+  }
+  
   return produtos;
 };
 

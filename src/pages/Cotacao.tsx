@@ -17,6 +17,7 @@ import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
 import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
+import QualityIndicator from '@/components/cotacao/QualityIndicator';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -179,6 +180,8 @@ const Cotacao = () => {
                 onCalcularTotal={calcularTotalFornecedor}
               />
             )}
+            
+            <QualityIndicator />
             
             <ProdutosExtraidosDetails produtosExtraidos={produtosExtraidos} />
 
