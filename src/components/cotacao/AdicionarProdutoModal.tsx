@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus } from 'lucide-react';
+import { normalizarTexto } from '@/lib/utils';
 
 interface Produto {
   id: string;
@@ -72,14 +73,16 @@ const AdicionarProdutoModal: React.FC<AdicionarProdutoModalProps> = ({
   const produtosFiltrados = produtos.filter(produto => {
     if (!produto) return false;
     
-    const searchTerm = buscaProduto?.toLowerCase() || '';
-    const produtoNome = produto.produto?.toLowerCase() || '';
-    const nomeBase = produto.nome_base?.toLowerCase() || '';
-    const nomeVariacao = produto.nome_variacao?.toLowerCase() || '';
+    const termoBusca = normalizarTexto(buscaProduto);
+    if (!termoBusca) return true;
     
-    return produtoNome.includes(searchTerm) ||
-           nomeBase.includes(searchTerm) ||
-           nomeVariacao.includes(searchTerm);
+    const produtoNormalizado = normalizarTexto(produto.produto || '');
+    const nomeBaseNormalizado = normalizarTexto(produto.nome_base || '');
+    const nomeVariacaoNormalizado = normalizarTexto(produto.nome_variacao || '');
+    
+    return produtoNormalizado.includes(termoBusca) ||
+           nomeBaseNormalizado.includes(termoBusca) ||
+           nomeVariacaoNormalizado.includes(termoBusca);
   });
 
   const handleAdicionarProdutoExistente = () => {

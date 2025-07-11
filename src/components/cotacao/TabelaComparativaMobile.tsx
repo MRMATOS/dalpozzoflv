@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search } from 'lucide-react';
 import { ItemTabelaComparativa } from '@/utils/productExtraction/types';
+import { normalizarTexto } from '@/lib/utils';
 import CotacaoActionButtons from './CotacaoActionButtons';
 import FornecedorMobileCard from './FornecedorMobileCard';
 
@@ -45,10 +46,29 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
 }) => {
   const [buscaProduto, setBuscaProduto] = useState('');
 
-  const produtosFiltrados = tabela.filter(item => 
-    item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    item.tipo.toLowerCase().includes(buscaProduto.toLowerCase())
-  );
+  const produtosFiltrados = (() => {
+    const termoBusca = normalizarTexto(buscaProduto);
+    if (!termoBusca) return tabela;
+    
+    return tabela.filter(item => {
+      // Buscar no produto e tipo
+      const produtoNormalizado = normalizarTexto(item.produto);
+      const tipoNormalizado = normalizarTexto(item.tipo);
+      
+      if (produtoNormalizado.includes(termoBusca) || tipoNormalizado.includes(termoBusca)) {
+        return true;
+      }
+      
+      // Buscar nas descrições originais de todos os fornecedores
+      if (item.descricaoOriginal) {
+        return Object.values(item.descricaoOriginal).some(descricao => 
+          descricao && normalizarTexto(descricao).includes(termoBusca)
+        );
+      }
+      
+      return false;
+    });
+  })();
 
   const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
 
