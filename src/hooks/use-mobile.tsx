@@ -3,11 +3,9 @@ import * as React from "react"
 const MOBILE_BREAKPOINT = 768
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(false)
-  const [isInitialized, setIsInitialized] = React.useState<boolean>(false)
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
 
   React.useEffect(() => {
-    // Inicialização mais robusta
     const checkIsMobile = () => {
       return window.innerWidth < MOBILE_BREAKPOINT
     }
@@ -19,12 +17,10 @@ export function useIsMobile() {
     
     // Definir estado inicial
     setIsMobile(checkIsMobile())
-    setIsInitialized(true)
     
     mql.addEventListener("change", onChange)
     return () => mql.removeEventListener("change", onChange)
   }, [])
 
-  // Durante o SSR ou antes da inicialização, assumir desktop
-  return isInitialized ? isMobile : false
+  return isMobile
 }

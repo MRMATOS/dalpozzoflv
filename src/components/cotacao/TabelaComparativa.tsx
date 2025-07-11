@@ -32,16 +32,9 @@ interface TabelaComparativaProps {
 const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
   const isMobile = useIsMobile();
   const [buscaProduto, setBuscaProduto] = useState('');
-  const [isHydrated, setIsHydrated] = React.useState(false);
   
-  // Evitar hidration mismatch
-  React.useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-  
-  // Durante a hidratação, mostrar uma versão neutra ou desktop
-  if (!isHydrated) {
-    // Renderizar versão desktop como fallback durante hidratação
+  // Durante a hidratação, mostrar loading
+  if (isMobile === undefined) {
     return <div className="animate-pulse h-96 bg-gray-100 rounded-lg"></div>;
   }
   
