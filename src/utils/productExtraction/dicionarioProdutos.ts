@@ -396,7 +396,7 @@ export const dicionarioProdutos = {
       'tomate longa vida', 'tomate longa vida graúdo', 
       'tomate longa vida médio'
     ],
-    'saladette': ['tomate saladete', 'tomate saladete graúdo’]
+    'saladete': ['tomate saladete', 'tomate saladete graúdo']
   },
   'tomate-cereja': {
     'bandeja': ['tomate cereja', 'tomate-cereja', 'tomate cereja bandeja', 'tomate-cereja bandeja'],
