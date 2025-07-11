@@ -37,26 +37,31 @@ export const useCotacaoPersistence = () => {
   const [isLoadingCotacao, setIsLoadingCotacao] = useState(true);
   const [cotacaoSalva, setCotacaoSalva] = useState(false);
   const [dadosCarregados, setDadosCarregados] = useState<RestauracaoData | null>(null);
+  const [carregamentoInicial, setCarregamentoInicial] = useState(false);
   
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveDataRef = useRef<string>('');
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-carregar última cotação ao inicializar
+  // Auto-carregar última cotação ao inicializar - APENAS UMA VEZ
   useEffect(() => {
+    if (carregamentoInicial) return; // Evitar múltiplas execuções
+    
     const carregarUltimaCotacao = async () => {
       if (!isAuthenticated || !user?.id) {
-        console.log('Usuário não autenticado, iniciando cotação limpa');
         setIsLoadingCotacao(false);
-        setDadosCarregados(null);
+        setDadosCarregados({
+          produtosExtraidos: [],
+          tabelaComparativa: []
+        });
         completSync();
+        setCarregamentoInicial(true);
         return;
       }
 
-      console.log('=== CARREGANDO ÚLTIMA COTAÇÃO AUTOMATICAMENTE ===');
       setIsLoadingCotacao(true);
 
       try {
-        // PRIMEIRO: Buscar a última cotação (enviada ou não) para carregar
         const { data, error } = await supabase
           .from('cotacoes')
           .select('*')
@@ -66,27 +71,21 @@ export const useCotacaoPersistence = () => {
           .maybeSingle();
 
         if (error) {
-          console.error('Erro ao carregar cotação:', error);
           setDadosCarregados({
             produtosExtraidos: [],
             tabelaComparativa: []
           });
         } else if (data) {
-          console.log('Última cotação encontrada para carregar:', data);
-          
-          // Se a cotação foi enviada, criar uma nova baseada nela
           if (data.enviado_em) {
-            console.log('Cotação foi enviada, criando nova baseada na anterior');
-            setCotacaoId(null); // Nova cotação
+            setCotacaoId(null);
             setCotacaoRestaurada(new Date(data.data));
             setTipoCotacao('enviada');
-            setCotacaoSalva(false); // Precisa salvar para criar nova
+            setCotacaoSalva(false);
           } else {
-            console.log('Carregando rascunho existente');
-            setCotacaoId(data.id); // Continuar editando
+            setCotacaoId(data.id);
             setCotacaoRestaurada(new Date(data.data));
             setTipoCotacao('rascunho');
-            setCotacaoSalva(true); // Já existe, pode auto-salvar
+            setCotacaoSalva(true);
           }
           
           const dadosRestaurados = {
@@ -95,10 +94,7 @@ export const useCotacaoPersistence = () => {
           };
           
           setDadosCarregados(dadosRestaurados);
-          console.log('Dados carregados automaticamente:', dadosRestaurados);
         } else {
-          console.log('Nenhuma cotação encontrada - iniciando cotação nova');
-          // Inicializar estados limpos para nova cotação
           setCotacaoId(null);
           setCotacaoRestaurada(null);
           setTipoCotacao(null);
@@ -109,8 +105,6 @@ export const useCotacaoPersistence = () => {
           });
         }
       } catch (error) {
-        console.error('Erro ao carregar cotação:', error);
-        // Em caso de erro, inicializar cotação limpa
         setDadosCarregados({
           produtosExtraidos: [],
           tabelaComparativa: []
@@ -118,11 +112,12 @@ export const useCotacaoPersistence = () => {
       } finally {
         setIsLoadingCotacao(false);
         completSync();
+        setCarregamentoInicial(true);
       }
     };
 
     carregarUltimaCotacao();
-  }, [isAuthenticated, user?.id, completSync]);
+  }, [isAuthenticated, user?.id]); // Removido completSync das dependências
 
   // Implementar retry automático
   const tentarSalvarComRetry = useCallback(async (
@@ -204,53 +199,49 @@ export const useCotacaoPersistence = () => {
     }
   }, [user?.id, isAuthenticated, startSync, completSync, failSync, tentarSalvarComRetry]);
 
-  // Auto-save somente após primeira salvamento manual
+  // Auto-save com debounce
   const salvarCotacao = useCallback(async (dadosCotacao: CotacaoData) => {
-    if (!cotacaoSalva) {
-      console.log('Auto-save desabilitado até primeiro salvamento manual');
-      return;
-    }
-
+    if (!cotacaoSalva) return;
     if (!isAuthenticated || !user?.id || !dadosCotacao.produtosExtraidos.length) return;
 
-    // Verificar se os dados realmente mudaram
     const dadosString = JSON.stringify({
       produtosExtraidos: dadosCotacao.produtosExtraidos,
       tabelaComparativa: dadosCotacao.tabelaComparativa
     });
     
-    if (dadosString === lastSaveDataRef.current) {
-      console.log('Dados não mudaram, pulando auto-save');
-      return;
+    if (dadosString === lastSaveDataRef.current) return;
+
+    // Implementar debounce para evitar saves excessivos
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
 
-    lastSaveDataRef.current = dadosString;
-    markUnsavedChanges();
+    debounceTimeoutRef.current = setTimeout(async () => {
+      lastSaveDataRef.current = dadosString;
+      markUnsavedChanges();
+      startSync();
 
-    console.log('=== AUTO-SAVE ATIVADO ===');
-
-    startSync();
-
-    try {
-      const sucesso = await tentarSalvarComRetry(dadosCotacao);
-      
-      if (sucesso) {
-        completSync();
-        console.log('Auto-save concluído com sucesso');
-      } else {
-        failSync('Falha no auto-save');
+      try {
+        const sucesso = await tentarSalvarComRetry(dadosCotacao);
+        if (sucesso) {
+          completSync();
+        } else {
+          failSync('Falha no auto-save');
+        }
+      } catch (error) {
+        failSync('Erro no auto-save');
       }
-    } catch (error) {
-      console.error('Erro no auto-save:', error);
-      failSync('Erro no auto-save');
-    }
+    }, 2000); // 2 segundos de debounce
   }, [user?.id, isAuthenticated, startSync, completSync, failSync, markUnsavedChanges, tentarSalvarComRetry, cotacaoSalva]);
 
-  // Limpar timeout ao desmontar
+  // Limpar timeouts ao desmontar
   useEffect(() => {
     return () => {
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
+      }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, []);

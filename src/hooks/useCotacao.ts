@@ -44,31 +44,19 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarPreco
   } = useComparisonTable({ produtosExtraidos, produtosDB });
 
-  // Carregar dados automaticamente quando disponíveis
+  // Carregar dados automaticamente apenas UMA vez
   useEffect(() => {
     if (dadosCarregados !== null && !isLoadingCotacao) {
-      console.log('=== CARREGANDO DADOS AUTOMATICAMENTE ===');
-      console.log('Dados carregados:', dadosCarregados);
-      
-      // Se dadosCarregados existe (mesmo que vazio), aplicar
       const produtosParaCarregar = dadosCarregados.produtosExtraidos || [];
       const tabelaParaCarregar = dadosCarregados.tabelaComparativa || [];
       
       setProdutosExtraidos(produtosParaCarregar);
       setTabelaComparativa(tabelaParaCarregar);
       
-      // Extrair fornecedores processados dos produtos
       const fornecedoresUnicos = new Set(produtosParaCarregar.map(p => p.fornecedor));
       setFornecedoresProcessados(fornecedoresUnicos);
-      
-      console.log('Estados atualizados - Produtos:', produtosParaCarregar.length, 'Tabela:', tabelaParaCarregar.length);
     }
-  }, [dadosCarregados, isLoadingCotacao, setTabelaComparativa]);
-
-  console.log('=== ESTADO ATUAL DA COTAÇÃO ===');
-  console.log('Produtos extraídos:', produtosExtraidos.length);
-  console.log('Tabela comparativa:', tabelaComparativa.length);
-  console.log('Fornecedores processados:', fornecedoresProcessados.size);
+  }, [dadosCarregados, isLoadingCotacao]); // Removido setTabelaComparativa das dependências
 
   // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
@@ -88,39 +76,20 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar quando há mudanças significativas
+  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE
   useEffect(() => {
-    // Só tentar auto-save se:
-    // 1. Dados foram inicializados (dadosCarregados não é null)
-    // 2. Não está carregando cotação
-    // 3. Não está sincronizando
-    // 4. Há produtos extraídos
     if (dadosCarregados !== null && 
         !isLoadingCotacao && 
         !syncStatus.isSyncing && 
         produtosExtraidos.length > 0) {
       
-      const timeoutId = setTimeout(() => {
-        console.log('=== AUTO-SAVE ATIVADO ===');
-        console.log('Produtos:', produtosExtraidos.length, 'Tabela:', tabelaComparativa.length);
-        salvarCotacao({
-          produtosExtraidos,
-          tabelaComparativa,
-          fornecedoresProcessados,
-        });
-      }, 3000); // 3 segundos para evitar saves excessivos
-      
-      return () => clearTimeout(timeoutId);
+      salvarCotacao({
+        produtosExtraidos,
+        tabelaComparativa,
+        fornecedoresProcessados,
+      });
     }
-  }, [
-    dadosCarregados,
-    produtosExtraidos, 
-    tabelaComparativa, 
-    salvarCotacao, 
-    isLoadingCotacao, 
-    fornecedoresProcessados,
-    syncStatus.isSyncing
-  ]);
+  }, [produtosExtraidos, tabelaComparativa]); // Dependências mínimas para evitar loops
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
     try {
