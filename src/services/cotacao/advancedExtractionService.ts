@@ -111,21 +111,50 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
   return dicionarioOtimizado;
 };
 
-// Busca produto no dicionário local
-const buscarNoDicionario = (linhaNormalizada: string): { produto: string; tipo: string; alias: string; } | null => {
-  const dicionario = getDicionarioOtimizado();
+// Função para normalizar texto
+const normalizarTexto = (texto: string): string => {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+    .replace(/\s+/g, ' ') // Remove espaços extras
+    .trim();
+};
+
+// Função para busca parcial e otimizada
+const buscarProdutoOtimizado = (linha: string, dicionario: MapeamentoProduto[]): { produto: string; tipo: string; alias: string; } | null => {
+  const linhaNormalizada = normalizarTexto(linha);
+  const palavrasLinha = linhaNormalizada.split(' ');
   
-  for (const mapeamento of dicionario) {
-    if (linhaNormalizada.includes(mapeamento.alias)) {
-      return {
-        produto: mapeamento.produto,
-        tipo: mapeamento.tipo,
-        alias: mapeamento.alias,
-      };
+  // Primeiro: busca exata
+  for (const item of dicionario) {
+    const aliasNorm = normalizarTexto(item.alias);
+    if (linhaNormalizada.includes(aliasNorm)) {
+      return { produto: item.produto, tipo: item.tipo, alias: item.alias };
+    }
+  }
+  
+  // Segundo: busca parcial - pelo menos 60% das palavras devem coincidir
+  for (const item of dicionario) {
+    const palavrasAlias = normalizarTexto(item.alias).split(' ');
+    const coincidencias = palavrasAlias.filter(palavra => 
+      palavrasLinha.some(p => p.includes(palavra) || palavra.includes(p))
+    ).length;
+    
+    const percentualCoincidencia = coincidencias / Math.max(palavrasAlias.length, 1);
+    if (percentualCoincidencia >= 0.6 && coincidencias >= 2) {
+      return { produto: item.produto, tipo: item.tipo, alias: item.alias };
     }
   }
   
   return null;
+};
+
+// Busca produto no dicionário local
+const buscarNoDicionario = (linhaNormalizada: string): { produto: string; tipo: string; alias: string; } | null => {
+  const dicionario = getDicionarioOtimizado();
+  return buscarProdutoOtimizado(linhaNormalizada, dicionario);
 };
 
 // Busca produto nos sinônimos do banco
@@ -141,6 +170,10 @@ const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: 
     return null;
   }
   
+  // Normaliza a linha
+  const linhaClean = normalizarTexto(linhaNormalizada);
+  const palavrasLinha = linhaClean.split(' ');
+  
   // Ordena sinônimos por comprimento para buscar o mais específico primeiro
   const sinonimosPorTamanho = sinonimos
     .filter(s => s.sinonimo && typeof s.sinonimo === 'string')
@@ -148,8 +181,30 @@ const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: 
     .filter(s => s.sinonimo.length > 0)
     .sort((a, b) => b.sinonimo.length - a.sinonimo.length);
   
+  // Busca exata primeiro
   for (const sinonimo of sinonimosPorTamanho) {
-    if (linhaNormalizada.includes(sinonimo.sinonimo)) {
+    const sinonimoNorm = normalizarTexto(sinonimo.sinonimo);
+    if (linhaClean.includes(sinonimoNorm)) {
+      const produto = produtos.find(p => p.id === sinonimo.produto_id);
+      if (produto) {
+        return {
+          produto: produto.nome_base || produto.produto || 'Produto',
+          tipo: produto.nome_variacao || 'padrão',
+          alias: sinonimo.sinonimo,
+          produtoId: produto.id
+        };
+      }
+    }
+  }
+  
+  // Busca parcial como fallback
+  for (const sinonimo of sinonimosPorTamanho) {
+    const palavrasSinonimo = normalizarTexto(sinonimo.sinonimo).split(' ');
+    const coincidencias = palavrasSinonimo.filter(palavra => 
+      palavrasLinha.some(p => p.includes(palavra) || palavra.includes(p))
+    ).length;
+    
+    if (coincidencias >= Math.min(palavrasSinonimo.length, 2)) {
       const produto = produtos.find(p => p.id === sinonimo.produto_id);
       if (produto) {
         return {

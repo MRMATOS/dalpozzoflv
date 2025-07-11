@@ -44,7 +44,7 @@ const EditarProdutoModal: React.FC<EditarProdutoModalProps> = ({
     }
   }, [produto]);
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (!produto || !nomeProduto.trim() || !tipoProduto.trim()) {
       toast({
         title: "Campos obrigatórios",
@@ -73,8 +73,35 @@ const EditarProdutoModal: React.FC<EditarProdutoModalProps> = ({
       tipo: tipoProduto.trim(),
       preco: precoNumerico,
       unidade: unidadeProduto,
-      confianca: confiancaProduto
+      confianca: Math.min(confiancaProduto + 0.2, 1.0) // Aumenta confiança ao ser editado
     };
+
+    // Registrar no sistema de aprendizado se houve mudança
+    const houveMudanca = 
+      produto.produto !== nomeProduto.trim() || 
+      produto.tipo !== tipoProduto.trim() || 
+      produto.preco !== precoNumerico;
+
+    if (houveMudanca) {
+      try {
+        // Importa dinamicamente o AprendizadoService
+        const { AprendizadoService } = await import('@/services/cotacao/aprendizadoService');
+        
+        await AprendizadoService.registrarFeedback(
+          produto,
+          produto.linhaOriginal || `${produto.produto} ${produto.tipo}`,
+          {
+            produto_corrigido: nomeProduto.trim() !== produto.produto ? nomeProduto.trim() : undefined,
+            tipo_corrigido: tipoProduto.trim() !== produto.tipo ? tipoProduto.trim() : undefined,
+            preco_corrigido: precoNumerico !== produto.preco ? precoNumerico : undefined,
+            qualidade: 4, // Boa qualidade para edições manuais
+            aprovado: true
+          }
+        );
+      } catch (error) {
+        console.error('Erro ao registrar aprendizado:', error);
+      }
+    }
 
     onSalvar(produtoEditado);
     
