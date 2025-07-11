@@ -282,10 +282,7 @@ export const dicionarioProdutos = {
     'pequena': ['melancia pequena', 'melancia peq']
   },
   'melão': {
-    'amarelo': [
-      'melão amarelo', 'melão amarelo graúdo', 
-      'melão amarelo graúdo top t 6/7'
-    ],
+    'amarelo': ['melão amarelo', 'melão amarelo graúdo', 'melão amarelo graúdo top t 6/7'],
     'cepi': ['melão cepi', 'melão cepi cx t6'],
     'gaia': ['melão gaia'],
     'melícia': ['melão melícia'],
