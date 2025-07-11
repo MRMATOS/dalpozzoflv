@@ -69,11 +69,18 @@ const AdicionarProdutoModal: React.FC<AdicionarProdutoModalProps> = ({
     }
   };
 
-  const produtosFiltrados = produtos.filter(produto =>
-    produto.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    produto.nome_base?.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    produto.nome_variacao?.toLowerCase().includes(buscaProduto.toLowerCase())
-  );
+  const produtosFiltrados = produtos.filter(produto => {
+    if (!produto) return false;
+    
+    const searchTerm = buscaProduto?.toLowerCase() || '';
+    const produtoNome = produto.produto?.toLowerCase() || '';
+    const nomeBase = produto.nome_base?.toLowerCase() || '';
+    const nomeVariacao = produto.nome_variacao?.toLowerCase() || '';
+    
+    return produtoNome.includes(searchTerm) ||
+           nomeBase.includes(searchTerm) ||
+           nomeVariacao.includes(searchTerm);
+  });
 
   const handleAdicionarProdutoExistente = () => {
     if (!fornecedorSelecionado || !produtoSelecionado || !preco) {
@@ -247,10 +254,10 @@ const AdicionarProdutoModal: React.FC<AdicionarProdutoModalProps> = ({
                         }`}
                         onClick={() => setProdutoSelecionado(produto)}
                       >
-                        <div className="font-medium">{produto.nome_base || produto.produto}</div>
-                        {produto.nome_variacao && (
-                          <div className="text-sm text-muted-foreground">{produto.nome_variacao}</div>
-                        )}
+                         <div className="font-medium">{produto?.nome_base || produto?.produto || 'Produto sem nome'}</div>
+                         {produto?.nome_variacao && (
+                           <div className="text-sm text-muted-foreground">{produto.nome_variacao}</div>
+                         )}
                       </div>
                     ))
                   ) : (

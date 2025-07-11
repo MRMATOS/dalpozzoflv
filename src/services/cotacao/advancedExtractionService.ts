@@ -3,6 +3,7 @@ import { dicionarioProdutos } from '@/utils/productExtraction/dicionarioProdutos
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
 import { refinarIdentificacaoProduto } from './refinementService';
 import { aplicarFallback, fallbackSystem } from './fallbackSystem';
+import { migrarDicionarioParaSinonimos } from './migrationService';
 
 interface MapeamentoProduto {
   alias: string;
@@ -129,12 +130,22 @@ const buscarNoDicionario = (linhaNormalizada: string): { produto: string; tipo: 
 
 // Busca produto nos sinônimos do banco
 const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: string; tipo: string; alias: string; produtoId: string; } | null> => {
+  if (!linhaNormalizada || typeof linhaNormalizada !== 'string') {
+    return null;
+  }
+
   const sinonimos = await carregarSinonimosBanco();
   const produtos = await carregarProdutosBanco();
   
+  if (!sinonimos || !produtos || sinonimos.length === 0) {
+    return null;
+  }
+  
   // Ordena sinônimos por comprimento para buscar o mais específico primeiro
   const sinonimosPorTamanho = sinonimos
-    .map(s => ({ ...s, sinonimo: s.sinonimo.toLowerCase() }))
+    .filter(s => s.sinonimo && typeof s.sinonimo === 'string')
+    .map(s => ({ ...s, sinonimo: s.sinonimo.toLowerCase().trim() }))
+    .filter(s => s.sinonimo.length > 0)
     .sort((a, b) => b.sinonimo.length - a.sinonimo.length);
   
   for (const sinonimo of sinonimosPorTamanho) {
@@ -156,7 +167,11 @@ const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: 
 
 // Processa linha extraindo produto e preço
 const processarLinha = async (linha: string, nomeFornecedor: string): Promise<ProdutoExtraido | null> => {
-  const linhaNormalizada = linha.toLowerCase();
+  if (!linha || typeof linha !== 'string' || linha.trim().length === 0) {
+    return null;
+  }
+  
+  const linhaNormalizada = linha.toLowerCase().trim();
   
   // Busca preço (opcional)
   const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
@@ -176,8 +191,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
     if (refinamento) {
       console.log(`Refinamento aplicado: ${refinamento.produto} - ${refinamento.tipo} (confiança: ${refinamento.confianca.toFixed(2)})`);
       return {
-        produto: refinamento.produto.charAt(0).toUpperCase() + refinamento.produto.slice(1),
-        tipo: refinamento.tipo.charAt(0).toUpperCase() + refinamento.tipo.slice(1),
+        produto: (refinamento.produto || 'Produto').charAt(0).toUpperCase() + (refinamento.produto || 'Produto').slice(1),
+        tipo: (refinamento.tipo || 'padrão').charAt(0).toUpperCase() + (refinamento.tipo || 'padrão').slice(1),
         preco,
         fornecedor: nomeFornecedor,
         linhaOriginal: linha,
@@ -221,8 +236,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
     }
 
     return {
-      produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-      tipo: tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+      produto: (produtoEncontrado.produto || 'Produto').charAt(0).toUpperCase() + (produtoEncontrado.produto || 'Produto').slice(1),
+      tipo: (tipoFinal || 'padrão').charAt(0).toUpperCase() + (tipoFinal || 'padrão').slice(1),
       preco,
       fornecedor: nomeFornecedor,
       linhaOriginal: linha,
@@ -236,8 +251,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
   const sinonimo = await buscarNosSinonimos(linhaNormalizada);
   if (sinonimo) {
     return {
-      produto: sinonimo.produto.charAt(0).toUpperCase() + sinonimo.produto.slice(1),
-      tipo: sinonimo.tipo.charAt(0).toUpperCase() + sinonimo.tipo.slice(1),
+      produto: (sinonimo.produto || 'Produto').charAt(0).toUpperCase() + (sinonimo.produto || 'Produto').slice(1),
+      tipo: (sinonimo.tipo || 'padrão').charAt(0).toUpperCase() + (sinonimo.tipo || 'padrão').slice(1),
       preco,
       fornecedor: nomeFornecedor,
       linhaOriginal: linha,
@@ -266,84 +281,65 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
 };
 
 export const extrairProdutosAvancado = async (mensagem: string, nomeFornecedor: string): Promise<ProdutoExtraido[]> => {
-  const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
+  if (!mensagem || typeof mensagem !== 'string' || !nomeFornecedor) {
+    console.log('❌ Mensagem ou fornecedor inválidos');
+    return [];
+  }
+
+  // Verificar se a migração foi feita
+  const { data: sinonimosCheck } = await supabase
+    .from('sinonimos_produto')
+    .select('id')
+    .limit(1);
+  
+  if (!sinonimosCheck || sinonimosCheck.length === 0) {
+    console.log('🔄 Executando migração do dicionário...');
+    await migrarDicionarioParaSinonimos();
+  }
+
+  const linhas = mensagem.split('\n').filter(linha => linha && linha.trim() !== '');
   const produtos: ProdutoExtraido[] = [];
   
-  console.log(`Processando ${linhas.length} linhas para fornecedor ${nomeFornecedor}`);
+  console.log(`🔍 Processando ${linhas.length} linhas para fornecedor ${nomeFornecedor}`);
   
-  for (const linha of linhas) {
+  // Processa com debounce para evitar loops
+  for (let i = 0; i < linhas.length; i++) {
+    const linha = linhas[i];
     try {
+      // Pequeno delay para evitar sobrecarga
+      if (i > 0 && i % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      
       const produto = await processarLinha(linha, nomeFornecedor);
       if (produto) {
         produtos.push(produto);
+        console.log(`✅ Produto extraído: ${produto.produto} - ${produto.tipo} (${produto.origem})`);
+      } else {
+        console.log(`⚠️ Linha não identificada: ${linha}`);
       }
     } catch (error) {
-      console.error('Erro ao processar linha:', linha, error);
+      console.error('❌ Erro ao processar linha:', linha, error);
     }
   }
   
-  console.log(`${produtos.length} produtos extraídos (incluindo não identificados)`);
+  console.log(`📊 ${produtos.length} produtos extraídos de ${linhas.length} linhas`);
   
   // Atualiza métricas de qualidade
-  fallbackSystem.updateQualityMetrics(produtos);
-  
-  // Verifica se precisa de alerta
-  if (fallbackSystem.shouldTriggerAlert()) {
-    console.warn('⚠️ Qualidade de extração abaixo do esperado');
-    console.log(fallbackSystem.generateQualityReport());
+  try {
+    fallbackSystem.updateQualityMetrics(produtos);
+    
+    // Verifica se precisa de alerta
+    if (fallbackSystem.shouldTriggerAlert()) {
+      console.warn('⚠️ Qualidade de extração abaixo do esperado');
+      console.log(fallbackSystem.generateQualityReport());
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar métricas:', error);
   }
   
   return produtos;
 };
 
-// Função para popular tabela de sinônimos com dados do dicionário
-export const migrarDicionarioParaSinonimos = async (): Promise<void> => {
-  try {
-    console.log('Iniciando migração do dicionário para sinônimos...');
-    
-    const produtos = await carregarProdutosBanco();
-    const dicionario = getDicionarioOtimizado();
-    
-    const sinonimosPararInserir: { produto_id: string; sinonimo: string }[] = [];
-    
-    for (const mapeamento of dicionario) {
-      // Encontra produto correspondente no banco
-      const produto = produtos.find(p => 
-        (p.nome_base?.toLowerCase() === mapeamento.produto.toLowerCase()) ||
-        (p.produto?.toLowerCase() === mapeamento.produto.toLowerCase())
-      );
-      
-      if (produto) {
-        sinonimosPararInserir.push({
-          produto_id: produto.id,
-          sinonimo: mapeamento.alias
-        });
-      }
-    }
-    
-    console.log(`Inserindo ${sinonimosPararInserir.length} sinônimos...`);
-    
-    // Insere em lotes para evitar timeout
-    const batchSize = 100;
-    for (let i = 0; i < sinonimosPararInserir.length; i += batchSize) {
-      const batch = sinonimosPararInserir.slice(i, i + batchSize);
-      
-      const { error } = await supabase
-        .from('sinonimos_produto')
-        .insert(batch);
-      
-      if (error) {
-        console.error('Erro ao inserir batch de sinônimos:', error);
-      } else {
-        console.log(`Batch ${Math.floor(i/batchSize) + 1} inserido com sucesso`);
-      }
-    }
-    
-    // Limpa cache para recarregar
-    sinonimosBanco = null;
-    
-    console.log('Migração concluída!');
-  } catch (error) {
-    console.error('Erro na migração:', error);
-  }
-};
+// Re-exporta a função de migração do novo serviço
+export { migrarDicionarioParaSinonimos, verificarStatusMigracao } from './migrationService';

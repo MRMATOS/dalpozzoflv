@@ -17,6 +17,7 @@ import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
 import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
+import MigracaoStatus from '@/components/cotacao/MigracaoStatus';
 import QualityIndicator from '@/components/cotacao/QualityIndicator';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import AprendizadoDashboard from '@/components/cotacao/AprendizadoDashboard';
@@ -153,6 +154,8 @@ const Cotacao = () => {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <MigracaoStatus />
+        
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
