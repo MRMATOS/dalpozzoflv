@@ -291,7 +291,7 @@ export const dicionarioProdutos = {
   },
   'mexerica': {
     'murcott': ['mexerica', 'mexerica murcott', 'murcott'],
-    'poncã': ['mexerica ponca', 'mexerica poncã', 'ponca', 'poncã’, ‘ponkan’],
+    'poncã': ['mexerica ponca', 'mexerica poncã', 'ponca', 'poncã', 'ponkan'],
     '15kg': ['mexerica 15', 'mexerica 15kg', 'mexerica 15 kg']
   },
   'milho verde': {
