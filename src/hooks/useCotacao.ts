@@ -223,10 +223,15 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   // Função para editar produto extraído
   const editarProdutoExtraido = useCallback((produtoEditado: ProdutoExtraido) => {
     const novosExtraidos = produtosExtraidos.map(produto => {
-      if (produto.fornecedor === produtoEditado.fornecedor && 
-          produto.produto === produtoEditado.produto && 
-          produto.tipo === produtoEditado.tipo) {
-        return produtoEditado;
+      // Usar ID único se disponível, senão usar combinação de campos
+      const mesmoItem = produtoEditado.id 
+        ? produto.id === produtoEditado.id
+        : (produto.fornecedor === produtoEditado.fornecedor && 
+           produto.linhaOriginal === produtoEditado.linhaOriginal && 
+           produto.aliasUsado === produtoEditado.aliasUsado);
+      
+      if (mesmoItem) {
+        return { ...produtoEditado, id: produto.id || produtoEditado.id };
       }
       return produto;
     });

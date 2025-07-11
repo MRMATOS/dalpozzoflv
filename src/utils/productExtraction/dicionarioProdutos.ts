@@ -47,6 +47,12 @@ export const dicionarioProdutos = {
       'alface crespa graúda', 'alface crespa kael'
     ]
   },
+  'caqui': {
+    'comum': ['caqui', 'caqui comum', 'caqui grande', 'caqui médio'],
+    'fuyu': ['caqui fuyu', 'fuyu', 'caqui doce'],
+    'chocolate': ['caqui chocolate', 'chocolate', 'caqui choco'],
+    'rama': ['caqui rama', 'rama forte', 'caqui rama forte']
+  },
   'alho': {
     'descascado': ['alho descascado', 'alho descascado 1kg'],
     'poró': [

@@ -11,6 +11,7 @@ export interface ProdutoExtraido {
   confianca?: number; // Score de confiança na identificação (0-1)
   origem: 'dicionario' | 'sinonimo' | 'banco' | 'manual'; // Origem da identificação
   unidade?: string; // Unidade do produto (Caixa, Kg, etc.)
+  id?: string; // ID único para identificação no array
 }
 
 export interface ItemTabelaComparativa {
