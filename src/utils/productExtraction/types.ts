@@ -10,6 +10,7 @@ export interface ProdutoExtraido {
   variacaoId?: string; // ID da variação específica quando encontrada
   confianca?: number; // Score de confiança na identificação (0-1)
   origem: 'dicionario' | 'sinonimo' | 'banco' | 'manual'; // Origem da identificação
+  unidade?: string; // Unidade do produto (Caixa, Kg, etc.)
 }
 
 export interface ItemTabelaComparativa {

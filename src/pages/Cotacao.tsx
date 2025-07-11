@@ -18,6 +18,7 @@ import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDeta
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import QualityIndicator from '@/components/cotacao/QualityIndicator';
+import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -60,6 +61,9 @@ const Cotacao = () => {
     calcularPercentualSuprimento,
     retrySync,
     formatLastSyncTime,
+    editarProdutoExtraido,
+    deletarProdutoExtraido,
+    adicionarProdutoManual
   } = useCotacao({ fornecedores, produtosDB, requisicoes });
 
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
@@ -98,10 +102,19 @@ const Cotacao = () => {
   };
 
   const handleProdutoAdicionado = (fornecedor: string, produto: string, tipo: string, preco: number, produtoId?: string) => {
-    // Aqui vamos adicionar a lógica para inserir o produto na tabela comparativa
-    // Por enquanto, simula a adição
-    toast.success(`Produto ${produto} (${tipo}) adicionado para ${fornecedor} por R$ ${preco.toFixed(2)}`);
+    adicionarProdutoManual(fornecedor, produto, tipo, preco, produtoId);
     setModalAdicionarAberto(false);
+  };
+
+  const handleEditarProdutos = () => {
+    // Abrir a seção de produtos extraídos para edição
+    toast.info('Abra a seção "Produtos Extraídos" abaixo para editar os produtos.');
+  };
+
+  const handleLimparTudo = () => {
+    if (window.confirm('Tem certeza que deseja limpar todos os produtos extraídos? Esta ação não pode ser desfeita.')) {
+      handleNovaCotacao();
+    }
   };
 
   if (isLoading) {
@@ -182,8 +195,21 @@ const Cotacao = () => {
             )}
             
             <QualityIndicator />
+
+            {/* Controles Manuais */}
+            <CotacaoManualControls
+              produtosExtraidos={produtosExtraidos}
+              fornecedoresComProdutos={fornecedoresComProdutos}
+              onAdicionarProduto={handleAdicionarProduto}
+              onEditarProdutos={handleEditarProdutos}
+              onLimparTudo={handleLimparTudo}
+            />
             
-            <ProdutosExtraidosDetails produtosExtraidos={produtosExtraidos} />
+            <ProdutosExtraidosDetails 
+              produtosExtraidos={produtosExtraidos}
+              onEditarProduto={editarProdutoExtraido}
+              onDeletarProduto={deletarProdutoExtraido}
+            />
 
             <GuiaUsoCotacao />
             

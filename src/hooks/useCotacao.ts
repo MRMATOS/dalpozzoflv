@@ -208,6 +208,73 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     return sucesso;
   }, [salvarRascunho, produtosExtraidos, tabelaComparativa, fornecedoresProcessados]);
 
+  // Função para editar produto extraído
+  const editarProdutoExtraido = useCallback((produtoEditado: ProdutoExtraido) => {
+    const novosExtraidos = produtosExtraidos.map(produto => {
+      if (produto.fornecedor === produtoEditado.fornecedor && 
+          produto.produto === produtoEditado.produto && 
+          produto.tipo === produtoEditado.tipo) {
+        return produtoEditado;
+      }
+      return produto;
+    });
+    setProdutosExtraidos(novosExtraidos);
+    toast.success(`Produto ${produtoEditado.produto} editado com sucesso!`);
+  }, [produtosExtraidos]);
+
+  // Função para deletar produto extraído
+  const deletarProdutoExtraido = useCallback((produto: ProdutoExtraido) => {
+    const novosExtraidos = produtosExtraidos.filter(p => 
+      !(p.fornecedor === produto.fornecedor && 
+        p.produto === produto.produto && 
+        p.tipo === produto.tipo)
+    );
+    setProdutosExtraidos(novosExtraidos);
+  }, [produtosExtraidos]);
+
+  // Função para adicionar produto manualmente
+  const adicionarProdutoManual = useCallback((
+    fornecedor: string, 
+    produto: string, 
+    tipo: string, 
+    preco: number, 
+    produtoId?: string
+  ) => {
+    const novoProduto: ProdutoExtraido = {
+      produto,
+      tipo,
+      preco,
+      unidade: 'Caixa',
+      fornecedor,
+      confianca: 1.0, // Produto manual tem confiança máxima
+      produtoId: produtoId || undefined,
+      linhaOriginal: 'Adicionado manualmente',
+      aliasUsado: produto,
+      origem: 'manual' as const
+    };
+
+    // Verificar se produto já existe para este fornecedor
+    const produtoExistente = produtosExtraidos.find(p => 
+      p.fornecedor === fornecedor && 
+      p.produto === produto && 
+      p.tipo === tipo
+    );
+
+    if (produtoExistente) {
+      // Atualizar produto existente
+      editarProdutoExtraido(novoProduto);
+    } else {
+      // Adicionar novo produto
+      const novosExtraidos = [...produtosExtraidos, novoProduto];
+      setProdutosExtraidos(novosExtraidos);
+      
+      // Marcar fornecedor como processado se ainda não estiver
+      if (!fornecedoresProcessados.has(fornecedor)) {
+        setFornecedoresProcessados(prev => new Set(prev).add(fornecedor));
+      }
+    }
+  }, [produtosExtraidos, fornecedoresProcessados, editarProdutoExtraido]);
+
   const handleRestaurarCotacao = async () => {
     console.log('=== RESTAURANDO COTAÇÃO ===');
     const dadosRestaurados = await restaurarUltimaCotacao();
@@ -275,6 +342,9 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     atualizarPreco,
     calcularPercentualSuprimento,
     retrySync,
-    formatLastSyncTime
+    formatLastSyncTime,
+    editarProdutoExtraido,
+    deletarProdutoExtraido,
+    adicionarProdutoManual
   };
 };
