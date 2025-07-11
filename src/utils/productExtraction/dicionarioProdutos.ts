@@ -103,8 +103,9 @@ export const dicionarioProdutos = {
     'padrão': ['berinjela', 'berinjela kg'],
     '10kg': ['berinjela 10kg', 'berinjela 10 kg']
   },
-  'beterraba': {
-    'padrão': ['beterraba', 'beterraba m', 'beterraba produtor', 'beterraba box', 'beterraba padrão top'],
+    'beterraba': {
+    'padrão': ['beterraba', 'beterraba m', 'beterraba box', 'beterraba padrão top'], // 'beterraba produtor' removido daqui
+    'produtor': ['beterraba produtor'], // NOVA VARIAÇÃO
     'selecionada': ['beterraba selecionada']
   },
   'brócolis': {
@@ -171,14 +172,13 @@ export const dicionarioProdutos = {
   'hortelã': {
     'maço': ['hortela', 'hortelã', 'hortela maco', 'hortelã maço', 'hortelã band']
   },
-    'kiwi': {
+  'kiwi': {
     'padrão': ['kiwi'],
     'importado': [
       'kiwi importado', 'kiwi imp', 'kiwi imp.t 20 10kg',
-      'kiwi imp 9 kg graúdo' // removido o 'kiwi bdj' daqui
+      'kiwi imp 9 kg graúdo', 'kiwi bdj 20x600 gr'
     ],
-    'nacional': ['kiwi nacional'],
-    'bandeja': ['kiwi bandeja', 'kiwi bdj', 'kiwi bdj 20x600 gr'] // NOVA VARIAÇÃO
+    'nacional': ['kiwi nacional']
   },
   'laranja': {
     'padrão': ['laranja'],
@@ -234,17 +234,18 @@ export const dicionarioProdutos = {
       'manga tomy rio sul', 'manga tomy top vale bonito'
     ]
   },
-  'maracujá': {
+    'maracujá': {
     'padrão': ['maracujá', 'maracuja', 'maracuja kg'],
-    'graúdo': ['maracujá graúdo', 'maracujá plástica top', 'maracujá médio', 'maracujá médio/graúdo'],
+    'graúdo': ['maracujá graúdo', 'maracujá médio', 'maracujá médio/graúdo'], // Agora sem a variação plástica
     'papelão': ['maracujá papelão'],
+    'plástica': ['maracujá plástica', 'maracujá plástica top'], // NOVA VARIAÇÃO
     'ceasa': ['maracujá ceasa']
   },
   'melancia': {
     'padrão': ['melancia'],
     'baby': ['melancia baby', 'melancia baby cx .t 6']
   },
-    'melão': {
+  'melão': {
     'padrão': ['melão'],
     'amarelo': [
       'melão amarelo', 'melão amarelo graúdo',
@@ -252,8 +253,7 @@ export const dicionarioProdutos = {
     ],
     'cepi': ['melão cepi', 'melão cepi cx t6'],
     'gaia': ['melão gaia'],
-    'melancia': ['melão melancia'],
-    'melícia': ['melão melícia', 'melão melicia'], // NOVA VARIAÇÃO
+    'melancia': ['melão melancia'], // CORRIGIDO
     'rei': ['melão rei', 'melão rei t 6'],
     'sapo': ['melão sapo', 'melão sapo bom', 'melão sapo graúdo'],
     'solto': ['melão solto']
@@ -341,15 +341,17 @@ export const dicionarioProdutos = {
     'ponkan': ['ponkan', 'tangerina ponkan'],
     'mixirica': ['mixirica', 'mexerica']
   },
-    'tomate': {
+  'tomate': {
     'padrão': ['tomate'],
-    'cereja': [ // Esta agora é a variação padrão/genérica
-      'tomate cereja', 'tomate grape', 'tomate sweet grape',
-      'tomate cereja klaina', 'tomate cereja cavali'
+    'cereja': [
+      'tomate cereja', 'tomate cereja bdj',
+      'tomate cereja cavali', 'tomate cereja cx',
+      'tomate cereja klaina', 'tomate grape'
     ],
-    'cereja bandeja': ['tomate cereja bdj', 'tomate cereja bandeja'], // NOVA VARIAÇÃO
-    'cereja caixa': ['tomate cereja cx'], // NOVA VARIAÇÃO
-    'longa vida': ['tomate longa vida', 'tomate longa vida graúdo', 'tomate longa vida g','tomate longa vida médio', 'tomate longa vida m'],
+    'longa vida': [
+      'tomate longa vida', 'tomate longa vida graúdo', 'tomate longa vida g',
+      'tomate longa vida médio', 'tomate longa vida m'
+    ],
     'saladete': ['tomate saladete', 'tomate saladete graúdo']
   },
   'uva': {
