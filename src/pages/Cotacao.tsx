@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,10 +72,20 @@ const Cotacao = () => {
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
   const temDados = produtosExtraidos.length > 0 || tabelaComparativa.length > 0;
 
-  const obterEstoquesDisplay = (produto: string, tipo: string) => {
-    const resultado = obterEstoquesDisplayInteligente(produto, tipo);
-    return resultado.jsx;
-  };
+  const obterEstoquesDisplay = useMemo(() => {
+    const cache = new Map<string, React.ReactNode>();
+    
+    return (produto: string, tipo: string) => {
+      const cacheKey = `${produto}|${tipo}`;
+      if (cache.has(cacheKey)) {
+        return cache.get(cacheKey);
+      }
+      
+      const resultado = obterEstoquesDisplayInteligente(produto, tipo);
+      cache.set(cacheKey, resultado.jsx);
+      return resultado.jsx;
+    };
+  }, [obterEstoquesDisplayInteligente]);
 
   const calcularTotalFornecedor = (fornecedor: string) => {
     return tabelaComparativa.reduce((total, item) => {

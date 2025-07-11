@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Search } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import CotacaoActionButtons from './CotacaoActionButtons';
 import FornecedorCell from './FornecedorCell';
 import TabelaComparativaMobile from './TabelaComparativaMobile';
+import EstoqueDisplay from './EstoqueDisplay';
 
 interface TabelaComparativaProps {
   tabela: ItemTabelaComparativa[];
@@ -53,9 +54,11 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
     onCalcularTotal,
   } = props;
 
-  const produtosFiltrados = tabela.filter(item => 
-    item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
-    item.tipo.toLowerCase().includes(buscaProduto.toLowerCase())
+  const produtosFiltrados = useMemo(() => 
+    tabela.filter(item => 
+      item.produto.toLowerCase().includes(buscaProduto.toLowerCase()) ||
+      item.tipo.toLowerCase().includes(buscaProduto.toLowerCase())
+    ), [tabela, buscaProduto]
   );
 
   const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
@@ -113,7 +116,13 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                   <tr key={`${item.produto}-${item.tipo}`} className="border-b last:border-b-0 hover:bg-gray-50">
                     <td className="w-[100px] min-w-[100px] p-3 font-medium border-r"><span className="truncate block">{item.produto}</span></td>
                     <td className="w-[150px] min-w-[150px] p-3 border-r"><Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge></td>
-                    <td className="w-[160px] min-w-[160px] p-3 border-r">{onObterEstoques(item.produto, item.tipo)}</td>
+                    <td className="w-[160px] min-w-[160px] p-3 border-r">
+                      <EstoqueDisplay 
+                        produto={item.produto} 
+                        tipo={item.tipo} 
+                        onObterEstoques={onObterEstoques} 
+                      />
+                    </td>
                     {fornecedoresComProdutos.map(fornecedor => {
                       const preco = item.fornecedores[fornecedor];
                       return (
