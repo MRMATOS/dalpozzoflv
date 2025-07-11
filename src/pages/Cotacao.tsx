@@ -19,6 +19,7 @@ import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import QualityIndicator from '@/components/cotacao/QualityIndicator';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
+import AprendizadoDashboard from '@/components/cotacao/AprendizadoDashboard';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -63,7 +64,8 @@ const Cotacao = () => {
     formatLastSyncTime,
     editarProdutoExtraido,
     deletarProdutoExtraido,
-    adicionarProdutoManual
+    adicionarProdutoManual,
+    textosPorFornecedor
   } = useCotacao({ fornecedores, produtosDB, requisicoes });
 
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
@@ -115,6 +117,11 @@ const Cotacao = () => {
     if (window.confirm('Tem certeza que deseja limpar todos os produtos extraídos? Esta ação não pode ser desfeita.')) {
       handleNovaCotacao();
     }
+  };
+
+  const handleFeedbackEnviado = () => {
+    // Opcional: recarregar estatísticas ou mostrar notificação
+    toast.success('Feedback registrado! O sistema vai melhorar com sua ajuda.');
   };
 
   if (isLoading) {
@@ -196,6 +203,9 @@ const Cotacao = () => {
             
             <QualityIndicator />
 
+            {/* Dashboard de Aprendizado */}
+            <AprendizadoDashboard />
+
             {/* Controles Manuais */}
             <CotacaoManualControls
               produtosExtraidos={produtosExtraidos}
@@ -207,8 +217,10 @@ const Cotacao = () => {
             
             <ProdutosExtraidosDetails 
               produtosExtraidos={produtosExtraidos}
+              textoOriginalPorFornecedor={textosPorFornecedor}
               onEditarProduto={editarProdutoExtraido}
               onDeletarProduto={deletarProdutoExtraido}
+              onFeedbackEnviado={handleFeedbackEnviado}
             />
 
             <GuiaUsoCotacao />

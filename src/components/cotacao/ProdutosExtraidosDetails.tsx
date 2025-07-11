@@ -6,21 +6,29 @@ import { ChevronDown, ChevronRight, Eye, EyeOff, Info } from 'lucide-react';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
 import IndicadorConfianca from './IndicadorConfianca';
 import ProdutoExtraidoItem from './ProdutoExtraidoItem';
+import ProdutoComAprendizado from './ProdutoComAprendizado';
 import EditarProdutoModal from './EditarProdutoModal';
+import FeedbackAprendizadoModal from './FeedbackAprendizadoModal';
 
 interface ProdutosExtraidosDetailsProps {
   produtosExtraidos: ProdutoExtraido[];
+  textoOriginalPorFornecedor?: { [fornecedor: string]: string };
   onEditarProduto?: (produtoEditado: ProdutoExtraido) => void;
   onDeletarProduto?: (produto: ProdutoExtraido) => void;
+  onFeedbackEnviado?: () => void;
 }
 
 const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({ 
   produtosExtraidos, 
+  textoOriginalPorFornecedor = {},
   onEditarProduto,
-  onDeletarProduto 
+  onDeletarProduto,
+  onFeedbackEnviado
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [produtoEditando, setProdutoEditando] = useState<ProdutoExtraido | null>(null);
+  const [produtoFeedback, setProdutoFeedback] = useState<ProdutoExtraido | null>(null);
+  const [textoFeedback, setTextoFeedback] = useState('');
 
   const fornecedoresUnicos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
   
@@ -35,11 +43,17 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
     setProdutoEditando(null);
   };
 
-  const handleDeletarProduto = (produto: ProdutoExtraido) => {
-    if (onDeletarProduto) {
-      onDeletarProduto(produto);
+  const handleFeedback = (produto: ProdutoExtraido, texto: string) => {
+    setProdutoFeedback(produto);
+    setTextoFeedback(texto || textoOriginalPorFornecedor[produto.fornecedor] || '');
+  };
+
+  const handleFeedbackEnviado = () => {
+    if (onFeedbackEnviado) {
+      onFeedbackEnviado();
     }
-    setProdutoEditando(null);
+    setProdutoFeedback(null);
+    setTextoFeedback('');
   };
   
   if (produtosExtraidos.length === 0) {
@@ -84,9 +98,11 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {produtosPorFornecedor.map((produto, index) => (
-                      <ProdutoExtraidoItem
+                      <ProdutoComAprendizado
                         key={`${produto.produto}-${produto.tipo}-${index}`}
                         produto={produto}
+                        textoOriginal={textoOriginalPorFornecedor[fornecedor] || produto.linhaOriginal}
+                        onFeedback={handleFeedback}
                         onEdit={handleEditarProduto}
                       />
                     ))}
@@ -99,12 +115,28 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
       </Collapsible>
       
       {/* Modal de Edição */}
-      <EditarProdutoModal
-        isOpen={!!produtoEditando}
-        onClose={() => setProdutoEditando(null)}
-        produto={produtoEditando}
-        onSalvar={handleSalvarProduto}
-        onDeletar={handleDeletarProduto}
+      {produtoEditando && (
+        <EditarProdutoModal
+          isOpen={!!produtoEditando}
+          onClose={() => setProdutoEditando(null)}
+          produto={produtoEditando}
+          onSalvar={handleSalvarProduto}
+          onDeletar={(produto) => {
+            if (onDeletarProduto) {
+              onDeletarProduto(produto);
+            }
+            setProdutoEditando(null);
+          }}
+        />
+      )}
+
+      {/* Modal de Feedback */}
+      <FeedbackAprendizadoModal
+        isOpen={!!produtoFeedback}
+        onClose={() => setProdutoFeedback(null)}
+        produto={produtoFeedback}
+        textoOriginal={textoFeedback}
+        onFeedbackEnviado={handleFeedbackEnviado}
       />
     </div>
   );

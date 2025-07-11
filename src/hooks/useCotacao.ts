@@ -4,6 +4,7 @@ import { useCotacaoPersistence } from '@/hooks/useCotacaoPersistence';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
 import { toast } from 'sonner';
 import { useComparisonTable } from './useComparisonTable';
+import { AprendizadoService } from '@/services/cotacao/aprendizadoService';
 import ExtractionWorker from '@/workers/extraction.worker.ts?worker';
 
 interface UseCotacaoProps {
@@ -32,6 +33,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   const [fornecedoresProcessados, setFornecedoresProcessados] = useState<Set<string>>(new Set());
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState<string | null>(null);
   const [mensagemAtual, setMensagemAtual] = useState('');
+  const [textosPorFornecedor, setTextosPorFornecedor] = useState<{ [fornecedor: string]: string }>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
   const {
@@ -160,18 +162,28 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
     const worker = new ExtractionWorker();
 
-    worker.onmessage = (e: MessageEvent<{type: 'SUCCESS' | 'ERROR', payload: ProdutoExtraido[] | string}>) => {
+    worker.onmessage = async (e: MessageEvent<{type: 'SUCCESS' | 'ERROR', payload: ProdutoExtraido[] | string}>) => {
       const { type, payload } = e.data;
       
       if (type === 'SUCCESS') {
         const produtos = payload as ProdutoExtraido[];
         if (produtos.length > 0) {
-          const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
+          // Aplicar aprendizado automático aos produtos extraídos
+          const produtosComAprendizado = await AprendizadoService.aplicarAprendizado(produtos, fornecedor.nome);
+          
+          const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtosComAprendizado];
           setProdutosExtraidos(novosExtraidos);
           setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
+          
+          // Salvar texto original para feedback
+          setTextosPorFornecedor(prev => ({
+            ...prev,
+            [fornecedor.nome]: mensagemAtual
+          }));
+          
           setFornecedorSelecionado(null);
           setMensagemAtual('');
-          toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
+          toast.success(`${produtosComAprendizado.length} produtos extraídos de ${fornecedor.nome}!`);
         } else {
           toast.error('Nenhum produto foi encontrado na mensagem.');
         }
@@ -293,6 +305,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     setProdutosExtraidos(dadosLimpos.produtosExtraidos);
     setTabelaComparativa(dadosLimpos.tabelaComparativa);
     setFornecedoresProcessados(new Set());
+    setTextosPorFornecedor({});
     setFornecedorSelecionado(null);
     setMensagemAtual('');
   };
@@ -345,6 +358,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     formatLastSyncTime,
     editarProdutoExtraido,
     deletarProdutoExtraido,
-    adicionarProdutoManual
+    adicionarProdutoManual,
+    textosPorFornecedor
   };
 };

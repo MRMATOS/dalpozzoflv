@@ -543,6 +543,45 @@ export type Database = {
         }
         Relationships: []
       }
+      padroes_fornecedores: {
+        Row: {
+          ativo: boolean | null
+          confianca: number
+          criado_em: string
+          fornecedor: string
+          id: string
+          ocorrencias: number
+          padrao_texto: string
+          produto_identificado: string
+          tipo_identificado: string
+          ultima_ocorrencia: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          confianca?: number
+          criado_em?: string
+          fornecedor: string
+          id?: string
+          ocorrencias?: number
+          padrao_texto: string
+          produto_identificado: string
+          tipo_identificado: string
+          ultima_ocorrencia?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          confianca?: number
+          criado_em?: string
+          fornecedor?: string
+          id?: string
+          ocorrencias?: number
+          padrao_texto?: string
+          produto_identificado?: string
+          tipo_identificado?: string
+          ultima_ocorrencia?: string
+        }
+        Relationships: []
+      }
       pedidos_compra: {
         Row: {
           cotacao_id: string | null
@@ -956,6 +995,106 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "produtos_com_pai"
             referencedColumns: ["produto_pai_id_ref"]
+          },
+        ]
+      }
+      sistema_aprendizado: {
+        Row: {
+          aplicado: boolean | null
+          aprovado: boolean | null
+          criado_em: string
+          feedback_qualidade: number | null
+          fornecedor: string
+          id: string
+          preco_corrigido: number | null
+          preco_extraido: number | null
+          produto_corrigido: string | null
+          produto_extraido: string
+          texto_original: string
+          tipo_corrigido: string | null
+          tipo_extraido: string
+          usuario_id: string | null
+        }
+        Insert: {
+          aplicado?: boolean | null
+          aprovado?: boolean | null
+          criado_em?: string
+          feedback_qualidade?: number | null
+          fornecedor: string
+          id?: string
+          preco_corrigido?: number | null
+          preco_extraido?: number | null
+          produto_corrigido?: string | null
+          produto_extraido: string
+          texto_original: string
+          tipo_corrigido?: string | null
+          tipo_extraido: string
+          usuario_id?: string | null
+        }
+        Update: {
+          aplicado?: boolean | null
+          aprovado?: boolean | null
+          criado_em?: string
+          feedback_qualidade?: number | null
+          fornecedor?: string
+          id?: string
+          preco_corrigido?: number | null
+          preco_extraido?: number | null
+          produto_corrigido?: string | null
+          produto_extraido?: string
+          texto_original?: string
+          tipo_corrigido?: string | null
+          tipo_extraido?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sistema_aprendizado_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sugestoes_inteligentes: {
+        Row: {
+          aceita: boolean | null
+          confianca: number
+          contexto: Json
+          criado_em: string
+          id: string
+          sugestao: string
+          tipo_sugestao: string
+          usuario_id: string | null
+        }
+        Insert: {
+          aceita?: boolean | null
+          confianca?: number
+          contexto: Json
+          criado_em?: string
+          id?: string
+          sugestao: string
+          tipo_sugestao: string
+          usuario_id?: string | null
+        }
+        Update: {
+          aceita?: boolean | null
+          confianca?: number
+          contexto?: Json
+          criado_em?: string
+          id?: string
+          sugestao?: string
+          tipo_sugestao?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sugestoes_inteligentes_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
           },
         ]
       }
