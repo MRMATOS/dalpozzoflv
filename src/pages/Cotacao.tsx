@@ -16,6 +16,7 @@ import CotacaoRestauradaMessage from '@/components/cotacao/CotacaoRestauradaMess
 import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
 import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
+import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -25,6 +26,7 @@ const Cotacao = () => {
   const { obterEstoquesDisplayInteligente } = useEstoqueVariacoes();
   
   const [produtosDB, setProdutosDB] = useState<any[]>([]);
+  const [modalAdicionarAberto, setModalAdicionarAberto] = useState(false);
   
   useEffect(() => {
     const buscarProdutos = async () => {
@@ -84,6 +86,21 @@ const Cotacao = () => {
       return;
     }
     navigate('/resumo-pedido', { state: { tabelaComparativa } });
+  };
+
+  const handleAdicionarProduto = () => {
+    if (fornecedoresComProdutos.length === 0) {
+      toast.error('Processe pelo menos um fornecedor antes de adicionar produtos');
+      return;
+    }
+    setModalAdicionarAberto(true);
+  };
+
+  const handleProdutoAdicionado = (fornecedor: string, produto: string, tipo: string, preco: number, produtoId?: string) => {
+    // Aqui vamos adicionar a lógica para inserir o produto na tabela comparativa
+    // Por enquanto, simula a adição
+    toast.success(`Produto ${produto} (${tipo}) adicionado para ${fornecedor} por R$ ${preco.toFixed(2)}`);
+    setModalAdicionarAberto(false);
   };
 
   if (isLoading) {
@@ -154,6 +171,7 @@ const Cotacao = () => {
                 onRestaurar={handleRestaurarCotacao}
                 onNova={handleNovaCotacao}
                 onVerResumo={irParaResumo}
+                onAdicionarProduto={handleAdicionarProduto}
                 onObterEstoques={obterEstoquesDisplay}
                 onQuantidadeChange={atualizarQuantidade}
                 onUnidadeChange={atualizarUnidadePedido}
@@ -168,6 +186,13 @@ const Cotacao = () => {
             
           </CardContent>
         </Card>
+
+        <AdicionarProdutoModal
+          isOpen={modalAdicionarAberto}
+          onClose={() => setModalAdicionarAberto(false)}
+          fornecedoresDisponiveis={fornecedoresComProdutos}
+          onProdutoAdicionado={handleProdutoAdicionado}
+        />
       </main>
     </div>
   );

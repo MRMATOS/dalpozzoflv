@@ -107,7 +107,8 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
           preco: parseFloat(preco),
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
-          aliasUsado: produtoEncontrado.alias
+          aliasUsado: produtoEncontrado.alias,
+          origem: 'dicionario' as const
         });
       }
     }

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Clock, FileText, RotateCcw, Save } from 'lucide-react';
+import { Clock, FileText, RotateCcw, Save, Plus } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface CotacaoActionButtonsProps {
@@ -9,6 +9,7 @@ interface CotacaoActionButtonsProps {
   onRestaurarCotacao: () => void;
   onNovaCotacao: () => void;
   onVerResumo: () => void;
+  onAdicionarProduto: () => void;
   temDados: boolean;
 }
 
@@ -17,6 +18,7 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
   onRestaurarCotacao,
   onNovaCotacao,
   onVerResumo,
+  onAdicionarProduto,
   temDados
 }) => {
   const handleSalvarClick = async () => {
@@ -75,6 +77,24 @@ const CotacaoActionButtons: React.FC<CotacaoActionButtonsProps> = ({
           </TooltipTrigger>
           <TooltipContent>
             <p>Nova cotação (limpar tudo)</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAdicionarProduto}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Adicionar produto manualmente</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

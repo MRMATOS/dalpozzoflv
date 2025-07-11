@@ -18,8 +18,9 @@ interface TabelaComparativaMobileProps {
   onRestaurar: () => void;
   onNova: () => void;
   onVerResumo: () => void;
+  onAdicionarProduto: () => void;
   onObterEstoques: (produto: string, tipo: string) => React.ReactNode;
-  onUnidadeChange: (prodIndex: number, forn: string, unid: string) => void;
+  onUnidadeChange: (prodIndex: number, forn: string, qtd: string) => void;
   onQuantidadeChange: (prodIndex: number, forn: string, qtd: string) => void;
   onPrecoChange: (prodIndex: number, forn: string, preco: string) => void;
   onCalcularTotal: (fornecedor: string) => number;
@@ -35,6 +36,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
   onRestaurar,
   onNova,
   onVerResumo,
+  onAdicionarProduto,
   onObterEstoques,
   onUnidadeChange,
   onQuantidadeChange,
@@ -72,6 +74,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
             onRestaurarCotacao={onRestaurar}
             onNovaCotacao={onNova}
             onVerResumo={onVerResumo}
+            onAdicionarProduto={onAdicionarProduto}
             temDados={temDados}
           />
         </div>

@@ -18,6 +18,7 @@ interface TabelaComparativaProps {
   onRestaurar: () => void;
   onNova: () => void;
   onVerResumo: () => void;
+  onAdicionarProduto: () => void;
   onObterEstoques: (produto: string, tipo: string) => React.ReactNode;
   onUnidadeChange: (prodIndex: number, forn: string, unid: string) => void;
   onQuantidadeChange: (prodIndex: number, forn: string, qtd: string) => void;
@@ -80,6 +81,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
             onRestaurarCotacao={onRestaurar}
             onNovaCotacao={onNova}
             onVerResumo={onVerResumo}
+            onAdicionarProduto={props.onAdicionarProduto}
             temDados={temDados}
           />
         </div>
