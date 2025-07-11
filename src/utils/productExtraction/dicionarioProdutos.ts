@@ -145,13 +145,8 @@ export const dicionarioProdutos = {
     'verde': ['coco verde', 'coco verde unidade']
   },
   'couve': {
-    // Agora se refere apenas à Couve Manteiga
-    'maço': ['couve', 'couve maço']
-  },
-  'couve-flor': {
-    // Produto base separado, como solicitado
-    'kg': ['couve-flor', 'couve flor', 'couve flor média p/graúda'], // Variação por unidade/peso
-    'maço': ['couve-flor maço', 'couve flor maço'] // Variação em maço
+    'flor': ['couve-flor', 'couve flor'],
+    'manteiga': ['couve', 'couve maço']
   },
   'escarola': {
     'padrão': ['escarola', 'escarola maço']
@@ -258,7 +253,7 @@ export const dicionarioProdutos = {
     'rei': ['melão rei', 'melão rei t 6'],
     'sapo': ['melão sapo', 'melão sapo bom', 'melão sapo graúdo']
   },
-'milho-verde': {
+    'milho-verde': {
     // Produto base agora é 'milho-verde'
     'bandeja': ['milho verde bandeja', 'milho verde bdj'],
     'unidade': ['milho verde', 'milho verde c 3.', 'milho verde c 4.', 'milho verde top']
