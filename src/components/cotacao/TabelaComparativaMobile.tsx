@@ -77,7 +77,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
       <h2 className="text-xl font-semibold text-gray-700 mb-4">Comparação de Preços</h2>
       
       {/* Header com busca e botões */}
-      <div className="sticky top-0 bg-white z-30 pb-4 border-b mb-4">
+      <div className="sticky top-0 bg-white z-50 pb-4 border-b mb-4 shadow-sm">
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -102,6 +102,18 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
 
       {/* Lista de produtos em cards */}
       <div className="space-y-4">
+        {produtosFiltrados.length === 0 && buscaProduto && (
+          <Card className="p-4 text-center">
+            <p className="text-gray-500">Nenhum produto encontrado para "{buscaProduto}"</p>
+          </Card>
+        )}
+        
+        {produtosFiltrados.length === 0 && !buscaProduto && tabela.length === 0 && (
+          <Card className="p-4 text-center">
+            <p className="text-gray-500">Nenhum produto na cotação ainda.</p>
+          </Card>
+        )}
+        
         {produtosFiltrados.map((item, index) => {
           const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
           const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
@@ -111,14 +123,28 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
             <Card key={`${item.produto}-${item.tipo}`} className="overflow-hidden">
               <CardContent className="p-4">
                 {/* Cabeçalho do produto */}
-                <div className="mb-4">
-                  <h3 className="font-semibold text-lg text-gray-900">{item.produto}</h3>
-                  <Badge variant="secondary" className="mt-1">{item.tipo}</Badge>
-                  <div className="mt-2 text-sm text-gray-600">
-                    <div className="font-medium mb-1">Estoques:</div>
-                    {onObterEstoques(item.produto, item.tipo)}
-                  </div>
-                </div>
+                 <div className="mb-4">
+                   <h3 className="font-semibold text-lg text-gray-900">{item.produto}</h3>
+                   <Badge variant="secondary" className="mt-1">{item.tipo}</Badge>
+                   
+                   {/* Mostrar descrições originais dos fornecedores */}
+                   {item.descricaoOriginal && Object.entries(item.descricaoOriginal).some(([_, desc]) => desc.trim()) && (
+                     <div className="mt-2 text-xs text-gray-600 space-y-1">
+                       {Object.entries(item.descricaoOriginal)
+                         .filter(([fornecedor, descricao]) => descricao.trim() && item.fornecedores[fornecedor] !== null)
+                         .map(([fornecedor, descricao]) => (
+                           <div key={fornecedor} className="border-l-2 border-blue-300 pl-2">
+                             <span className="font-medium text-blue-600">{fornecedor}:</span> {descricao}
+                           </div>
+                         ))}
+                     </div>
+                   )}
+                   
+                   <div className="mt-2 text-sm text-gray-600">
+                     <div className="font-medium mb-1">Estoques:</div>
+                     {onObterEstoques(item.produto, item.tipo)}
+                   </div>
+                 </div>
 
                 {/* Fornecedores */}
                 <div className="space-y-3">
