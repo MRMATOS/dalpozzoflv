@@ -40,71 +40,94 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
   return dicionarioOtimizado;
 };
 
+// Função auxiliar para extrair descrição original limpa (sem preço)
+const extrairDescricaoOriginal = (linhaOriginal: string): string => {
+  // Remove preços da linha
+  const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
+  let descricao = linhaOriginal.replace(regexPreco, '').trim();
+  
+  // Remove caracteres de separação comuns
+  descricao = descricao.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+  descricao = descricao.replace(/\s+/g, ' ');
+  
+  return descricao;
+};
+
 export const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
   const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
-  const produtos: ProdutoExtraido[] = [];
+  const produtosMap = new Map<string, ProdutoExtraido>(); // Mapa para controle de duplicatas
   const dicionario = getDicionarioOtimizado(); // Usa a versão otimizada
 
   linhas.forEach(linha => {
     // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
+    
+    // Processar também linhas sem preço para capturar produtos
+    const linhaNormalizada = linha.toLowerCase();
+    let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
-    if (precos && precos.length > 0) {
-      const preco = precos[precos.length - 1].replace(',', '.'); // Último preço encontrado
-      const linhaNormalizada = linha.toLowerCase();
-      
-      let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
-
-      // Loop único no dicionário otimizado. Muito mais rápido.
-      for (const mapeamento of dicionario) {
-        if (linhaNormalizada.includes(mapeamento.alias)) {
-          produtoEncontrado = {
-            produto: mapeamento.produto,
-            tipo: mapeamento.tipo,
-            alias: mapeamento.alias,
-          };
-          // Como o dicionário está ordenado, o primeiro match é o mais específico.
-          break; 
-        }
+    // Loop único no dicionário otimizado. Muito mais rápido.
+    for (const mapeamento of dicionario) {
+      if (linhaNormalizada.includes(mapeamento.alias)) {
+        produtoEncontrado = {
+          produto: mapeamento.produto,
+          tipo: mapeamento.tipo,
+          alias: mapeamento.alias,
+        };
+        // Como o dicionário está ordenado, o primeiro match é o mais específico.
+        break; 
       }
+    }
 
-      if (produtoEncontrado) {
-        // O restante da lógica permanece o mesmo
-        let infoAdicional = linha;
+    if (produtoEncontrado) {
+      const preco = precos && precos.length > 0 ? precos[precos.length - 1].replace(',', '.') : null;
+      
+      // O restante da lógica permanece o mesmo
+      let infoAdicional = linha;
 
+      if (precos) {
         precos.forEach(p => {
           infoAdicional = infoAdicional.replace(p, '');
         });
+      }
 
-        const indexAlias = infoAdicional.toLowerCase().indexOf(produtoEncontrado.alias);
-        if (indexAlias !== -1) {
-          const antesAlias = infoAdicional.substring(0, indexAlias).trim();
-          const depoisAlias = infoAdicional.substring(indexAlias + produtoEncontrado.alias.length).trim();
-          infoAdicional = (antesAlias + ' ' + depoisAlias).trim();
+      const indexAlias = infoAdicional.toLowerCase().indexOf(produtoEncontrado.alias);
+      if (indexAlias !== -1) {
+        const antesAlias = infoAdicional.substring(0, indexAlias).trim();
+        const depoisAlias = infoAdicional.substring(indexAlias + produtoEncontrado.alias.length).trim();
+        infoAdicional = (antesAlias + ' ' + depoisAlias).trim();
+      }
+
+      infoAdicional = infoAdicional.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+
+      let tipoFinal = produtoEncontrado.tipo;
+      if (infoAdicional && infoAdicional.length > 1) {
+        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+      }
+
+      const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
+      const tipoFinalLowerCase = tipoFinal.toLowerCase();
+      if (tipoFinalLowerCase.includes(nomeProdutoLowerCase)) {
+        tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
+        tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
+        if (!tipoFinal || tipoFinal.length === 0) {
+          tipoFinal = 'padrão';
         }
+      }
 
-        infoAdicional = infoAdicional.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+      const chaveItem = `${produtoEncontrado.produto}_${tipoFinal}`;
+      const itemExistente = produtosMap.get(chaveItem);
 
-        let tipoFinal = produtoEncontrado.tipo;
-        if (infoAdicional && infoAdicional.length > 1) {
-          tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
-        }
+      // REGRA DE PRIORIZAÇÃO: Produto com preço sempre prevalece sobre produto sem preço
+      const deveSubstituir = !itemExistente || 
+                            (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
 
-        const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
-        const tipoFinalLowerCase = tipoFinal.toLowerCase();
-        if (tipoFinalLowerCase.includes(nomeProdutoLowerCase)) {
-          tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
-          tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
-          if (!tipoFinal || tipoFinal.length === 0) {
-            tipoFinal = 'padrão';
-          }
-        }
-
-        produtos.push({
+      if (deveSubstituir) {
+        produtosMap.set(chaveItem, {
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
           tipo: tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
-          preco: parseFloat(preco),
+          preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
           aliasUsado: produtoEncontrado.alias,
@@ -114,5 +137,5 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     }
   });
 
-  return produtos;
+  return Array.from(produtosMap.values());
 };

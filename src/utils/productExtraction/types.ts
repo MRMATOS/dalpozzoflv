@@ -20,4 +20,5 @@ export interface ItemTabelaComparativa {
   fornecedores: { [fornecedor: string]: number | null };
   quantidades: { [fornecedor: string]: number };
   unidadePedido: { [fornecedor: string]: string };
+  descricaoOriginal?: { [fornecedor: string]: string }; // Descrição original do fornecedor para cada produto
 }

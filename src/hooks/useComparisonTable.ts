@@ -27,6 +27,19 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
     return 'Caixa';
   }, [produtosDB]);
 
+  // Função auxiliar para extrair descrição original limpa (sem preço)
+  const extrairDescricaoOriginal = useCallback((linhaOriginal: string): string => {
+    // Remove preços da linha
+    const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
+    let descricao = linhaOriginal.replace(regexPreco, '').trim();
+    
+    // Remove caracteres de separação comuns
+    descricao = descricao.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+    descricao = descricao.replace(/\s+/g, ' ');
+    
+    return descricao;
+  }, []);
+
   const criarTabelaComparativa = useCallback((produtos: ProdutoExtraido[]) => {
     const fornecedoresList = [...new Set(produtos.map(p => p.fornecedor))];
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
@@ -46,7 +59,8 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
           tipo: produto.tipo,
           fornecedores: {},
           quantidades: {},
-          unidadePedido: {}
+          unidadePedido: {},
+          descricaoOriginal: {} // Inicializar descrições originais
         };
         
         fornecedoresList.forEach(f => {
@@ -55,16 +69,23 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
           produtosAgrupados[chave].quantidades[f] = itemExistente?.quantidades[f] || 0;
           // Preservar unidades existentes ou usar padrão
           produtosAgrupados[chave].unidadePedido[f] = itemExistente?.unidadePedido[f] || unidadePadrao;
+          // Preservar descrições existentes ou inicializar vazio
+          produtosAgrupados[chave].descricaoOriginal![f] = itemExistente?.descricaoOriginal?.[f] || '';
         });
       }
+      
+      // Definir preço e capturar descrição original
       produtosAgrupados[chave].fornecedores[produto.fornecedor] = produto.preco;
+      if (produtosAgrupados[chave].descricaoOriginal) {
+        produtosAgrupados[chave].descricaoOriginal[produto.fornecedor] = extrairDescricaoOriginal(produto.linhaOriginal);
+      }
     });
 
     const tabela = Object.values(produtosAgrupados).sort((a, b) => 
       a.produto.localeCompare(b.produto) || a.tipo.localeCompare(b.tipo)
     );
     setTabelaComparativa(tabela);
-  }, [obterUnidadePadraoProduto, tabelaComparativa]);
+  }, [obterUnidadePadraoProduto, tabelaComparativa, extrairDescricaoOriginal]);
 
   useEffect(() => {
     if (produtosExtraidos) {

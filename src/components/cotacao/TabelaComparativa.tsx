@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Search } from 'lucide-react';
 import { ItemTabelaComparativa } from '@/utils/productExtraction/types';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -115,7 +116,35 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                 return (
                   <tr key={`${item.produto}-${item.tipo}`} className="border-b last:border-b-0 hover:bg-gray-50">
                     <td className="w-[100px] min-w-[100px] p-3 font-medium border-r"><span className="truncate block">{item.produto}</span></td>
-                    <td className="w-[150px] min-w-[150px] p-3 border-r"><Badge variant="secondary" className="truncate max-w-full">{item.tipo}</Badge></td>
+                    <td className="w-[150px] min-w-[150px] p-3 border-r">
+                      <div className="space-y-1">
+                        <Badge variant="secondary" className="truncate max-w-full block">{item.tipo}</Badge>
+                        {/* Mostrar descrições originais dos fornecedores */}
+                        {item.descricaoOriginal && Object.entries(item.descricaoOriginal).some(([_, desc]) => desc.trim()) && (
+                          <TooltipProvider>
+                            <div className="space-y-0.5">
+                              {Object.entries(item.descricaoOriginal)
+                                .filter(([fornecedor, descricao]) => descricao.trim() && item.fornecedores[fornecedor] !== null)
+                                .map(([fornecedor, descricao]) => (
+                                  <Tooltip key={fornecedor}>
+                                    <TooltipTrigger asChild>
+                                      <div className="text-xs text-gray-600 truncate cursor-help border-l-2 border-gray-300 pl-2">
+                                        <span className="font-medium text-blue-600">{fornecedor.substring(0, 3)}:</span> {descricao}
+                                      </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="left" className="max-w-xs">
+                                      <div className="text-sm">
+                                        <div className="font-semibold text-blue-600 mb-1">{fornecedor}:</div>
+                                        <div>{descricao}</div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ))}
+                            </div>
+                          </TooltipProvider>
+                        )}
+                      </div>
+                    </td>
                     <td className="w-[160px] min-w-[160px] p-3 border-r">
                       <EstoqueDisplay 
                         produto={item.produto} 
