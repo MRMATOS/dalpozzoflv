@@ -33,11 +33,6 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
   const isMobile = useIsMobile();
   const [buscaProduto, setBuscaProduto] = useState('');
   
-  // Durante a hidratação, mostrar loading
-  if (isMobile === undefined) {
-    return <div className="animate-pulse h-96 bg-gray-100 rounded-lg"></div>;
-  }
-  
   // Se é mobile, renderiza a versão mobile
   if (isMobile) {
     return <TabelaComparativaMobile {...props} />;
