@@ -171,13 +171,14 @@ export const dicionarioProdutos = {
   'hortelã': {
     'maço': ['hortela', 'hortelã', 'hortela maco', 'hortelã maço', 'hortelã band']
   },
-  'kiwi': {
+    'kiwi': {
     'padrão': ['kiwi'],
     'importado': [
       'kiwi importado', 'kiwi imp', 'kiwi imp.t 20 10kg',
-      'kiwi imp 9 kg graúdo', 'kiwi bdj 20x600 gr'
+      'kiwi imp 9 kg graúdo' // removido o 'kiwi bdj' daqui
     ],
-    'nacional': ['kiwi nacional']
+    'nacional': ['kiwi nacional'],
+    'bandeja': ['kiwi bandeja', 'kiwi bdj', 'kiwi bdj 20x600 gr'] // NOVA VARIAÇÃO
   },
   'laranja': {
     'padrão': ['laranja'],
@@ -243,7 +244,7 @@ export const dicionarioProdutos = {
     'padrão': ['melancia'],
     'baby': ['melancia baby', 'melancia baby cx .t 6']
   },
-  'melão': {
+    'melão': {
     'padrão': ['melão'],
     'amarelo': [
       'melão amarelo', 'melão amarelo graúdo',
@@ -251,7 +252,8 @@ export const dicionarioProdutos = {
     ],
     'cepi': ['melão cepi', 'melão cepi cx t6'],
     'gaia': ['melão gaia'],
-    'melancia': ['melão melancia'], // CORRIGIDO
+    'melancia': ['melão melancia'],
+    'melícia': ['melão melícia', 'melão melicia'], // NOVA VARIAÇÃO
     'rei': ['melão rei', 'melão rei t 6'],
     'sapo': ['melão sapo', 'melão sapo bom', 'melão sapo graúdo'],
     'solto': ['melão solto']
@@ -339,17 +341,15 @@ export const dicionarioProdutos = {
     'ponkan': ['ponkan', 'tangerina ponkan'],
     'mixirica': ['mixirica', 'mexerica']
   },
-  'tomate': {
+    'tomate': {
     'padrão': ['tomate'],
-    'cereja': [
-      'tomate cereja', 'tomate cereja bdj',
-      'tomate cereja cavali', 'tomate cereja cx',
-      'tomate cereja klaina', 'tomate grape'
+    'cereja': [ // Esta agora é a variação padrão/genérica
+      'tomate cereja', 'tomate grape', 'tomate sweet grape',
+      'tomate cereja klaina', 'tomate cereja cavali'
     ],
-    'longa vida': [
-      'tomate longa vida', 'tomate longa vida graúdo', 'tomate longa vida g',
-      'tomate longa vida médio', 'tomate longa vida m'
-    ],
+    'cereja bandeja': ['tomate cereja bdj', 'tomate cereja bandeja'], // NOVA VARIAÇÃO
+    'cereja caixa': ['tomate cereja cx'], // NOVA VARIAÇÃO
+    'longa vida': ['tomate longa vida', 'tomate longa vida graúdo', 'tomate longa vida g','tomate longa vida médio', 'tomate longa vida m'],
     'saladete': ['tomate saladete', 'tomate saladete graúdo']
   },
   'uva': {
