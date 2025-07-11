@@ -294,7 +294,7 @@ export const dicionarioProdutos = {
   },
   'mexerica': {
     'murcott': ['mexerica', 'mexerica murcott', 'murcott'],
-    'poncã': ['mexerica ponca', 'mexerica poncã', 'ponca', 'poncã'],
+    'poncã': ['mexerica ponca', 'mexerica poncã', 'ponca', 'poncã’, ‘ponkan’],
     '15kg': ['mexerica 15', 'mexerica 15kg', 'mexerica 15 kg']
   },
   'milho verde': {
@@ -322,6 +322,11 @@ export const dicionarioProdutos = {
     '15kg': ['nectarina 15', 'nectarina 15kg', 'nectarina 15 kg'],
     '18kg': ['nectarina 18', 'nectarina 18kg', 'nectarina 18 kg']
   },
+  'pepino: {
+    ‘conversa’: ['pepino conversa’],
+    ‘japonês’: [‘pepino japonês’, ‘pepino japonês klaina padrão’],
+    ‘salada’: [‘pepino salada’, ‘pepino salada top’]
+ },
   'pêra': {
     'importada': ['pera imp', 'pera williams', 'pera danju'],
     'nacional': ['pera nacional']
