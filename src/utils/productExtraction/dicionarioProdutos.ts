@@ -258,9 +258,10 @@ export const dicionarioProdutos = {
     'rei': ['melão rei', 'melão rei t 6'],
     'sapo': ['melão sapo', 'melão sapo bom', 'melão sapo graúdo']
   },
-  'milho verde': {
-    'bandeja': ['milho verde', 'milho verde bandeja', 'milho verde bdj', 'milho verde c 3', 'milho verde c 4'],
-    'espiga': ['milho espiga', 'milho verde espiga']
+    'milho-verde': {
+    // Produto base agora é 'milho-verde'
+    'bandeja': ['milho verde bandeja', 'milho verde bdj'],
+    'unidade': ['milho verde', 'milho verde c 3.', 'milho verde c 4.', 'milho verde top']
   },
   'mirtilo': {
     'padrão': ['mirtilo']
