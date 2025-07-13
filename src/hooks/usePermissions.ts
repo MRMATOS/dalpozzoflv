@@ -8,6 +8,7 @@ type SystemResource =
   | 'estoque' 
   | 'requisicoes'
   | 'cotacao'
+  | 'pedido_simples'
   | 'gestao_cd'
   | 'configuracoes'
   | 'historico_requisicoes'
@@ -44,6 +45,10 @@ const getDefaultPermissionsByType = (userType: string): UserPermission[] => {
         { resource: 'cotacao', action: 'create', enabled: true },
         { resource: 'cotacao', action: 'edit', enabled: true },
         { resource: 'cotacao', action: 'delete', enabled: true },
+        { resource: 'pedido_simples', action: 'view', enabled: true },
+        { resource: 'pedido_simples', action: 'create', enabled: true },
+        { resource: 'pedido_simples', action: 'edit', enabled: true },
+        { resource: 'pedido_simples', action: 'delete', enabled: true },
         { resource: 'gestao_cd', action: 'view', enabled: true },
         { resource: 'gestao_cd', action: 'edit', enabled: true },
         { resource: 'gestao_cd', action: 'create', enabled: true },
@@ -76,6 +81,10 @@ const getDefaultPermissionsByType = (userType: string): UserPermission[] => {
         { resource: 'cotacao', action: 'create', enabled: true },
         { resource: 'cotacao', action: 'edit', enabled: true },
         { resource: 'cotacao', action: 'delete', enabled: true },
+        { resource: 'pedido_simples', action: 'view', enabled: true },
+        { resource: 'pedido_simples', action: 'create', enabled: true },
+        { resource: 'pedido_simples', action: 'edit', enabled: true },
+        { resource: 'pedido_simples', action: 'delete', enabled: true },
         { resource: 'requisicoes', action: 'view', enabled: true },
         { resource: 'requisicoes', action: 'create', enabled: true },
         { resource: 'requisicoes', action: 'edit', enabled: true },

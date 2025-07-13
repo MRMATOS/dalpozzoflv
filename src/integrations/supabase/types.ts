@@ -322,16 +322,19 @@ export type Database = {
         Row: {
           id: string
           nome: string
+          status_tipo: string | null
           telefone: string | null
         }
         Insert: {
           id?: string
           nome: string
+          status_tipo?: string | null
           telefone?: string | null
         }
         Update: {
           id?: string
           nome?: string
+          status_tipo?: string | null
           telefone?: string | null
         }
         Relationships: []
@@ -637,6 +640,103 @@ export type Database = {
           },
           {
             foreignKeyName: "pedidos_compra_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos_simples: {
+        Row: {
+          criado_em: string
+          criado_por: string | null
+          data_pedido: string
+          fornecedor_id: string | null
+          fornecedor_nome: string
+          id: string
+          observacoes: string | null
+          produto_id: string | null
+          produto_nome: string
+          quantidade: number
+          tipo: string | null
+          unidade: string
+          user_id: string | null
+          valor_total_estimado: number
+          valor_unitario: number
+        }
+        Insert: {
+          criado_em?: string
+          criado_por?: string | null
+          data_pedido: string
+          fornecedor_id?: string | null
+          fornecedor_nome: string
+          id?: string
+          observacoes?: string | null
+          produto_id?: string | null
+          produto_nome: string
+          quantidade: number
+          tipo?: string | null
+          unidade?: string
+          user_id?: string | null
+          valor_total_estimado: number
+          valor_unitario: number
+        }
+        Update: {
+          criado_em?: string
+          criado_por?: string | null
+          data_pedido?: string
+          fornecedor_id?: string | null
+          fornecedor_nome?: string
+          id?: string
+          observacoes?: string | null
+          produto_id?: string | null
+          produto_nome?: string
+          quantidade?: number
+          tipo?: string | null
+          unidade?: string
+          user_id?: string | null
+          valor_total_estimado?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_simples_criado_por_fkey"
+            columns: ["criado_por"]
+            isOneToOne: false
+            referencedRelation: "usuarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_simples_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_simples_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_simples_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedidos_simples_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["produto_pai_id_ref"]
+          },
+          {
+            foreignKeyName: "pedidos_simples_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "usuarios"

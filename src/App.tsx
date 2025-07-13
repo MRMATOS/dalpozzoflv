@@ -26,6 +26,7 @@ import RecebimentoAtivo from "@/pages/RecebimentoAtivo";
 import HistoricoRecebimentos from "@/pages/HistoricoRecebimentos";
 import PoliticaPrivacidade from "@/pages/PoliticaPrivacidade";
 import TermosUso from "@/pages/TermosUso";
+import PedidoSimples from "@/pages/PedidoSimples";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Cotacao />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pedido-simples" 
+                element={
+                  <ProtectedRoute allowedTypes={['master', 'comprador']}>
+                    <PedidoSimples />
                   </ProtectedRoute>
                 } 
               />

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Trash2, Save, X, Phone } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { validateInput } from '@/utils/inputValidation';
 import { toast } from 'sonner';
 
@@ -12,6 +14,7 @@ interface Fornecedor {
   id: string;
   nome: string;
   telefone?: string;
+  status_tipo?: string;
 }
 
 interface FornecedorCardProps {
@@ -33,7 +36,8 @@ const FornecedorCard = ({
 }: FornecedorCardProps) => {
   const [editValues, setEditValues] = useState({
     nome: fornecedor.nome,
-    telefone: fornecedor.telefone || ''
+    telefone: fornecedor.telefone || '',
+    status_tipo: fornecedor.status_tipo || 'Cotação e Pedido'
   });
 
   const handleSave = () => {
@@ -100,6 +104,39 @@ const FornecedorCard = ({
                 </div>
               )}
             </div>
+
+            {/* Status Tipo */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Mostrar fornecedor em:</label>
+              {isEditing ? (
+                <Select
+                  value={editValues.status_tipo}
+                  onValueChange={(value) => setEditValues(prev => ({ ...prev, status_tipo: value }))}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cotação">Cotação</SelectItem>
+                    <SelectItem value="Pedido Simples">Pedido Simples</SelectItem>
+                    <SelectItem value="Cotação e Pedido">Cotação e Pedido</SelectItem>
+                    <SelectItem value="Desativado">Desativado</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge 
+                  variant="outline" 
+                  className={
+                    fornecedor.status_tipo === 'Cotação' ? 'bg-purple-50 text-purple-700' :
+                    fornecedor.status_tipo === 'Pedido Simples' ? 'bg-amber-50 text-amber-700' :
+                    fornecedor.status_tipo === 'Desativado' ? 'bg-red-50 text-red-700' :
+                    'bg-blue-50 text-blue-700'
+                  }
+                >
+                  {fornecedor.status_tipo || 'Cotação e Pedido'}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -118,7 +155,8 @@ const FornecedorCard = ({
                 <Button variant="outline" size="sm" onClick={() => {
                   setEditValues({
                     nome: fornecedor.nome,
-                    telefone: fornecedor.telefone || ''
+                    telefone: fornecedor.telefone || '',
+                    status_tipo: fornecedor.status_tipo || 'Cotação e Pedido'
                   });
                   setEditingFornecedor(fornecedor.id);
                 }} className="h-8">

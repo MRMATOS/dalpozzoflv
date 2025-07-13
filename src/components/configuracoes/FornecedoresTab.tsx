@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2, Plus, Save } from 'lucide-react';
 import DeleteConfirmDialog from './DeleteConfirmDialog';
@@ -15,7 +17,8 @@ const FornecedoresTab = () => {
   const queryClient = useQueryClient();
   const [newFornecedor, setNewFornecedor] = useState({
     nome: '',
-    telefone: ''
+    telefone: '',
+    status_tipo: 'Cotação e Pedido'
   });
   const [showNewFornecedor, setShowNewFornecedor] = useState(false);
   const [editingFornecedor, setEditingFornecedor] = useState<string | null>(null);
@@ -48,7 +51,7 @@ const FornecedoresTab = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fornecedores'] });
       toast.success('Fornecedor criado com sucesso!');
-      setNewFornecedor({ nome: '', telefone: '' });
+      setNewFornecedor({ nome: '', telefone: '', status_tipo: 'Cotação e Pedido' });
       setShowNewFornecedor(false);
     },
     onError: (error) => {
@@ -101,30 +104,57 @@ const FornecedoresTab = () => {
           {showNewFornecedor && (
             <div className="mb-6 p-4 border rounded-lg bg-blue-50">
               <h3 className="font-semibold mb-4">Novo Fornecedor</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Input
-                  placeholder="Nome do fornecedor"
-                  value={newFornecedor.nome}
-                  onChange={(e) => setNewFornecedor({ ...newFornecedor, nome: e.target.value })}
-                />
-                <Input
-                  placeholder="Telefone (WhatsApp)"
-                  value={newFornecedor.telefone}
-                  onChange={(e) => setNewFornecedor({ ...newFornecedor, telefone: e.target.value })}
-                />
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={() => createFornecedorMutation.mutate(newFornecedor)}
-                    disabled={!newFornecedor.nome.trim() || createFornecedorMutation.isPending}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {createFornecedorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Salvar
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowNewFornecedor(false)}>
-                    Cancelar
-                  </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="nome">Nome do Fornecedor</Label>
+                  <Input
+                    id="nome"
+                    placeholder="Nome do fornecedor"
+                    value={newFornecedor.nome}
+                    onChange={(e) => setNewFornecedor({ ...newFornecedor, nome: e.target.value })}
+                  />
                 </div>
+                <div>
+                  <Label htmlFor="telefone">Telefone (WhatsApp)</Label>
+                  <Input
+                    id="telefone"
+                    placeholder="(XX) XXXXX-XXXX"
+                    value={newFornecedor.telefone}
+                    onChange={(e) => setNewFornecedor({ ...newFornecedor, telefone: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <Label htmlFor="status_tipo">Mostrar fornecedor em:</Label>
+                  <Select
+                    value={newFornecedor.status_tipo}
+                    onValueChange={(value) => setNewFornecedor({ ...newFornecedor, status_tipo: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Cotação">Cotação</SelectItem>
+                      <SelectItem value="Pedido Simples">Pedido Simples</SelectItem>
+                      <SelectItem value="Cotação e Pedido">Cotação e Pedido</SelectItem>
+                      <SelectItem value="Desativado">Desativado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  onClick={() => createFornecedorMutation.mutate(newFornecedor)}
+                  disabled={!newFornecedor.nome.trim() || createFornecedorMutation.isPending}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {createFornecedorMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Salvar
+                </Button>
+                <Button variant="outline" onClick={() => setShowNewFornecedor(false)}>
+                  Cancelar
+                </Button>
               </div>
             </div>
           )}

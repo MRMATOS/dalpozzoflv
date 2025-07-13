@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield } from "lucide-react";
+import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield, FileText } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -37,6 +37,13 @@ const Dashboard = () => {
       icon: Calculator,
       color: "bg-purple-500",
       onClick: () => navigate("/cotacao")
+    },
+    canView('pedido_simples') && {
+      title: "Pedido Simples",
+      description: "Pedidos rápidos com fornecedores",
+      icon: FileText,
+      color: "bg-amber-500",
+      onClick: () => navigate("/pedido-simples")
     },
     canView('gestao_cd') && {
       title: "Gestão CD",

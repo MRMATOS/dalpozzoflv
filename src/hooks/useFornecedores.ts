@@ -6,6 +6,7 @@ interface Fornecedor {
   id: string;
   nome: string;
   telefone?: string;
+  status_tipo?: string;
 }
 
 export const useFornecedores = () => {
@@ -16,7 +17,7 @@ export const useFornecedores = () => {
       try {
         const { data, error } = await supabase
           .from('fornecedores')
-          .select('id, nome, telefone')
+          .select('id, nome, telefone, status_tipo')
           .order('nome');
 
         if (error) {
