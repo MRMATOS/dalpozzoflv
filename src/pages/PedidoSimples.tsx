@@ -65,7 +65,7 @@ const PedidoSimples = () => {
   const [historico, setHistorico] = useState<PedidoSimples[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [filtros, setFiltros] = useState({
-    fornecedor: "",
+    fornecedor: "todos",
     produto: "",
     dataInicio: "",
     dataFim: ""
@@ -180,8 +180,8 @@ const PedidoSimples = () => {
         .order('criado_em', { ascending: false });
 
       // Aplicar filtros
-      if (filtros.fornecedor) {
-        query = query.ilike('fornecedor_nome', `%${filtros.fornecedor}%`);
+      if (filtros.fornecedor && filtros.fornecedor !== "todos") {
+        query = query.eq('fornecedor_nome', filtros.fornecedor);
       }
       if (filtros.produto) {
         query = query.ilike('produto_nome', `%${filtros.produto}%`);
@@ -495,7 +495,7 @@ const PedidoSimples = () => {
                       <SelectValue placeholder="Todos os fornecedores" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Todos os fornecedores</SelectItem>
+                      <SelectItem value="todos">Todos os fornecedores</SelectItem>
                       {fornecedoresUnicos.map((fornecedor) => (
                         <SelectItem key={fornecedor} value={fornecedor}>
                           {fornecedor}
