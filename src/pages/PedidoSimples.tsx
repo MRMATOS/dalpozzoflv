@@ -149,9 +149,7 @@ const PedidoSimples = () => {
 
       toast.success("Pedido simples registrado com sucesso!");
       
-      // Limpar formulário
-      setFornecedor("");
-      setFornecedorId(null);
+      // Limpar formulário (mantém fornecedor selecionado)
       setProdutoId("");
       setTipo("");
       setQuantidade("");
@@ -211,6 +209,26 @@ const PedidoSimples = () => {
     setFornecedor(fornecedorSelecionado.nome);
     setFornecedorId(fornecedorSelecionado.id);
   };
+
+  // Agrupar histórico por fornecedor
+  const historicoPorFornecedor = historico.reduce((acc, pedido) => {
+    const fornecedor = pedido.fornecedor_nome;
+    if (!acc[fornecedor]) {
+      acc[fornecedor] = [];
+    }
+    acc[fornecedor].push(pedido);
+    return acc;
+  }, {} as Record<string, PedidoSimples[]>);
+
+  // Calcular total por fornecedor
+  const calcularTotalFornecedor = (pedidos: PedidoSimples[]) => {
+    return pedidos.reduce((total, pedido) => total + pedido.valor_total_estimado, 0);
+  };
+
+  // Obter fornecedores únicos do histórico para o dropdown
+  const fornecedoresUnicos = Array.from(
+    new Set(historico.map(p => p.fornecedor_nome))
+  ).sort();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -469,11 +487,22 @@ const PedidoSimples = () => {
               <CardContent>
                 {/* Filtros */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                  <Input
-                    placeholder="Filtrar por fornecedor..."
-                    value={filtros.fornecedor}
-                    onChange={(e) => setFiltros({...filtros, fornecedor: e.target.value})}
-                  />
+                  <Select 
+                    value={filtros.fornecedor} 
+                    onValueChange={(value) => setFiltros({...filtros, fornecedor: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos os fornecedores" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Todos os fornecedores</SelectItem>
+                      {fornecedoresUnicos.map((fornecedor) => (
+                        <SelectItem key={fornecedor} value={fornecedor}>
+                          {fornecedor}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <Input
                     placeholder="Filtrar por produto..."
                     value={filtros.produto}
@@ -497,7 +526,7 @@ const PedidoSimples = () => {
                   Buscar
                 </Button>
 
-                {/* Lista do histórico */}
+                {/* Lista do histórico agrupada por fornecedor */}
                 {loadingHistorico ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -509,48 +538,69 @@ const PedidoSimples = () => {
                     <p className="text-gray-500">Nenhum pedido encontrado</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {historico.map((pedido) => (
-                      <div key={pedido.id} className="border rounded-lg p-4 bg-white">
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-                          <div>
-                            <p className="text-sm text-gray-500">Data</p>
-                            <p className="font-medium">
-                              {format(new Date(pedido.data_pedido), 'dd/MM/yyyy')}
-                            </p>
+                  <div className="space-y-6">
+                    {Object.entries(historicoPorFornecedor).map(([nomeFornecedor, pedidosFornecedor]) => (
+                      <Card key={nomeFornecedor} className="bg-white">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center space-x-2 text-lg">
+                              <User className="h-5 w-5 text-blue-600" />
+                              <span>{nomeFornecedor}</span>
+                            </CardTitle>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Total do Fornecedor</p>
+                              <p className="text-lg font-bold text-blue-600">
+                                R$ {calcularTotalFornecedor(pedidosFornecedor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Fornecedor</p>
-                            <p className="font-medium">{pedido.fornecedor_nome}</p>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="space-y-3">
+                            {pedidosFornecedor.map((pedido) => (
+                              <div key={pedido.id} className="border rounded-lg p-3 bg-gray-50">
+                                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                                  <div>
+                                    <p className="text-xs text-gray-500">Data</p>
+                                    <p className="text-sm font-medium">
+                                      {format(new Date(pedido.data_pedido), 'dd/MM/yyyy')}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500">Produto</p>
+                                    <p className="text-sm font-medium">{pedido.produto_nome}</p>
+                                    {pedido.tipo && (
+                                      <p className="text-xs text-gray-600">({pedido.tipo})</p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500">Quantidade</p>
+                                    <p className="text-sm font-medium">{pedido.quantidade} {pedido.unidade}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500">Valor Unit.</p>
+                                    <p className="text-sm font-medium">
+                                      R$ {pedido.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-gray-500">Total Est.</p>
+                                    <p className="text-sm font-bold text-blue-600">
+                                      R$ {pedido.valor_total_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                  </div>
+                                </div>
+                                {pedido.observacoes && (
+                                  <div className="mt-2 pt-2 border-t border-gray-200">
+                                    <p className="text-xs text-gray-500">Observações:</p>
+                                    <p className="text-xs text-gray-700">{pedido.observacoes}</p>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Produto</p>
-                            <p className="font-medium">{pedido.produto_nome}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Quantidade</p>
-                            <p className="font-medium">{pedido.quantidade} {pedido.unidade}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Valor Unit.</p>
-                            <p className="font-medium">
-                              R$ {pedido.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-gray-500">Total Est.</p>
-                            <p className="font-bold text-blue-600">
-                              R$ {pedido.valor_total_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                        </div>
-                        {pedido.observacoes && (
-                          <div className="mt-2 pt-2 border-t">
-                            <p className="text-sm text-gray-500">Observações:</p>
-                            <p className="text-sm">{pedido.observacoes}</p>
-                          </div>
-                        )}
-                      </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 )}
