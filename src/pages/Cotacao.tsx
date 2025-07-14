@@ -2,8 +2,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { CotacaoValidator, CotacaoMonitor } from '@/utils/cotacaoValidation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calculator, Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calculator, Loader2, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
 import { useRequisicoes } from '@/hooks/useRequisicoes';
@@ -17,10 +19,9 @@ import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
 import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
-
-import QualityIndicator from '@/components/cotacao/QualityIndicator';
+import HistoricoPedidos from '@/components/cotacao/HistoricoPedidos';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
-import AprendizadoDashboard from '@/components/cotacao/AprendizadoDashboardOptimizado';
+import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -34,11 +35,20 @@ const Cotacao = () => {
   
   useEffect(() => {
     const buscarProdutos = async () => {
+      const startTime = Date.now();
       const { data, error } = await supabase.from('produtos').select('*').eq('ativo', true);
       if (error) console.error('Erro ao buscar produtos:', error);
       else setProdutosDB(data || []);
+      CotacaoValidator.monitorPerformance('carregarProdutos', startTime);
     };
     buscarProdutos();
+    
+    // Iniciar monitoramento de proteção
+    CotacaoMonitor.getInstance().startMonitoring();
+    
+    return () => {
+      CotacaoMonitor.getInstance().stopMonitoring();
+    };
   }, []);
 
   const {
@@ -68,6 +78,27 @@ const Cotacao = () => {
     adicionarProdutoManual,
     textosPorFornecedor
   } = useCotacao({ fornecedores, produtosDB, requisicoes });
+
+  // Validação de proteção
+  useEffect(() => {
+    const hookObject = {
+      processarMensagem,
+      editarProdutoExtraido,
+      deletarProdutoExtraido,
+      adicionarProdutoManual,
+      atualizarQuantidade,
+      atualizarPreco,
+      handleSalvarRascunho
+    };
+    
+    if (!CotacaoValidator.validateCriticalFunctions(hookObject)) {
+      console.error('🚨 ALERTA: Funcionalidades críticas comprometidas!');
+    }
+    
+    if (!CotacaoValidator.validateExtractionIntegrity(produtosExtraidos)) {
+      console.error('🚨 ALERTA: Integridade da extração comprometida!');
+    }
+  }, [produtosExtraidos, processarMensagem]);
 
   const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
   const temDados = produtosExtraidos.length > 0 || tabelaComparativa.length > 0;
@@ -170,72 +201,102 @@ const Cotacao = () => {
               <Calculator className="text-green-600" />
               Cotação de produtos
             </CardTitle>
-            <p className="text-gray-600">
-              Selecione um fornecedor e cole a mensagem que ele enviou no campo abaixo.
-            </p>
           </CardHeader>
           <CardContent>
-            <FornecedorInput
-              fornecedores={fornecedores}
-              fornecedoresProcessados={fornecedoresProcessados}
-              fornecedorSelecionado={fornecedorSelecionado}
-              mensagemAtual={mensagemAtual}
-              onFornecedorSelect={selecionarFornecedor}
-              onMensagemChange={setMensagemAtual}
-              onProcessar={processarMensagem}
-            />
+            <Tabs defaultValue="nova-cotacao" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="nova-cotacao" className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Nova Cotação
+                </TabsTrigger>
+                <TabsTrigger value="historico" className="flex items-center gap-2">
+                  <History className="h-4 w-4" />
+                  Histórico de Pedidos
+                </TabsTrigger>
+              </TabsList>
 
-            {cotacaoRestaurada && (
-              <CotacaoRestauradaMessage 
-                dataRestauracao={cotacaoRestaurada} 
-                tipoRestauracao={tipoCotacao || 'rascunho'}
-              />
-            )}
+              <TabsContent value="nova-cotacao" className="space-y-6">
+                <div className="text-gray-600 text-sm">
+                  Selecione um fornecedor e cole a mensagem que ele enviou no campo abaixo.
+                </div>
+                
+                <FornecedorInput
+                  fornecedores={fornecedores}
+                  fornecedoresProcessados={fornecedoresProcessados}
+                  fornecedorSelecionado={fornecedorSelecionado}
+                  mensagemAtual={mensagemAtual}
+                  onFornecedorSelect={selecionarFornecedor}
+                  onMensagemChange={setMensagemAtual}
+                  onProcessar={processarMensagem}
+                />
 
-            {tabelaComparativa.length > 0 && (
-              <TabelaComparativa
-                tabela={tabelaComparativa}
-                lojasComRequisicoes={lojasComRequisicoes}
-                fornecedoresComProdutos={fornecedoresComProdutos}
-                temDados={temDados}
-                onCalcularPercentual={calcularPercentualSuprimento}
-                onSalvarRascunho={handleSalvarRascunho}
-                onRestaurar={handleRestaurarCotacao}
-                onNova={handleNovaCotacao}
-                onVerResumo={irParaResumo}
-                onAdicionarProduto={handleAdicionarProduto}
-                onObterEstoques={obterEstoquesDisplay}
-                onQuantidadeChange={atualizarQuantidade}
-                onUnidadeChange={atualizarUnidadePedido}
-                onPrecoChange={atualizarPreco}
-                onCalcularTotal={calcularTotalFornecedor}
-              />
-            )}
-            
-            <QualityIndicator />
+                {cotacaoRestaurada && (
+                  <CotacaoRestauradaMessage 
+                    dataRestauracao={cotacaoRestaurada} 
+                    tipoRestauracao={tipoCotacao || 'rascunho'}
+                  />
+                )}
 
-            {/* Dashboard de Aprendizado */}
-            <AprendizadoDashboard />
+                {tabelaComparativa.length > 0 && (
+                  <TabelaComparativa
+                    tabela={tabelaComparativa}
+                    lojasComRequisicoes={lojasComRequisicoes}
+                    fornecedoresComProdutos={fornecedoresComProdutos}
+                    temDados={temDados}
+                    onCalcularPercentual={calcularPercentualSuprimento}
+                    onSalvarRascunho={handleSalvarRascunho}
+                    onRestaurar={handleRestaurarCotacao}
+                    onNova={handleNovaCotacao}
+                    onVerResumo={irParaResumo}
+                    onAdicionarProduto={handleAdicionarProduto}
+                    onObterEstoques={obterEstoquesDisplay}
+                    onQuantidadeChange={atualizarQuantidade}
+                    onUnidadeChange={atualizarUnidadePedido}
+                    onPrecoChange={atualizarPreco}
+                    onCalcularTotal={calcularTotalFornecedor}
+                  />
+                )}
 
-            {/* Controles Manuais */}
-            <CotacaoManualControls
-              produtosExtraidos={produtosExtraidos}
-              fornecedoresComProdutos={fornecedoresComProdutos}
-              onAdicionarProduto={handleAdicionarProduto}
-              onEditarProdutos={handleEditarProdutos}
-              onLimparTudo={handleLimparTudo}
-            />
-            
-            <ProdutosExtraidosDetails 
-              produtosExtraidos={produtosExtraidos}
-              textoOriginalPorFornecedor={textosPorFornecedor}
-              onEditarProduto={editarProdutoExtraido}
-              onDeletarProduto={deletarProdutoExtraido}
-              onFeedbackEnviado={handleFeedbackEnviado}
-            />
+                {/* Controles Manuais */}
+                <CotacaoManualControls
+                  produtosExtraidos={produtosExtraidos}
+                  fornecedoresComProdutos={fornecedoresComProdutos}
+                  onAdicionarProduto={handleAdicionarProduto}
+                  onEditarProdutos={handleEditarProdutos}
+                  onLimparTudo={handleLimparTudo}
+                />
+                
+                <ProdutosExtraidosDetails 
+                  produtosExtraidos={produtosExtraidos}
+                  textoOriginalPorFornecedor={textosPorFornecedor}
+                  onEditarProduto={editarProdutoExtraido}
+                  onDeletarProduto={deletarProdutoExtraido}
+                  onFeedbackEnviado={handleFeedbackEnviado}
+                />
 
-            <GuiaUsoCotacao />
-            
+                <GuiaUsoCotacao />
+                
+                {/* Indicador de saúde do sistema (apenas em desenvolvimento) */}
+                {process.env.NODE_ENV === 'development' && (
+                  <SystemHealthIndicator 
+                    cotacaoHook={{
+                      processarMensagem,
+                      editarProdutoExtraido,
+                      deletarProdutoExtraido,
+                      adicionarProdutoManual,
+                      atualizarQuantidade,
+                      atualizarPreco,
+                      handleSalvarRascunho
+                    }}
+                    produtosExtraidos={produtosExtraidos}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="historico">
+                <HistoricoPedidos />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 

@@ -76,19 +76,23 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE
+  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO (10s)
   useEffect(() => {
-    if (dadosCarregados !== null && 
-        !isLoadingCotacao && 
-        !syncStatus.isSyncing && 
-        produtosExtraidos.length > 0) {
-      
-      salvarCotacao({
-        produtosExtraidos,
-        tabelaComparativa,
-        fornecedoresProcessados,
-      });
-    }
+    const timer = setTimeout(() => {
+      if (dadosCarregados !== null && 
+          !isLoadingCotacao && 
+          !syncStatus.isSyncing && 
+          produtosExtraidos.length > 0) {
+        
+        salvarCotacao({
+          produtosExtraidos,
+          tabelaComparativa,
+          fornecedoresProcessados,
+        });
+      }
+    }, 10000); // Aumentado para 10 segundos
+
+    return () => clearTimeout(timer);
   }, [produtosExtraidos, tabelaComparativa]); // Dependências mínimas para evitar loops
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
@@ -132,36 +136,39 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     const worker = new ExtractionWorker();
 
     worker.onmessage = async (e: MessageEvent<{type: 'SUCCESS' | 'ERROR', payload: ProdutoExtraido[] | string}>) => {
-      const { type, payload } = e.data;
-      
-      if (type === 'SUCCESS') {
-        const produtos = payload as ProdutoExtraido[];
-        if (produtos.length > 0) {
-          // Aplicar aprendizado automático aos produtos extraídos
-          const produtosComAprendizado = await AprendizadoService.aplicarAprendizado(produtos, fornecedor.nome);
-          
-          const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtosComAprendizado];
-          setProdutosExtraidos(novosExtraidos);
-          setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
-          
-          // Salvar texto original para feedback
-          setTextosPorFornecedor(prev => ({
-            ...prev,
-            [fornecedor.nome]: mensagemAtual
-          }));
-          
-          setFornecedorSelecionado(null);
-          setMensagemAtual('');
-          toast.success(`${produtosComAprendizado.length} produtos extraídos de ${fornecedor.nome}!`);
+      try {
+        const { type, payload } = e.data;
+        
+        if (type === 'SUCCESS') {
+          const produtos = payload as ProdutoExtraido[];
+          if (produtos.length > 0) {
+            // Aplicar aprendizado básico (sem sistema pesado)
+            const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
+            setProdutosExtraidos(novosExtraidos);
+            setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
+            
+            // Salvar texto original para feedback
+            setTextosPorFornecedor(prev => ({
+              ...prev,
+              [fornecedor.nome]: mensagemAtual
+            }));
+            
+            setFornecedorSelecionado(null);
+            setMensagemAtual('');
+            toast.success(`${produtos.length} produtos extraídos de ${fornecedor.nome}!`);
+          } else {
+            toast.error('Nenhum produto foi encontrado na mensagem.');
+          }
         } else {
-          toast.error('Nenhum produto foi encontrado na mensagem.');
+          toast.error(`Erro ao processar mensagem: ${payload as string}`);
         }
-      } else {
-        toast.error(`Erro ao processar mensagem: ${payload as string}`);
+      } catch (error) {
+        console.error('Erro no processamento:', error);
+        toast.error('Erro inesperado no processamento');
+      } finally {
+        setIsProcessing(false);
+        worker.terminate();
       }
-
-      setIsProcessing(false);
-      worker.terminate();
     };
 
     worker.onerror = (err) => {
