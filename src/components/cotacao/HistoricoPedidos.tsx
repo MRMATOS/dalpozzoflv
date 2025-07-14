@@ -40,8 +40,8 @@ const HistoricoPedidos: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [expandedPedido, setExpandedPedido] = useState<string | null>(null);
   const [filtros, setFiltros] = useState({
-    fornecedor: '',
-    status: '',
+    fornecedor: 'todos',
+    status: 'todos',
     dataInicio: '',
     dataFim: '',
     busca: ''
@@ -72,11 +72,7 @@ const HistoricoPedidos: React.FC = () => {
         .order('criado_em', { ascending: false });
 
       // Aplicar filtros
-      if (filtros.fornecedor) {
-        // Filtro por fornecedor seria aplicado via join, mas por simplicidade vamos filtrar depois
-      }
-      
-      if (filtros.status) {
+      if (filtros.status && filtros.status !== 'todos') {
         query = query.eq('status', filtros.status);
       }
       
@@ -99,7 +95,7 @@ const HistoricoPedidos: React.FC = () => {
       let pedidosFiltrados = data || [];
 
       // Filtrar por fornecedor (pós-query)
-      if (filtros.fornecedor) {
+      if (filtros.fornecedor && filtros.fornecedor !== 'todos') {
         pedidosFiltrados = pedidosFiltrados.filter(pedido => 
           pedido.fornecedores?.nome?.toLowerCase().includes(filtros.fornecedor.toLowerCase())
         );
@@ -170,8 +166,8 @@ const HistoricoPedidos: React.FC = () => {
 
   const limparFiltros = () => {
     setFiltros({
-      fornecedor: '',
-      status: '',
+      fornecedor: 'todos',
+      status: 'todos',
       dataInicio: '',
       dataFim: '',
       busca: ''
@@ -228,7 +224,7 @@ const HistoricoPedidos: React.FC = () => {
                   <SelectValue placeholder="Todos os fornecedores" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os fornecedores</SelectItem>
+                  <SelectItem value="todos">Todos os fornecedores</SelectItem>
                   {fornecedoresUnicos.map(fornecedor => (
                     <SelectItem key={fornecedor} value={fornecedor || ''}>
                       {fornecedor}
@@ -245,7 +241,7 @@ const HistoricoPedidos: React.FC = () => {
                   <SelectValue placeholder="Todos os status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os status</SelectItem>
+                  <SelectItem value="todos">Todos os status</SelectItem>
                   {statusUnicos.map(status => (
                     <SelectItem key={status} value={status}>
                       {status}
