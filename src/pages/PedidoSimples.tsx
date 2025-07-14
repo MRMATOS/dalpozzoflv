@@ -80,8 +80,8 @@ const PedidoSimples = () => {
     
     if (qtd === 0 || valor === 0) return 0;
     
-    // Se valor <= 14,99, multiplicar por média_kg_caixa
-    if (valor <= 14.99 && produtoSelecionado?.media_por_caixa) {
+    // Se valor <= 14,99 E unidade for "Caixa", multiplicar por média_kg_caixa
+    if (valor <= 14.99 && produtoSelecionado?.media_por_caixa && unidade === 'Caixa') {
       return valor * produtoSelecionado.media_por_caixa * qtd;
     } else {
       return valor * qtd;
@@ -502,7 +502,7 @@ const PedidoSimples = () => {
                         R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-blue-700 mt-1">
-                        {parseFloat(valorUnitario) <= 14.99 ? 
+                        {parseFloat(valorUnitario) <= 14.99 && unidade === 'Caixa' ? 
                           'Cálculo: Valor × Média por Caixa × Quantidade' : 
                           'Cálculo: Valor × Quantidade'
                         }
