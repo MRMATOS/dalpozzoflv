@@ -262,7 +262,7 @@ const PedidoSimples = () => {
       carregarHistorico();
     } catch (error: any) {
       console.error('Erro ao excluir pedido:', error);
-      toast.error(`Erro ao excluir pedido: ${error.message}`);
+      toast.error(error.message || 'Erro ao excluir pedido');
     }
   };
 
@@ -294,7 +294,7 @@ const PedidoSimples = () => {
       carregarHistorico();
     } catch (error: any) {
       console.error('Erro ao excluir pedidos do fornecedor:', error);
-      toast.error(`Erro ao excluir pedidos do fornecedor: ${error.message}`);
+      toast.error(error.message || 'Erro ao excluir pedidos do fornecedor');
     }
   };
 

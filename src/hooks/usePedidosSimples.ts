@@ -82,10 +82,50 @@ export const usePedidosSimples = () => {
     return data;
   };
 
+  const excluirPedido = async (pedidoId: string) => {
+    if (!user?.id) throw new Error('Usuário não autenticado');
+
+    const { data, error } = await supabase
+      .from('pedidos_simples')
+      .delete()
+      .eq('id', pedidoId)
+      .eq('user_id', user.id)
+      .select();
+
+    if (error) throw error;
+    
+    if (data && data.length === 0) {
+      throw new Error('Pedido não encontrado ou você não tem permissão para excluí-lo');
+    }
+
+    return data;
+  };
+
+  const excluirPedidosFornecedor = async (nomeFornecedor: string) => {
+    if (!user?.id) throw new Error('Usuário não autenticado');
+
+    const { data, error } = await supabase
+      .from('pedidos_simples')
+      .delete()
+      .eq('fornecedor_nome', nomeFornecedor)
+      .eq('user_id', user.id)
+      .select();
+
+    if (error) throw error;
+    
+    if (data && data.length === 0) {
+      throw new Error('Nenhum pedido encontrado para este fornecedor ou você não tem permissão');
+    }
+
+    return data;
+  };
+
   return {
     pedidos,
     loading,
     buscarPedidos,
-    criarPedido
+    criarPedido,
+    excluirPedido,
+    excluirPedidosFornecedor
   };
 };
