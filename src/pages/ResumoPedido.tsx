@@ -34,7 +34,7 @@ interface ResumoFornecedor {
 const ResumoPedido = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { fornecedores } = useFornecedores();
+  const { fornecedores } = useFornecedores('cotacao');
   const { user } = useAuth();
   const { marcarComoEnviada } = useCotacaoPersistence();
   const [loadingWhatsApp, setLoadingWhatsApp] = useState<string | null>(null);

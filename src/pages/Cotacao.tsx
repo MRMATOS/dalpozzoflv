@@ -26,7 +26,7 @@ import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
 const Cotacao = () => {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const { fornecedores } = useFornecedores();
+  const { fornecedores } = useFornecedores('cotacao');
   const { requisicoes, lojasComRequisicoes } = useRequisicoes();
   const { obterEstoquesDisplayInteligente } = useEstoqueVariacoes();
   

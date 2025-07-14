@@ -32,7 +32,7 @@ const EditarProdutoModal: React.FC<EditarProdutoModalProps> = ({
   
   const { toast } = useToast();
 
-  const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
+  const unidadesDisponiveis = ['Bandeja', 'Caixa', 'Gaiola', 'Kg', 'Maço', 'Pacote', 'Saco', 'Unidade'];
 
   useEffect(() => {
     if (produto) {

@@ -70,7 +70,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
     });
   })();
 
-  const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
+  const unidadesDisponiveis = ['Bandeja', 'Caixa', 'Gaiola', 'Kg', 'Maço', 'Pacote', 'Saco', 'Unidade'];
 
   return (
     <div className="mb-8">

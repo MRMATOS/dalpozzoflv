@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { useProdutosComPai } from "@/hooks/useProdutosComPai";
+import { Combobox } from "@/components/ui/combobox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -26,7 +27,8 @@ import {
   History,
   Package,
   User,
-  Calculator
+  Calculator,
+  Trash2
 } from "lucide-react";
 
 interface PedidoSimples {
@@ -46,7 +48,7 @@ interface PedidoSimples {
 const PedidoSimples = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { fornecedores } = useFornecedores();
+  const { fornecedores } = useFornecedores('pedido_simples');
   const { produtos } = useProdutosComPai();
   
   // Estado do formulário
@@ -54,7 +56,6 @@ const PedidoSimples = () => {
   const [fornecedorId, setFornecedorId] = useState<string | null>(null);
   const [produtoId, setProdutoId] = useState("");
   const [unidade, setUnidade] = useState("Caixa");
-  const [tipo, setTipo] = useState("");
   const [quantidade, setQuantidade] = useState("");
   const [valorUnitario, setValorUnitario] = useState("");
   const [dataPedido, setDataPedido] = useState<Date>(new Date());
@@ -91,9 +92,14 @@ const PedidoSimples = () => {
 
   // Busca inteligente de fornecedor
   const fornecedoresFiltrados = fornecedores.filter(f => 
-    f.nome.toLowerCase().includes(fornecedor.toLowerCase()) &&
-    (f.status_tipo === 'Pedido Simples' || f.status_tipo === 'Cotação e Pedido' || !f.status_tipo)
+    f.nome.toLowerCase().includes(fornecedor.toLowerCase())
   );
+
+  // Preparar opções para o Combobox de produtos (incluindo variações)
+  const produtoOptions = produtos.map(produto => ({
+    value: produto.id!,
+    label: produto.produto || ''
+  }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,7 +141,6 @@ const PedidoSimples = () => {
           produto_id: produtoId,
           produto_nome: produtoSelecionado?.produto || '',
           unidade,
-          tipo,
           quantidade: parseFloat(quantidade),
           valor_unitario: parseFloat(valorUnitario),
           valor_total_estimado: valorTotal,
@@ -151,7 +156,6 @@ const PedidoSimples = () => {
       
       // Limpar formulário (mantém fornecedor selecionado)
       setProdutoId("");
-      setTipo("");
       setQuantidade("");
       setValorUnitario("");
       setObservacoes("");
@@ -229,6 +233,44 @@ const PedidoSimples = () => {
   const fornecedoresUnicos = Array.from(
     new Set(historico.map(p => p.fornecedor_nome))
   ).sort();
+
+  // Função para excluir pedido individual
+  const excluirPedido = async (pedidoId: string) => {
+    try {
+      const { error } = await supabase
+        .from('pedidos_simples')
+        .delete()
+        .eq('id', pedidoId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      toast.success("Pedido excluído com sucesso!");
+      carregarHistorico();
+    } catch (error: any) {
+      console.error('Erro ao excluir pedido:', error);
+      toast.error("Erro ao excluir pedido");
+    }
+  };
+
+  // Função para excluir todos os pedidos de um fornecedor
+  const excluirPedidosFornecedor = async (nomeFornecedor: string) => {
+    try {
+      const { error } = await supabase
+        .from('pedidos_simples')
+        .delete()
+        .eq('fornecedor_nome', nomeFornecedor)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      toast.success(`Todos os pedidos do fornecedor "${nomeFornecedor}" foram excluídos!`);
+      carregarHistorico();
+    } catch (error: any) {
+      console.error('Erro ao excluir pedidos do fornecedor:', error);
+      toast.error("Erro ao excluir pedidos do fornecedor");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -330,18 +372,14 @@ const PedidoSimples = () => {
                     {/* Produto */}
                     <div className="space-y-2">
                       <Label htmlFor="produto">Produto *</Label>
-                      <Select value={produtoId} onValueChange={setProdutoId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o produto" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {produtos.map((produto) => (
-                            <SelectItem key={produto.id} value={produto.id!}>
-                              {produto.produto}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        options={produtoOptions}
+                        value={produtoId}
+                        onValueChange={setProdutoId}
+                        placeholder="Busque e selecione o produto..."
+                        searchPlaceholder="Buscar produto..."
+                        emptyText="Nenhum produto encontrado."
+                      />
                     </div>
 
                     {/* Unidade */}
@@ -352,24 +390,18 @@ const PedidoSimples = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="Bandeja">Bandeja</SelectItem>
                           <SelectItem value="Caixa">Caixa</SelectItem>
-                          <SelectItem value="Pacote">Pacote</SelectItem>
-                          <SelectItem value="Unidade">Unidade</SelectItem>
+                          <SelectItem value="Gaiola">Gaiola</SelectItem>
                           <SelectItem value="Kg">Kg</SelectItem>
+                          <SelectItem value="Maço">Maço</SelectItem>
+                          <SelectItem value="Pacote">Pacote</SelectItem>
+                          <SelectItem value="Saco">Saco</SelectItem>
+                          <SelectItem value="Unidade">Unidade</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
-                    {/* Tipo */}
-                    <div className="space-y-2">
-                      <Label htmlFor="tipo">Tipo / Variação</Label>
-                      <Input
-                        id="tipo"
-                        value={tipo}
-                        onChange={(e) => setTipo(e.target.value)}
-                        placeholder="Ex: Especial, Nacional..."
-                      />
-                    </div>
 
                     {/* Quantidade */}
                     <div className="space-y-2">
@@ -547,11 +579,26 @@ const PedidoSimples = () => {
                               <User className="h-5 w-5 text-blue-600" />
                               <span>{nomeFornecedor}</span>
                             </CardTitle>
-                            <div className="text-right">
-                              <p className="text-sm text-gray-500">Total do Fornecedor</p>
-                              <p className="text-lg font-bold text-blue-600">
-                                R$ {calcularTotalFornecedor(pedidosFornecedor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </p>
+                            <div className="flex items-center space-x-4">
+                              <div className="text-right">
+                                <p className="text-sm text-gray-500">Total do Fornecedor</p>
+                                <p className="text-lg font-bold text-blue-600">
+                                  R$ {calcularTotalFornecedor(pedidosFornecedor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (confirm(`Tem certeza que deseja excluir TODOS os pedidos do fornecedor "${nomeFornecedor}"?`)) {
+                                    excluirPedidosFornecedor(nomeFornecedor);
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Excluir Fornecedor
+                              </Button>
                             </div>
                           </div>
                         </CardHeader>
@@ -559,37 +606,51 @@ const PedidoSimples = () => {
                           <div className="space-y-3">
                             {pedidosFornecedor.map((pedido) => (
                               <div key={pedido.id} className="border rounded-lg p-3 bg-gray-50">
-                                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                                  <div>
-                                    <p className="text-xs text-gray-500">Data</p>
-                                    <p className="text-sm font-medium">
-                                      {format(new Date(pedido.data_pedido), 'dd/MM/yyyy')}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500">Produto</p>
-                                    <p className="text-sm font-medium">{pedido.produto_nome}</p>
-                                    {pedido.tipo && (
-                                      <p className="text-xs text-gray-600">({pedido.tipo})</p>
-                                    )}
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500">Quantidade</p>
-                                    <p className="text-sm font-medium">{pedido.quantidade} {pedido.unidade}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500">Valor Unit.</p>
-                                    <p className="text-sm font-medium">
-                                      R$ {pedido.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-gray-500">Total Est.</p>
-                                    <p className="text-sm font-bold text-blue-600">
-                                      R$ {pedido.valor_total_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                    </p>
-                                  </div>
-                                </div>
+                                 <div className="flex items-start justify-between mb-3">
+                                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3 flex-1">
+                                     <div>
+                                       <p className="text-xs text-gray-500">Data</p>
+                                       <p className="text-sm font-medium">
+                                         {format(new Date(pedido.data_pedido), 'dd/MM/yyyy')}
+                                       </p>
+                                     </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500">Produto</p>
+                                       <p className="text-sm font-medium">{pedido.produto_nome}</p>
+                                       {pedido.tipo && (
+                                         <p className="text-xs text-gray-600">({pedido.tipo})</p>
+                                       )}
+                                     </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500">Quantidade</p>
+                                       <p className="text-sm font-medium">{pedido.quantidade} {pedido.unidade}</p>
+                                     </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500">Valor Unit.</p>
+                                       <p className="text-sm font-medium">
+                                         R$ {pedido.valor_unitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                       </p>
+                                     </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500">Total Est.</p>
+                                       <p className="text-sm font-bold text-blue-600">
+                                         R$ {pedido.valor_total_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                       </p>
+                                     </div>
+                                   </div>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     onClick={() => {
+                                       if (confirm('Tem certeza que deseja excluir este pedido?')) {
+                                         excluirPedido(pedido.id);
+                                       }
+                                     }}
+                                     className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-3"
+                                   >
+                                     <Trash2 className="h-4 w-4" />
+                                   </Button>
+                                 </div>
                                 {pedido.observacoes && (
                                   <div className="mt-2 pt-2 border-t border-gray-200">
                                     <p className="text-xs text-gray-500">Observações:</p>

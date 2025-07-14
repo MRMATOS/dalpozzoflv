@@ -35,7 +35,7 @@ interface ItemPedido {
 const HistoricoPedidos = () => {
   const { user, profile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { fornecedores } = useFornecedores();
+  const { fornecedores } = useFornecedores('todos');
   const [pedidos, setPedidos] = useState<PedidoHistorico[]>([]);
   const [pedidoSelecionado, setPedidoSelecionado] = useState<PedidoHistorico | null>(null);
   const [itensPedido, setItensPedido] = useState<ItemPedido[]>([]);

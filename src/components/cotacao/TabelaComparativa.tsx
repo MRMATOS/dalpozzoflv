@@ -80,7 +80,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
     });
   }, [tabela, buscaProduto]);
 
-  const unidadesDisponiveis = ['Caixa', 'Kg', 'Maço', 'Bandeja', 'Unidade', 'Dúzia'];
+  const unidadesDisponiveis = ['Bandeja', 'Caixa', 'Gaiola', 'Kg', 'Maço', 'Pacote', 'Saco', 'Unidade'];
 
   return (
     <div className="mb-8">
