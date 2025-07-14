@@ -38,31 +38,46 @@ export const useProdutosComPai = () => {
 
       if (error) throw error;
 
-      // Processar os produtos para criar o display_name correto
-      const produtosProcessados = data?.map(produto => {
-        let displayName = '';
+      // Organizar produtos pai seguidos de suas variações
+      const produtosPai = data?.filter(p => !p.produto_pai_id) || [];
+      const produtosFilhos = data?.filter(p => p.produto_pai_id) || [];
+      
+      const produtosOrganizados: any[] = [];
+      
+      // Para cada produto pai, adicionar ele e suas variações
+      produtosPai.forEach(pai => {
+        // Adicionar produto pai
+        produtosOrganizados.push({
+          ...pai,
+          display_name: pai.produto || `ID: ${pai.id?.substring(0, 8)}`
+        });
         
-        if (produto.produto_pai_nome && produto.nome_variacao) {
-          // É uma variação: "Produto Pai Variação"
-          displayName = `${produto.produto_pai_nome} ${produto.nome_variacao}`;
-        } else if (produto.produto) {
-          // É um produto principal
-          displayName = produto.produto;
-        } else if (produto.nome_variacao) {
-          // Caso especial: apenas variação sem pai (não deveria acontecer)
-          displayName = produto.nome_variacao;
-        } else {
-          // Fallback
-          displayName = `ID: ${produto.id.substring(0, 8)}`;
-        }
+        // Adicionar variações deste pai
+        const variacoesDoPai = produtosFilhos
+          .filter(filho => filho.produto_pai_id === pai.id)
+          .sort((a, b) => (a.ordem_exibicao || 0) - (b.ordem_exibicao || 0));
+        
+        variacoesDoPai.forEach(variacao => {
+          produtosOrganizados.push({
+            ...variacao,
+            display_name: `${pai.produto} ${variacao.nome_variacao}`
+          });
+        });
+      });
+      
+      // Adicionar produtos órfãos (sem pai definido corretamente)
+      const produtosOrfaos = produtosFilhos.filter(filho => 
+        !produtosPai.some(pai => pai.id === filho.produto_pai_id)
+      );
+      
+      produtosOrfaos.forEach(orfao => {
+        produtosOrganizados.push({
+          ...orfao,
+          display_name: orfao.produto || orfao.nome_variacao || `ID: ${orfao.id?.substring(0, 8)}`
+        });
+      });
 
-        return {
-          ...produto,
-          display_name: displayName
-        };
-      }) || [];
-
-      setProdutos(produtosProcessados);
+      setProdutos(produtosOrganizados);
     } catch (error: any) {
       console.error('Erro ao buscar produtos:', error);
       setError(error.message);

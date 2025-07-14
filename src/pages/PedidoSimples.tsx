@@ -98,7 +98,7 @@ const PedidoSimples = () => {
   // Preparar opções para o Combobox de produtos (incluindo variações)
   const produtoOptions = produtos.map(produto => ({
     value: produto.id!,
-    label: produto.produto || ''
+    label: produto.display_name || produto.produto || ''
   }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,7 +139,7 @@ const PedidoSimples = () => {
           fornecedor_id: fornecedorFinalId,
           fornecedor_nome: fornecedor,
           produto_id: produtoId,
-          produto_nome: produtoSelecionado?.produto || '',
+          produto_nome: produtoSelecionado?.display_name || produtoSelecionado?.produto || '',
           unidade,
           quantidade: parseFloat(quantidade),
           valor_unitario: parseFloat(valorUnitario),
@@ -237,38 +237,64 @@ const PedidoSimples = () => {
   // Função para excluir pedido individual
   const excluirPedido = async (pedidoId: string) => {
     try {
-      const { error } = await supabase
+      console.log('Tentando excluir pedido:', pedidoId, 'para usuário:', user?.id);
+      
+      const { data, error } = await supabase
         .from('pedidos_simples')
         .delete()
         .eq('id', pedidoId)
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Resultado da exclusão:', { data, error });
+
+      if (error) {
+        console.error('Erro na exclusão:', error);
+        throw error;
+      }
+
+      if (data && data.length === 0) {
+        toast.error("Pedido não encontrado ou você não tem permissão para excluí-lo");
+        return;
+      }
 
       toast.success("Pedido excluído com sucesso!");
       carregarHistorico();
     } catch (error: any) {
       console.error('Erro ao excluir pedido:', error);
-      toast.error("Erro ao excluir pedido");
+      toast.error(`Erro ao excluir pedido: ${error.message}`);
     }
   };
 
   // Função para excluir todos os pedidos de um fornecedor
   const excluirPedidosFornecedor = async (nomeFornecedor: string) => {
     try {
-      const { error } = await supabase
+      console.log('Tentando excluir pedidos do fornecedor:', nomeFornecedor, 'para usuário:', user?.id);
+      
+      const { data, error } = await supabase
         .from('pedidos_simples')
         .delete()
         .eq('fornecedor_nome', nomeFornecedor)
-        .eq('user_id', user?.id);
+        .eq('user_id', user?.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Resultado da exclusão do fornecedor:', { data, error });
 
-      toast.success(`Todos os pedidos do fornecedor "${nomeFornecedor}" foram excluídos!`);
+      if (error) {
+        console.error('Erro na exclusão do fornecedor:', error);
+        throw error;
+      }
+
+      if (data && data.length === 0) {
+        toast.error("Nenhum pedido encontrado para este fornecedor ou você não tem permissão");
+        return;
+      }
+
+      toast.success(`${data?.length || 0} pedidos do fornecedor "${nomeFornecedor}" foram excluídos!`);
       carregarHistorico();
     } catch (error: any) {
       console.error('Erro ao excluir pedidos do fornecedor:', error);
-      toast.error("Erro ao excluir pedidos do fornecedor");
+      toast.error(`Erro ao excluir pedidos do fornecedor: ${error.message}`);
     }
   };
 
@@ -324,6 +350,7 @@ const PedidoSimples = () => {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Primeira linha: Fornecedor e Produto */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Fornecedor */}
                     <div className="space-y-2">
@@ -381,7 +408,10 @@ const PedidoSimples = () => {
                         emptyText="Nenhum produto encontrado."
                       />
                     </div>
+                  </div>
 
+                  {/* Segunda linha: Unidade, Quantidade, Valor Unitário e Data */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Unidade */}
                     <div className="space-y-2">
                       <Label htmlFor="unidade">Unidade *</Label>
@@ -402,10 +432,9 @@ const PedidoSimples = () => {
                       </Select>
                     </div>
 
-
                     {/* Quantidade */}
                     <div className="space-y-2">
-                      <Label htmlFor="quantidade">Quantidade de Caixas *</Label>
+                      <Label htmlFor="quantidade">Quantidade *</Label>
                       <Input
                         id="quantidade"
                         type="number"
@@ -418,7 +447,7 @@ const PedidoSimples = () => {
 
                     {/* Valor Unitário */}
                     <div className="space-y-2">
-                      <Label htmlFor="valor">Valor Unitário (R$) *</Label>
+                      <Label htmlFor="valor">Valor Unit. (R$) *</Label>
                       <Input
                         id="valor"
                         type="number"
@@ -428,38 +457,38 @@ const PedidoSimples = () => {
                         placeholder="0,00"
                       />
                     </div>
-                  </div>
 
-                  {/* Data do Pedido */}
-                  <div className="space-y-2">
-                    <Label>Data do Pedido *</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !dataPedido && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {dataPedido ? (
-                            format(dataPedido, "PPP", { locale: ptBR })
-                          ) : (
-                            <span>Selecione uma data</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={dataPedido}
-                          onSelect={(date) => date && setDataPedido(date)}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    {/* Data do Pedido */}
+                    <div className="space-y-2">
+                      <Label>Data do Pedido *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !dataPedido && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dataPedido ? (
+                              format(dataPedido, "dd/MM", { locale: ptBR })
+                            ) : (
+                              <span>Data</span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={dataPedido}
+                            onSelect={(date) => date && setDataPedido(date)}
+                            initialFocus
+                            className="pointer-events-auto"
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
 
                   {/* Valor Total Estimado */}
@@ -481,25 +510,28 @@ const PedidoSimples = () => {
                     </div>
                   )}
 
-                  {/* Observações */}
-                  <div className="space-y-2">
-                    <Label htmlFor="observacoes">Observações</Label>
-                    <Textarea
-                      id="observacoes"
-                      value={observacoes}
-                      onChange={(e) => setObservacoes(e.target.value)}
-                      placeholder="Observações adicionais sobre o pedido..."
-                      rows={3}
-                    />
+                  {/* Terceira linha: Observações e Botão de Registro lado a lado */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-2 md:col-span-3">
+                      <Label htmlFor="observacoes">Observações</Label>
+                      <Textarea
+                        id="observacoes"
+                        value={observacoes}
+                        onChange={(e) => setObservacoes(e.target.value)}
+                        placeholder="Observações adicionais sobre o pedido..."
+                        rows={2}
+                      />
+                    </div>
+                    <div>
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 h-[68px]"
+                      >
+                        {loading ? "Registrando..." : "Registrar Pedido"}
+                      </Button>
+                    </div>
                   </div>
-
-                  <Button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    {loading ? "Registrando..." : "Registrar Pedido"}
-                  </Button>
                 </form>
               </CardContent>
             </Card>
