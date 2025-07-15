@@ -24,6 +24,7 @@ import RecebimentoDashboard from "@/pages/RecebimentoDashboard";
 import NovoRecebimento from "@/pages/NovoRecebimento";
 import RecebimentoAtivo from "@/pages/RecebimentoAtivo";
 import HistoricoRecebimentos from "@/pages/HistoricoRecebimentos";
+import PedidosParaRecebimento from "@/pages/PedidosParaRecebimento";
 import PoliticaPrivacidade from "@/pages/PoliticaPrivacidade";
 import TermosUso from "@/pages/TermosUso";
 import PedidoSimples from "@/pages/PedidoSimples";
@@ -150,6 +151,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RecebimentoDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/recebimento/pedidos" 
+                element={
+                  <ProtectedRoute>
+                    <PedidosParaRecebimento />
                   </ProtectedRoute>
                 } 
               />

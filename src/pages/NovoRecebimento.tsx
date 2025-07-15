@@ -1,33 +1,81 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Package, Plus, Scale, Users } from "lucide-react";
+import { ArrowLeft, Package, Plus, Scale, Users, FileX } from "lucide-react";
 import { toast } from "sonner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import EtapasRecebimento from '@/components/recebimento/EtapasRecebimento';
 
 const NovoRecebimento = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    fornecedor: '',
-    origem: '',
-    observacoes: '',
     modo_pesagem: 'individual',
     quantidade_pallets: '',
     peso_total: ''
   });
 
+  const pedidoId = searchParams.get('pedido_id');
+  const tipoPedido = searchParams.get('tipo') as 'compra' | 'simples';
+
+  // Buscar dados do pedido selecionado
+  const { data: pedidoSelecionado } = useQuery({
+    queryKey: ['pedido-selecionado', pedidoId, tipoPedido],
+    queryFn: async () => {
+      if (!pedidoId || !tipoPedido) return null;
+      
+      if (tipoPedido === 'compra') {
+        const { data, error } = await supabase
+          .from('pedidos_compra')
+          .select(`
+            *,
+            fornecedores(nome),
+            itens_pedido(
+              id,
+              produto_id,
+              quantidade,
+              preco,
+              produtos(produto)
+            )
+          `)
+          .eq('id', pedidoId)
+          .single();
+        
+        if (error) throw error;
+        return { ...data, tipo: 'compra', fornecedor: data.fornecedores?.nome };
+      } else {
+        const { data, error } = await supabase
+          .from('pedidos_simples')
+          .select('*')
+          .eq('id', pedidoId)
+          .single();
+        
+        if (error) throw error;
+        return { ...data, tipo: 'simples', fornecedor: data.fornecedor_nome };
+      }
+    },
+    enabled: !!pedidoId && !!tipoPedido,
+  });
+
+  // Redirecionar para seleção de pedidos se não tiver pedido selecionado
+  useEffect(() => {
+    if (!pedidoId || !tipoPedido) {
+      navigate('/recebimento/pedidos');
+    }
+  }, [pedidoId, tipoPedido, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.id || !pedidoSelecionado) return;
 
     // Validações para modo média
     if (formData.modo_pesagem === 'media') {
@@ -52,15 +100,15 @@ const NovoRecebimento = () => {
       const { data, error } = await supabase
         .from('recebimentos')
         .insert({
-          fornecedor: formData.fornecedor || null,
-          origem: formData.origem || null,
-          observacoes: formData.observacoes || null,
+          fornecedor: pedidoSelecionado.fornecedor,
           iniciado_por: profile.id,
           status: 'iniciado',
           modo_pesagem: formData.modo_pesagem,
           quantidade_pallets_informada: formData.modo_pesagem === 'media' ? parseInt(formData.quantidade_pallets) : null,
           peso_total_informado: formData.modo_pesagem === 'media' ? parseFloat(formData.peso_total) : null,
-          peso_medio_calculado: pesoMedio
+          peso_medio_calculado: pesoMedio,
+          pedido_origem_id: pedidoId,
+          tipo_origem: tipoPedido
         })
         .select()
         .single();
@@ -77,6 +125,17 @@ const NovoRecebimento = () => {
     }
   };
 
+  if (!pedidoSelecionado) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <FileX className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Carregando dados do pedido...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -87,52 +146,68 @@ const NovoRecebimento = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate('/recebimento')}
+                onClick={() => navigate('/recebimento/pedidos')}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Voltar
               </Button>
               <div>
-                <h1 className="text-lg font-semibold text-gray-900">Novo Recebimento</h1>
-                <p className="text-sm text-gray-500">Iniciar processo de recebimento físico</p>
+                <h1 className="text-lg font-semibold text-gray-900">Configurar Recebimento</h1>
+                <p className="text-sm text-gray-500">Fornecedor: {pedidoSelecionado.fornecedor}</p>
               </div>
+            </div>
+            <div className="text-sm text-gray-500">
+              Etapa 2/3 - Modo de Pesagem
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <EtapasRecebimento etapaAtual={2} />
+        
+        {/* Card com dados do pedido */}
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Package className="h-5 w-5 mr-2" />
-              Informações do Recebimento
+              Pedido Selecionado
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Fornecedor:</span> {pedidoSelecionado.fornecedor}
+              </div>
+              <div>
+                <span className="font-medium">Tipo:</span> {pedidoSelecionado.tipo === 'compra' ? 'Pedido de Compra' : 'Pedido Simples'}
+              </div>
+              <div>
+                <span className="font-medium">Data:</span> {new Date(pedidoSelecionado.criado_em).toLocaleDateString('pt-BR')}
+              </div>
+              <div>
+                <span className="font-medium">Valor:</span> R$ {
+                  pedidoSelecionado.tipo === 'compra' 
+                    ? ((pedidoSelecionado as any).total || 0).toFixed(2)
+                    : ((pedidoSelecionado as any).valor_total_estimado || 0).toFixed(2)
+                }
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Scale className="h-5 w-5 mr-2" />
+              Configuração do Modo de Pesagem
             </CardTitle>
             <CardDescription>
-              Preencha as informações básicas para iniciar o recebimento
+              Selecione como deseja registrar o peso dos pallets
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="fornecedor">Fornecedor (opcional)</Label>
-                <Input
-                  id="fornecedor"
-                  value={formData.fornecedor}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fornecedor: e.target.value }))}
-                  placeholder="Nome do fornecedor"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="origem">Origem (opcional)</Label>
-                <Input
-                  id="origem"
-                  value={formData.origem}
-                  onChange={(e) => setFormData(prev => ({ ...prev, origem: e.target.value }))}
-                  placeholder="Local de origem da mercadoria"
-                />
-              </div>
 
               <div className="space-y-4">
                 <div className="space-y-3">
@@ -162,6 +237,18 @@ const NovoRecebimento = () => {
                           <div>
                             <div className="font-medium">Pesagem por Média</div>
                             <div className="text-sm text-gray-500">Pesar todos os pallets juntos e dividir pela quantidade</div>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-3 p-3 border rounded-lg">
+                      <RadioGroupItem value="sem_palete" id="sem_palete" />
+                      <Label htmlFor="sem_palete" className="flex-1 cursor-pointer">
+                        <div className="flex items-center space-x-2">
+                          <FileX className="h-4 w-4" />
+                          <div>
+                            <div className="font-medium">Sem Palete</div>
+                            <div className="text-sm text-gray-500">Para produtos grandes ou unitários (ex: abóbora)</div>
                           </div>
                         </div>
                       </Label>
@@ -207,29 +294,18 @@ const NovoRecebimento = () => {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações (opcional)</Label>
-                <Textarea
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                  placeholder="Observações sobre o recebimento"
-                  rows={3}
-                />
-              </div>
-
               <div className="flex space-x-4">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => navigate('/recebimento')}
+                  onClick={() => navigate('/recebimento/pedidos')}
                   className="flex-1"
                 >
-                  Cancelar
+                  Voltar
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (formData.modo_pesagem === 'media' && (!formData.quantidade_pallets || !formData.peso_total))}
                   className="flex-1"
                 >
                   {loading ? 'Iniciando...' : 'Iniciar Recebimento'}

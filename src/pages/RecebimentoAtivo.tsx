@@ -164,11 +164,11 @@ const RecebimentoAtivo = () => {
             <TabsTrigger value="produtos">
               Produtos ({produtos.length})
             </TabsTrigger>
-            <TabsTrigger value="configuracao">
-              Configuração
-            </TabsTrigger>
             <TabsTrigger value="resumo">
               Resumo
+            </TabsTrigger>
+            <TabsTrigger value="configuracao">
+              Configuração
             </TabsTrigger>
           </TabsList>
 
@@ -189,10 +189,6 @@ const RecebimentoAtivo = () => {
               onProdutoAdded={() => refetch()}
               recebimento={recebimento}
             />
-          </TabsContent>
-
-          <TabsContent value="configuracao">
-            <TiposCaixasRecebimento />
           </TabsContent>
 
           <TabsContent value="resumo">
@@ -266,6 +262,10 @@ const RecebimentoAtivo = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="configuracao">
+            <TiposCaixasRecebimento />
           </TabsContent>
         </Tabs>
       </main>

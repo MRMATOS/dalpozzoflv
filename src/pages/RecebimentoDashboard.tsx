@@ -114,7 +114,7 @@ const RecebimentoDashboard = () => {
                 </div>
               )}
             </div>
-            <Button onClick={() => navigate('/recebimento/novo')} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => navigate('/recebimento/pedidos')} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Novo Recebimento
             </Button>
@@ -132,22 +132,10 @@ const RecebimentoDashboard = () => {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          {isMobile ? (
-            <div className="space-y-2">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="configuracao">Configuração</TabsTrigger>
-              </TabsList>
-            </div>
-          ) : (
-            <TabsList className="grid w-full grid-cols-2 max-w-md">
-              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-              <TabsTrigger value="configuracao">Configuração</TabsTrigger>
-            </TabsList>
-          )}
+        <div className="space-y-6">
+          {/* Removendo tabs - apenas dashboard agora */}
 
-          <TabsContent value="dashboard" className="space-y-6">
+          <div className="space-y-6">
             {/* Cards de Estatísticas */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <Card>
@@ -290,7 +278,7 @@ const RecebimentoDashboard = () => {
                   <Button 
                     variant="outline" 
                     className="h-auto p-4 flex flex-col items-center space-y-2 hover:bg-blue-50 border-blue-200"
-                    onClick={() => navigate('/recebimento/novo')}
+                     onClick={() => navigate('/recebimento/pedidos')}
                   >
                     <Plus className="h-6 w-6 text-blue-600" />
                     <span className="text-blue-600">Novo Recebimento</span>
@@ -316,38 +304,8 @@ const RecebimentoDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="configuracao">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Settings className="h-5 w-5 mr-2" />
-                  Tipos de Caixas e Embalagens
-                </CardTitle>
-                <CardDescription>
-                  Gerencie os tipos de caixas e suas taras padrão para cálculo automático
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {tiposCaixas?.map((tipo) => (
-                    <div key={tipo.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h4 className="font-medium">{tipo.nome}</h4>
-                        <p className="text-sm text-gray-500">{tipo.descricao}</p>
-                        <p className="text-sm font-mono">Tara: {tipo.tara_kg} kg</p>
-                      </div>
-                      <Badge variant="outline">
-                        {tipo.ativo ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </main>
     </div>
   );
