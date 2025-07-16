@@ -1616,6 +1616,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_comprador_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_user_master: {
         Args: Record<PropertyKey, never>
         Returns: boolean
