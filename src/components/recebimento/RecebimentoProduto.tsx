@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import TipoCaixaSelector from './TipoCaixaSelector';
 import PalletsVisualizacao from './PalletsVisualizacao';
 import { useProdutosComPai } from '@/hooks/useProdutosComPai';
+import { useProdutosPedido } from '@/hooks/useProdutosPedido';
 
 interface Pallet {
   id: string;
@@ -39,6 +40,8 @@ interface RecebimentoProdutoProps {
   produtos: Produto[];
   onProdutoAdded: () => void;
   recebimento?: any;
+  pedidoOrigemId?: string;
+  tipoOrigem?: 'compra' | 'simples';
 }
 
 const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
@@ -46,7 +49,9 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   pallets,
   produtos,
   onProdutoAdded,
-  recebimento
+  recebimento,
+  pedidoOrigemId,
+  tipoOrigem
 }) => {
   const [formData, setFormData] = useState({
     produto_id: '',
@@ -64,6 +69,10 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const produtoTravado = isModoMedia && primeiroProdutoRegistrado ? produtos[0].produto_nome : null;
 
   const { produtos: produtosDisponiveis } = useProdutosComPai();
+  const { produtos: produtosPedido } = useProdutosPedido(pedidoOrigemId, tipoOrigem);
+  
+  // Usar produtos do pedido se disponível, senão usar todos os produtos
+  const produtosParaExibir = produtosPedido.length > 0 ? produtosPedido : produtosDisponiveis;
 
   const { data: tiposCaixa, refetch: refetchTiposCaixa } = useQuery({
     queryKey: ['tipos-caixa-recebimento'],
@@ -95,10 +104,19 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
   useEffect(() => {
     const ultimoTipoCaixa = localStorage.getItem('ultimo-tipo-caixa-recebimento');
+    const ultimoProduto = localStorage.getItem('ultimo-produto-recebimento');
+    const ultimaQuantidade = localStorage.getItem('ultima-quantidade-recebimento');
+    
     if (ultimoTipoCaixa) {
       setFormData(prev => ({ ...prev, tipo_caixa_id: ultimoTipoCaixa }));
     }
-  }, []);
+    if (ultimoProduto && !produtoTravado) {
+      setFormData(prev => ({ ...prev, produto_id: ultimoProduto }));
+    }
+    if (ultimaQuantidade) {
+      setFormData(prev => ({ ...prev, quantidade_caixas: ultimaQuantidade }));
+    }
+  }, [produtoTravado]);
 
   useEffect(() => {
     const palletsUsados = produtos.reduce((acc: number[], produto) => {
@@ -114,7 +132,8 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
     }, 0);
 
     const tipoCaixa = tiposCaixa?.find(t => t.id === formData.tipo_caixa_id);
-    const taraCaixas = tipoCaixa ? tipoCaixa.tara_kg * parseInt(formData.quantidade_caixas || '0') : 0;
+    const isSemCaixa = formData.tipo_caixa_id === 'sem-caixa';
+    const taraCaixas = isSemCaixa ? 0 : (tipoCaixa ? tipoCaixa.tara_kg * parseInt(formData.quantidade_caixas || '0') : 0);
 
     return { taraPallets, taraCaixas };
   };
@@ -140,8 +159,9 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
     setLoading(true);
     try {
-      const produto = produtosDisponiveis?.find(p => p.id === produtoId);
+      const produto = produtosParaExibir?.find(p => p.id === produtoId);
       const tipoCaixa = tiposCaixa?.find(t => t.id === formData.tipo_caixa_id);
+      const isSemCaixa = formData.tipo_caixa_id === 'sem-caixa';
 
       const { error } = await supabase
         .from('recebimentos_produtos')
@@ -152,8 +172,8 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
           peso_bruto_kg: pesoBruto,
           peso_liquido_kg: pesoLiquido,
           quantidade_caixas: parseInt(formData.quantidade_caixas || '0'),
-          tipo_caixa_id: formData.tipo_caixa_id || null,
-          tipo_caixa_nome: tipoCaixa?.nome || null,
+          tipo_caixa_id: isSemCaixa ? null : formData.tipo_caixa_id || null,
+          tipo_caixa_nome: isSemCaixa ? 'Sem Caixa' : (tipoCaixa?.nome || null),
           tara_caixas_kg: taraCaixas,
           tara_pallets_kg: taraPallets,
           pallets_utilizados: palletsUtilizados,
@@ -162,14 +182,21 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
 
       if (error) throw error;
 
+      // Salvar últimas seleções no localStorage
       if (formData.tipo_caixa_id) {
         localStorage.setItem('ultimo-tipo-caixa-recebimento', formData.tipo_caixa_id);
       }
+      if (!produtoTravado && formData.produto_id) {
+        localStorage.setItem('ultimo-produto-recebimento', formData.produto_id);
+      }
+      if (formData.quantidade_caixas) {
+        localStorage.setItem('ultima-quantidade-recebimento', formData.quantidade_caixas);
+      }
 
       setFormData(prev => ({
-        produto_id: '',
+        produto_id: produtoTravado ? prev.produto_id : '',
         peso_bruto: '',
-        quantidade_caixas: '',
+        quantidade_caixas: prev.quantidade_caixas,
         tipo_caixa_id: prev.tipo_caixa_id,
         loja_destino: prev.loja_destino
       }));
@@ -177,6 +204,14 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
       
       onProdutoAdded();
       toast.success('Produto registrado com sucesso!');
+
+      // Auto-focus no campo peso bruto após 100ms
+      setTimeout(() => {
+        const pesoBrutoInput = document.getElementById('peso_bruto');
+        if (pesoBrutoInput) {
+          pesoBrutoInput.focus();
+        }
+      }, 100);
     } catch (error) {
       console.error('Erro ao adicionar produto:', error);
       toast.error('Erro ao registrar produto');
@@ -216,6 +251,24 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
       return;
     }
     setFormData(prev => ({ ...prev, tipo_caixa_id: value }));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, nextFieldId?: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (nextFieldId) {
+        const nextField = document.getElementById(nextFieldId);
+        if (nextField) {
+          nextField.focus();
+        }
+      } else {
+        // Se não há próximo campo, submeter o formulário
+        const form = e.currentTarget.closest('form');
+        if (form) {
+          form.requestSubmit();
+        }
+      }
+    }
   };
 
   return (
@@ -267,7 +320,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                       <SelectValue placeholder="Selecione o produto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {produtosDisponiveis?.map((produto) => (
+                      {produtosParaExibir?.map((produto) => (
                         <SelectItem key={produto.id} value={produto.id}>
                           {produto.display_name || produto.produto}
                         </SelectItem>
@@ -315,6 +368,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                   type="number"
                   value={formData.quantidade_caixas}
                   onChange={(e) => setFormData(prev => ({ ...prev, quantidade_caixas: e.target.value }))}
+                  onKeyDown={(e) => handleKeyDown(e, 'peso_bruto')}
                   placeholder="0"
                 />
               </div>
@@ -330,8 +384,10 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                     step="0.1"
                     value={formData.peso_bruto}
                     onChange={(e) => setFormData(prev => ({ ...prev, peso_bruto: e.target.value }))}
+                    onKeyDown={(e) => handleKeyDown(e)}
                     placeholder="Ex: 150.5"
                     required
+                    autoFocus
                   />
                 </div>
 

@@ -188,6 +188,8 @@ const RecebimentoAtivo = () => {
               produtos={produtos}
               onProdutoAdded={() => refetch()}
               recebimento={recebimento}
+              pedidoOrigemId={recebimento?.pedido_origem_id}
+              tipoOrigem={recebimento?.tipo_origem as 'compra' | 'simples'}
             />
           </TabsContent>
 

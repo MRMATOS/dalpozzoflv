@@ -74,6 +74,10 @@ const TipoCaixaSelector: React.FC<TipoCaixaSelectorProps> = ({
       handleNovaClick();
       return;
     }
+    if (newValue === 'sem-caixa') {
+      onValueChange('sem-caixa');
+      return;
+    }
     onValueChange(newValue);
   };
 
@@ -84,6 +88,11 @@ const TipoCaixaSelector: React.FC<TipoCaixaSelectorProps> = ({
           <SelectValue placeholder="Selecione o tipo" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="sem-caixa" className="text-blue-600 font-medium">
+            <div className="flex items-center">
+              <span>Sem Caixa (Tara: 0 kg)</span>
+            </div>
+          </SelectItem>
           {tiposCaixa?.map((tipo) => (
             <SelectItem key={tipo.id} value={tipo.id}>
               <div className="flex items-center justify-between w-full">

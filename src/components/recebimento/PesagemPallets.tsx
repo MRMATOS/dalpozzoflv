@@ -69,6 +69,12 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
   };
 
   const removerPallet = async (palletId: string, ordem: number) => {
+    // Verificar se é o último pallet e se tem pelo menos 2 pallets
+    if (pallets.length <= 2) {
+      toast.error('Deve haver pelo menos 2 pallets registrados');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('recebimentos_pallets')
@@ -90,6 +96,12 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
 
   const gerarPalletsMedia = async () => {
     if (!recebimento || !recebimento.quantidade_pallets_informada || !recebimento.peso_medio_calculado) return;
+    
+    // Validar mínimo de 2 pallets
+    if (recebimento.quantidade_pallets_informada < 2) {
+      toast.error('Quantidade mínima de pallets é 2');
+      return;
+    }
     
     setLoading(true);
     try {
@@ -118,6 +130,13 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
       setLoading(false);
     }
   };
+
+  // Auto-gerar pallets no modo média quando carregado pela primeira vez
+  React.useEffect(() => {
+    if (isModoMedia && pallets.length === 0 && recebimento?.quantidade_pallets_informada && recebimento?.peso_medio_calculado) {
+      gerarPalletsMedia();
+    }
+  }, [isModoMedia, pallets.length, recebimento]);
 
   return (
     <div className="space-y-6">
@@ -243,6 +262,8 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
                         size="sm"
                         onClick={() => removerPallet(pallet.id, pallet.ordem)}
                         className="text-red-600 hover:text-red-700"
+                        disabled={pallets.length <= 2}
+                        title={pallets.length <= 2 ? "Mínimo de 2 pallets necessário" : "Remover pallet"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
