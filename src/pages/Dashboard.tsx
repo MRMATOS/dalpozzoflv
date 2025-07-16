@@ -76,10 +76,10 @@ const Dashboard = () => {
     },
     canView('historico_pedidos') && {
       title: "Histórico de Pedidos",
-      description: "Visualizar pedidos de compra",
+      description: "Visualizar histórico completo de pedidos",
       icon: BarChart3,
       color: "bg-indigo-500",
-      onClick: () => navigate("/historico-pedidos")
+      onClick: () => navigate("/historico-pedidos-completo")
     },
     // Terceira linha: Histórico de Requisições, Admin de Permissões, Configurações
     canView('historico_requisicoes') && {

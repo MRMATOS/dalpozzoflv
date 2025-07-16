@@ -14,6 +14,7 @@ import ResumoPedido from "./pages/ResumoPedido";
 import Configuracoes from "./pages/Configuracoes";
 import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 import HistoricoPedidos from "./pages/HistoricoPedidos";
+import HistoricoPedidosCompleto from "./pages/HistoricoPedidosCompleto";
 import GestaoCd from "./pages/GestaoCd";
 import TransferenciasCD from "./pages/TransferenciasCD";
 import Transferencias from "./pages/Transferencias";
@@ -112,6 +113,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <HistoricoPedidos />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/historico-pedidos-completo" 
+                element={
+                  <ProtectedRoute allowedTypes={['master', 'comprador']}>
+                    <HistoricoPedidosCompleto />
                   </ProtectedRoute>
                 } 
               />

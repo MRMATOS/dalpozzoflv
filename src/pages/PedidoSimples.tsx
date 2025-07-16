@@ -113,21 +113,38 @@ const PedidoSimples = () => {
     try {
       let fornecedorFinalId = fornecedorId;
       
-      // Se fornecedor não existe, criar automaticamente
+      // Se fornecedor não existe, verificar se já existe com nome similar e criar se necessário
       if (!fornecedorId && fornecedor) {
-        const { data: novoFornecedor, error: errorFornecedor } = await supabase
+        // Primeiro, verificar se já existe um fornecedor com nome similar
+        const { data: fornecedoresExistentes } = await supabase
           .from('fornecedores')
-          .insert({
-            nome: fornecedor,
-            status_tipo: 'Pedido Simples'
-          })
-          .select()
-          .single();
+          .select('id, nome')
+          .ilike('nome', fornecedor.trim());
 
-        if (errorFornecedor) throw errorFornecedor;
-        fornecedorFinalId = novoFornecedor.id;
-        
-        toast.success(`Fornecedor "${fornecedor}" cadastrado automaticamente`);
+        if (fornecedoresExistentes && fornecedoresExistentes.length > 0) {
+          // Se encontrou fornecedor com nome similar, usar o existente
+          const fornecedorExistente = fornecedoresExistentes[0];
+          fornecedorFinalId = fornecedorExistente.id;
+          setFornecedor(fornecedorExistente.nome);
+          setFornecedorId(fornecedorExistente.id);
+          
+          toast.info(`Usando fornecedor existente: "${fornecedorExistente.nome}"`);
+        } else {
+          // Criar novo fornecedor apenas se não existir similar
+          const { data: novoFornecedor, error: errorFornecedor } = await supabase
+            .from('fornecedores')
+            .insert({
+              nome: fornecedor.trim(),
+              status_tipo: 'Pedido Simples'
+            })
+            .select()
+            .single();
+
+          if (errorFornecedor) throw errorFornecedor;
+          fornecedorFinalId = novoFornecedor.id;
+          
+          toast.success(`Fornecedor "${fornecedor}" cadastrado automaticamente`);
+        }
       }
 
       const produtoSelecionado = produtos.find(p => p.id === produtoId);
@@ -352,46 +369,44 @@ const PedidoSimples = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Primeira linha: Fornecedor e Produto */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Fornecedor */}
+                     {/* Fornecedor */}
                     <div className="space-y-2">
                       <Label htmlFor="fornecedor">Fornecedor *</Label>
-                      <div className="relative">
-                        <Input
-                          id="fornecedor"
-                          value={fornecedor}
-                          onChange={(e) => {
-                            setFornecedor(e.target.value);
-                            setFornecedorId(null);
-                          }}
-                          placeholder="Digite o nome do fornecedor..."
-                          className="pr-10"
-                        />
-                        <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      </div>
+                      <Combobox
+                        options={fornecedores.map(f => ({
+                          value: f.id,
+                          label: f.nome
+                        }))}
+                        value={fornecedorId || ""}
+                        onValueChange={(value) => {
+                          setFornecedorId(value);
+                          const fornecedorSelecionado = fornecedores.find(f => f.id === value);
+                          setFornecedor(fornecedorSelecionado ? fornecedorSelecionado.nome : "");
+                        }}
+                        placeholder="Busque e selecione o fornecedor..."
+                        searchPlaceholder="Buscar fornecedor..."
+                        emptyText="Nenhum fornecedor encontrado. Digite para criar novo."
+                        className="w-full"
+                      />
                       
-                      {/* Sugestões de fornecedores */}
-                      {fornecedor && !fornecedorId && fornecedoresFiltrados.length > 0 && (
-                        <div className="border rounded-md bg-white shadow-sm max-h-40 overflow-y-auto">
-                          {fornecedoresFiltrados.slice(0, 5).map((f) => (
-                            <div
-                              key={f.id}
-                              onClick={() => selecionarFornecedor(f)}
-                              className="p-2 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm">{f.nome}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {f.status_tipo || 'Cotação e Pedido'}
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
+                      {/* Opção para criar novo fornecedor */}
+                      {!fornecedorId && (
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            placeholder="Ou digite um novo fornecedor..."
+                            value={fornecedor}
+                            onChange={(e) => {
+                              setFornecedor(e.target.value);
+                              setFornecedorId(null);
+                            }}
+                            className="flex-1"
+                          />
                         </div>
                       )}
                       
-                      {fornecedor && !fornecedorId && fornecedoresFiltrados.length === 0 && (
+                      {fornecedor && !fornecedorId && (
                         <p className="text-xs text-blue-600">
-                          Fornecedor será cadastrado automaticamente
+                          Novo fornecedor "{fornecedor}" será cadastrado automaticamente
                         </p>
                       )}
                     </div>
