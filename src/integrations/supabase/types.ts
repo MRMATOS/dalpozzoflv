@@ -1620,6 +1620,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_master_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       populate_default_permissions: {
         Args: { target_user_id: string; user_type: string }
         Returns: undefined
