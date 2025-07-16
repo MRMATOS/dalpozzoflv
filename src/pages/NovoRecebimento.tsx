@@ -78,19 +78,24 @@ const NovoRecebimento = () => {
     e.preventDefault();
     if (!profile?.id || !pedidoSelecionado) return;
 
-    // Validações para modo média
-    if (formData.modo_pesagem === 'media') {
-      if (!formData.quantidade_pallets || !formData.peso_total) {
-        toast.error('Preencha quantidade de pallets e peso total para o modo média');
-        return;
-      }
-      
+      // Validações para modo média
+      if (formData.modo_pesagem === 'media') {
+        if (!formData.quantidade_pallets || !formData.peso_total) {
+          toast.error('Preencha quantidade de pallets e peso total para o modo média');
+          return;
+        }
+        
       const quantidade = parseInt(formData.quantidade_pallets);
       if (quantidade < 2) {
-        toast.error('A pesagem por média exige pelo menos 2 pallets');
+        toast.error('Não é possível criar recebimento com apenas 1 pallet. Mínimo: 2 pallets');
         return;
       }
-    }
+      }
+
+      // Para modo sem palete, não fazer validações de pallet
+      if (formData.modo_pesagem === 'sem_palete') {
+        // Nenhuma validação específica necessária
+      }
 
     setLoading(true);
     try {
@@ -166,7 +171,7 @@ const NovoRecebimento = () => {
               </div>
             </div>
             <div className="text-sm text-gray-500">
-              Etapa 2/3 - Modo de Pesagem
+              Etapa 2/3 - Configurar Modo de Pesagem
             </div>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Package, Plus, Undo2 } from "lucide-react";
+import { Package, Plus, Undo2, Trash2 } from "lucide-react";
 import { toast } from 'sonner';
 import TipoCaixaSelector from './TipoCaixaSelector';
 import PalletsVisualizacao from './PalletsVisualizacao';
@@ -65,6 +65,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
   const [loading, setLoading] = useState(false);
 
   const isModoMedia = recebimento?.modo_pesagem === 'media';
+  const isModoSemPalete = recebimento?.modo_pesagem === 'sem_palete';
   const primeiroProdutoRegistrado = produtos.length > 0;
   const produtoTravado = isModoMedia && primeiroProdutoRegistrado ? produtos[0].produto_nome : null;
 
@@ -123,10 +124,22 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
       return acc.concat(produto.pallets_utilizados || []);
     }, []);
     setPalletsIndisponiveis(palletsUsados);
-  }, [produtos]);
+    
+    // Auto-selecionar próximo palete no modo individual
+    if (recebimento?.modo_pesagem === 'individual' && pallets.length > 0) {
+      const palletsDisponiveis = pallets
+        .filter(p => !palletsUsados.includes(p.ordem))
+        .sort((a, b) => a.ordem - b.ordem);
+      
+      if (palletsDisponiveis.length > 0 && palletsUtilizados.length === 0) {
+        setPalletsUtilizados([palletsDisponiveis[0].ordem]);
+      }
+    }
+  }, [produtos, pallets, recebimento?.modo_pesagem]);
 
   const calcularTara = () => {
-    const taraPallets = palletsUtilizados.reduce((acc, ordem) => {
+    // No modo sem palete, não há tara de pallets
+    const taraPallets = isModoSemPalete ? 0 : palletsUtilizados.reduce((acc, ordem) => {
       const pallet = pallets.find(p => p.ordem === ordem);
       return acc + (pallet?.peso_kg || 0);
     }, 0);
@@ -176,7 +189,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
           tipo_caixa_nome: isSemCaixa ? 'Sem Caixa' : (tipoCaixa?.nome || null),
           tara_caixas_kg: taraCaixas,
           tara_pallets_kg: taraPallets,
-          pallets_utilizados: palletsUtilizados,
+          pallets_utilizados: isModoSemPalete ? [] : palletsUtilizados,
           loja_destino: formData.loja_destino
         });
 
@@ -193,10 +206,11 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         localStorage.setItem('ultima-quantidade-recebimento', formData.quantidade_caixas);
       }
 
+      // Otimização do foco: manter produto e tipo de caixa após primeiro registro
       setFormData(prev => ({
-        produto_id: produtoTravado ? prev.produto_id : '',
+        produto_id: (produtoTravado || (primeiroProdutoRegistrado && !isModoSemPalete)) ? prev.produto_id : '',
         peso_bruto: '',
-        quantidade_caixas: prev.quantidade_caixas,
+        quantidade_caixas: isModoSemPalete ? '' : prev.quantidade_caixas, // Zerar qtd no modo sem palete
         tipo_caixa_id: prev.tipo_caixa_id,
         loja_destino: prev.loja_destino
       }));
@@ -263,11 +277,32 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
         }
       } else {
         // Se não há próximo campo, submeter o formulário
-        const form = e.currentTarget.closest('form');
-        if (form) {
-          form.requestSubmit();
-        }
+        adicionarProduto(e as any);
       }
+    }
+  };
+
+  const editarProduto = async (produtoId: string) => {
+    // Implementar edição de produto
+    toast.info('Funcionalidade de edição em desenvolvimento');
+  };
+
+  const excluirProduto = async (produtoId: string, produtoNome: string) => {
+    if (!confirm(`Excluir produto "${produtoNome}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('recebimentos_produtos')
+        .delete()
+        .eq('id', produtoId);
+
+      if (error) throw error;
+
+      onProdutoAdded();
+      toast.success('Produto excluído com sucesso!');
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      toast.error('Erro ao excluir produto');
     }
   };
 
@@ -294,6 +329,7 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
           </CardTitle>
           <CardDescription>
             Registre o peso bruto e deixe o sistema calcular automaticamente o peso líquido
+            {isModoSemPalete && " • Modo sem palete ativo"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -314,7 +350,14 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 ) : (
                   <Select
                     value={formData.produto_id}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, produto_id: value }))}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({ ...prev, produto_id: value }));
+                      // Auto-focus no próximo campo após seleção
+                      setTimeout(() => {
+                        const nextField = document.getElementById('quantidade_caixas');
+                        if (nextField) nextField.focus();
+                      }, 100);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o produto" />
@@ -356,7 +399,14 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 <TipoCaixaSelector
                   tiposCaixa={tiposCaixa || []}
                   value={formData.tipo_caixa_id}
-                  onValueChange={handleTipoCaixaChange}
+                  onValueChange={(value) => {
+                    handleTipoCaixaChange(value);
+                    // Auto-focus após seleção
+                    setTimeout(() => {
+                      const nextField = document.getElementById('quantidade_caixas');
+                      if (nextField) nextField.focus();
+                    }, 100);
+                  }}
                   onTiposUpdated={refetchTiposCaixa}
                 />
               </div>
@@ -422,12 +472,31 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 </Button>
               </div>
 
-              <PalletsVisualizacao
-                pallets={pallets}
-                palletsUtilizados={palletsUtilizados}
-                onPalletsChange={setPalletsUtilizados}
-                palletsIndisponiveis={palletsIndisponiveis}
-              />
+              {/* Não mostrar seleção de pallets no modo sem palete */}
+              {!isModoSemPalete && (
+                <PalletsVisualizacao
+                  pallets={pallets}
+                  palletsUtilizados={palletsUtilizados}
+                  onPalletsChange={setPalletsUtilizados}
+                  palletsIndisponiveis={palletsIndisponiveis}
+                  modoMedia={isModoMedia}
+                  modoIndividual={recebimento?.modo_pesagem === 'individual'}
+                />
+              )}
+
+              {/* Exibir informação para modo sem palete */}
+              {isModoSemPalete && (
+                <Card className="bg-yellow-50 border-yellow-200">
+                  <CardContent className="pt-4">
+                    <div className="text-center">
+                      <div className="text-sm text-yellow-700 font-medium">Modo Sem Palete</div>
+                      <div className="text-xs text-yellow-600 mt-1">
+                        Produtos grandes ou unitários - sem necessidade de pallets
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </form>
         </CardContent>
@@ -447,13 +516,33 @@ const RecebimentoProduto: React.FC<RecebimentoProdutoProps> = ({
                 <div key={produto.id} className="border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">{produto.produto_nome}</h4>
-                    <Badge variant="outline">#{index + 1}</Badge>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline">#{index + 1}</Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => editarProduto(produto.id)}
+                        className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                        title="Editar produto"
+                      >
+                        <Package className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => excluirProduto(produto.id, produto.produto_nome)}
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        title="Excluir produto"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600">
                     <div>Peso Bruto: <span className="font-mono">{produto.peso_bruto_kg.toFixed(1)} kg</span></div>
                     <div>Peso Líquido: <span className="font-mono font-bold text-green-600">{produto.peso_liquido_kg.toFixed(1)} kg</span></div>
                     <div>Caixas: {produto.quantidade_caixas} {produto.tipo_caixa_nome && `(${produto.tipo_caixa_nome})`}</div>
-                    <div>Pallets: {produto.pallets_utilizados && produto.pallets_utilizados.length > 0 ? produto.pallets_utilizados.join(', ') : 'Nenhum'}</div>
+                    <div>Pallets: {isModoSemPalete ? 'N/A' : (produto.pallets_utilizados && produto.pallets_utilizados.length > 0 ? produto.pallets_utilizados.join(', ') : 'Nenhum')}</div>
                   </div>
                 </div>
               ))}

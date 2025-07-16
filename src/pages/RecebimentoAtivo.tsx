@@ -141,7 +141,9 @@ const RecebimentoAtivo = () => {
       <div className="bg-white border-b px-4 sm:px-6 lg:px-8 py-3">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center space-x-2">
-            <h1 className="text-sm font-medium text-gray-600">Recebimento Ativo</h1>
+            <h1 className="text-sm font-medium text-gray-600">
+              Recebimento Ativo - Etapa {recebimento?.modo_pesagem === 'sem_palete' ? '2' : '3'}/3
+            </h1>
             <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
               {recebimento.status}
             </Badge>
@@ -149,18 +151,22 @@ const RecebimentoAtivo = () => {
               <span className="text-sm text-gray-500">{recebimento.fornecedor}</span>
             )}
             <Badge variant="outline" className="text-xs">
-              {recebimento.modo_pesagem === 'media' ? 'Pesagem por média' : 'Pesagem individual'}
+              {recebimento.modo_pesagem === 'media' ? 'Pesagem por média' : 
+               recebimento.modo_pesagem === 'sem_palete' ? 'Sem palete' : 'Pesagem individual'}
             </Badge>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Tabs defaultValue="pallets" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pallets">
-              Pallets ({pallets.length})
-            </TabsTrigger>
+        <Tabs defaultValue={recebimento?.modo_pesagem === 'sem_palete' ? 'produtos' : 'pallets'} className="space-y-6">
+          <TabsList className={`grid w-full ${recebimento?.modo_pesagem === 'sem_palete' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+            {/* Não mostrar aba Pallets no modo sem palete */}
+            {recebimento?.modo_pesagem !== 'sem_palete' && (
+              <TabsTrigger value="pallets">
+                Pallets ({pallets.length})
+              </TabsTrigger>
+            )}
             <TabsTrigger value="produtos">
               Produtos ({produtos.length})
             </TabsTrigger>
@@ -172,14 +178,17 @@ const RecebimentoAtivo = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="pallets">
-            <PesagemPallets 
-              recebimentoId={id!} 
-              pallets={pallets}
-              onPalletAdded={() => refetch()}
-              recebimento={recebimento}
-            />
-          </TabsContent>
+          {/* Não mostrar aba Pallets no modo sem palete */}
+          {recebimento?.modo_pesagem !== 'sem_palete' && (
+            <TabsContent value="pallets">
+              <PesagemPallets 
+                recebimentoId={id!} 
+                pallets={pallets}
+                onPalletAdded={() => refetch()}
+                recebimento={recebimento}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="produtos">
             <RecebimentoProduto 
@@ -194,21 +203,24 @@ const RecebimentoAtivo = () => {
           </TabsContent>
 
           <TabsContent value="resumo">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Scale className="h-5 w-5 mr-2" />
-                    Pallets Registrados
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{pallets.length}</div>
-                  <p className="text-sm text-gray-500">
-                    Peso total: {pallets.reduce((acc, p) => acc + (p.peso_kg || 0), 0).toFixed(1)} kg
-                  </p>
-                </CardContent>
-              </Card>
+            <div className={`grid grid-cols-1 ${recebimento?.modo_pesagem === 'sem_palete' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-6`}>
+              {/* Não mostrar card de pallets no modo sem palete */}
+              {recebimento?.modo_pesagem !== 'sem_palete' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Scale className="h-5 w-5 mr-2" />
+                      Pallets Registrados
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{pallets.length}</div>
+                    <p className="text-sm text-gray-500">
+                      Peso total: {pallets.reduce((acc, p) => acc + (p.peso_kg || 0), 0).toFixed(1)} kg
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader>
@@ -231,12 +243,15 @@ const RecebimentoAtivo = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Pallets:</span>
-                      <Badge variant={pallets.length > 0 ? "default" : "secondary"}>
-                        {pallets.length > 0 ? "Registrados" : "Pendente"}
-                      </Badge>
-                    </div>
+                    {/* Não mostrar status de pallets no modo sem palete */}
+                    {recebimento?.modo_pesagem !== 'sem_palete' && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Pallets:</span>
+                        <Badge variant={pallets.length > 0 ? "default" : "secondary"}>
+                          {pallets.length > 0 ? "Registrados" : "Pendente"}
+                        </Badge>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Produtos:</span>
                       <Badge variant={produtos.length > 0 ? "default" : "secondary"}>

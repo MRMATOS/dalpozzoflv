@@ -60,6 +60,12 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
       setObservacoes('');
       onPalletAdded();
       toast.success(`Pallet ${proximaOrdem} registrado com sucesso!`);
+      
+      // Auto-focus no campo peso após registro
+      setTimeout(() => {
+        const pesoField = document.getElementById('peso');
+        if (pesoField) pesoField.focus();
+      }, 100);
     } catch (error) {
       console.error('Erro ao adicionar pallet:', error);
       toast.error('Erro ao registrar pallet');
@@ -69,7 +75,13 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
   };
 
   const removerPallet = async (palletId: string, ordem: number) => {
-    // Verificar se é o último pallet e se tem pelo menos 2 pallets
+    // Não permitir criar recebimento com apenas 1 pallet
+    if (pallets.length <= 1) {
+      toast.error('Não é possível excluir todos os pallets');
+      return;
+    }
+
+    // Verificar se ficará apenas 1 pallet (mínimo de 2)
     if (pallets.length <= 2) {
       toast.error('Deve haver pelo menos 2 pallets registrados');
       return;
@@ -99,7 +111,7 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
     
     // Validar mínimo de 2 pallets
     if (recebimento.quantidade_pallets_informada < 2) {
-      toast.error('Quantidade mínima de pallets é 2');
+      toast.error('Não é possível criar recebimento com apenas 1 pallet. Mínimo: 2 pallets');
       return;
     }
     
@@ -194,24 +206,38 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="peso">Peso (kg) *</Label>
-                <Input
-                  id="peso"
-                  type="number"
-                  step="0.1"
-                  value={peso}
-                  onChange={(e) => setPeso(e.target.value)}
-                  placeholder="Ex: 25.5"
-                  required
-                />
+                 <Input
+                   id="peso"
+                   type="number"
+                   step="0.1"
+                   value={peso}
+                   onChange={(e) => setPeso(e.target.value)}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       e.preventDefault();
+                       const observacoesField = document.getElementById('observacoes');
+                       if (observacoesField) observacoesField.focus();
+                     }
+                   }}
+                   placeholder="Ex: 25.5"
+                   required
+                   autoFocus
+                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="observacoes">Observações (opcional)</Label>
-                <Input
-                  id="observacoes"
-                  value={observacoes}
-                  onChange={(e) => setObservacoes(e.target.value)}
-                  placeholder="Ex: Pallet danificado"
-                />
+                 <Input
+                   id="observacoes"
+                   value={observacoes}
+                   onChange={(e) => setObservacoes(e.target.value)}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter') {
+                       e.preventDefault();
+                       adicionarPallet(e as any);
+                     }
+                   }}
+                   placeholder="Ex: Pallet danificado"
+                 />
               </div>
               <div className="flex items-end">
                 <Button type="submit" disabled={loading} className="w-full">
@@ -262,8 +288,8 @@ const PesagemPallets: React.FC<PesagemPalletsProps> = ({
                         size="sm"
                         onClick={() => removerPallet(pallet.id, pallet.ordem)}
                         className="text-red-600 hover:text-red-700"
-                        disabled={pallets.length <= 2}
-                        title={pallets.length <= 2 ? "Mínimo de 2 pallets necessário" : "Remover pallet"}
+                        disabled={pallets.length <= 1}
+                        title={pallets.length <= 1 ? "Não é possível excluir todos os pallets" : "Remover pallet"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
