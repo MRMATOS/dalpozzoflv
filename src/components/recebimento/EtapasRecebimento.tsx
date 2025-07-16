@@ -11,6 +11,8 @@ const EtapasRecebimento: React.FC<EtapasRecebimentoProps> = ({
   etapaAtual, 
   labels = ['Seleção do Pedido', 'Modo de Pesagem', 'Recebimento Ativo'] 
 }) => {
+  // Log para debugging
+  console.log('EtapasRecebimento renderizado:', { etapaAtual, labels });
   const etapas = [
     { numero: 1, label: labels[0], ativa: etapaAtual >= 1, completa: etapaAtual > 1 },
     { numero: 2, label: labels[1], ativa: etapaAtual >= 2, completa: etapaAtual > 2 },

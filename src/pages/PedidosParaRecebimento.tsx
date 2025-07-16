@@ -21,7 +21,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 const PedidosParaRecebimento = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [filtroFornecedor, setFiltroFornecedor] = useState('');
+  
+  // Log para debugging
+  console.log('PedidosParaRecebimento renderizado');
+  const [filtroFornecedor, setFiltroFornecedor] = useState('todos');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [busca, setBusca] = useState('');
   const [expandedPedidos, setExpandedPedidos] = useState<Set<string>>(new Set());
@@ -98,7 +101,7 @@ const PedidosParaRecebimento = () => {
   })) || [];
 
   const todosPedidos = [...pedidosCompraComTipo, ...pedidosSimplesComTipo].filter(pedido => {
-    if (filtroFornecedor && pedido.fornecedor !== filtroFornecedor) return false;
+    if (filtroFornecedor && filtroFornecedor !== 'todos' && pedido.fornecedor !== filtroFornecedor) return false;
     if (busca && !pedido.fornecedor?.toLowerCase().includes(busca.toLowerCase())) return false;
     return true;
   });
@@ -159,7 +162,7 @@ const PedidosParaRecebimento = () => {
                     <SelectValue placeholder="Todos os fornecedores" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os fornecedores</SelectItem>
+                    <SelectItem value="todos">Todos os fornecedores</SelectItem>
                     {fornecedoresUnicos.map(fornecedor => (
                       <SelectItem key={fornecedor} value={fornecedor}>
                         {fornecedor}
@@ -174,7 +177,7 @@ const PedidosParaRecebimento = () => {
                   variant="outline" 
                   onClick={() => {
                     setBusca('');
-                    setFiltroFornecedor('');
+                    setFiltroFornecedor('todos');
                     setFiltroStatus('');
                   }}
                   className="w-full"

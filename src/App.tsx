@@ -19,6 +19,7 @@ import TransferenciasCD from "./pages/TransferenciasCD";
 import Transferencias from "./pages/Transferencias";
 import AdminPermissions from "./pages/AdminPermissions";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ErrorBoundary from "./components/ErrorBoundary";
 import NotFound from "./pages/NotFound";
 import RecebimentoDashboard from "@/pages/RecebimentoDashboard";
 import NovoRecebimento from "@/pages/NovoRecebimento";
@@ -149,41 +150,51 @@ function App() {
               <Route 
                 path="/recebimento" 
                 element={
-                  <ProtectedRoute>
-                    <RecebimentoDashboard />
-                  </ProtectedRoute>
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <RecebimentoDashboard />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
                 } 
               />
               <Route 
                 path="/recebimento/pedidos" 
                 element={
-                  <ProtectedRoute>
-                    <PedidosParaRecebimento />
-                  </ProtectedRoute>
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <PedidosParaRecebimento />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
                 } 
               />
               <Route 
                 path="/recebimento/novo" 
                 element={
-                  <ProtectedRoute>
-                    <NovoRecebimento />
-                  </ProtectedRoute>
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <NovoRecebimento />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
                 } 
               />
               <Route 
                 path="/recebimento/:id" 
                 element={
-                  <ProtectedRoute>
-                    <RecebimentoAtivo />
-                  </ProtectedRoute>
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <RecebimentoAtivo />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
                 } 
               />
               <Route 
                 path="/recebimento/historico" 
                 element={
-                  <ProtectedRoute>
-                    <HistoricoRecebimentos />
-                  </ProtectedRoute>
+                  <ErrorBoundary>
+                    <ProtectedRoute>
+                      <HistoricoRecebimentos />
+                    </ProtectedRoute>
+                  </ErrorBoundary>
                 } 
               />
               <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />

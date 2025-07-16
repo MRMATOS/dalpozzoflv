@@ -69,6 +69,7 @@ const NovoRecebimento = () => {
   // Redirecionar para seleção de pedidos se não tiver pedido selecionado
   useEffect(() => {
     if (!pedidoId || !tipoPedido) {
+      console.log('Redirecionando para seleção de pedidos - Missing:', { pedidoId, tipoPedido });
       navigate('/recebimento/pedidos');
     }
   }, [pedidoId, tipoPedido, navigate]);
@@ -125,7 +126,15 @@ const NovoRecebimento = () => {
     }
   };
 
-  if (!pedidoSelecionado) {
+  // Adicionar logs para debugging
+  console.log('NovoRecebimento - State:', { 
+    pedidoId, 
+    tipoPedido, 
+    pedidoSelecionado: !!pedidoSelecionado,
+    profile: !!profile 
+  });
+
+  if (!pedidoSelecionado && pedidoId && tipoPedido) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
