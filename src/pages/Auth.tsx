@@ -130,7 +130,7 @@ const Auth = () => {
               </Alert>}
 
             <div className="text-xs text-gray-500 space-y-1">
-              <p><strong>Para funcionários:</strong> Faça o login com sua conta Google e aguarde aprovação.</p>
+              <p><strong>Para usuários:</strong> Entre com sua conta Google e aguarde aprovação.</p>
             </div>
           </CardContent>
         </Card>
