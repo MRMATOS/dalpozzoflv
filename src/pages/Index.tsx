@@ -25,23 +25,23 @@ const Index = () => {
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-6 bg-slate-500">
             <span className="text-white text-3xl font-bold">FLV</span>
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Verdura Super Fácil</h1>
-          <p className="text-xl text-gray-600">Facilitando o gerenciamento das rotinas da feira</p>
-          <p className="text-gray-500 mt-2">Gestão completa de frutas, legumes e verduras</p>
+          <p className="text-xl text-gray-600">Facilitando as rotinas da feira</p>
+          
         </div>
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-center text-2xl">Bem-vindo</CardTitle>
+            <CardTitle className="text-center text-2xl text-blue-600">Bem-vindo</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-4">
-              <p className="text-gray-600">Sistema integrado para gestão de estoque, requisições, cotações e recebimento de produtos FLV.</p>
+              <p className="text-gray-600">Gestão de estoque, requisições, cotações e recebimento de produtos FLV.</p>
               
-              <Button onClick={() => navigate("/auth")} size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3">
+              <Button onClick={() => navigate("/auth")} size="lg" className="w-full text-white font-semibold py-3 bg-blue-600 hover:bg-blue-500">
                 Acessar Sistema
               </Button>
             </div>
