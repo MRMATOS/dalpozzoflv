@@ -136,8 +136,7 @@ const Auth = () => {
             )}
 
             <div className="text-xs text-gray-500 space-y-1">
-              <p><strong>Para funcionários:</strong> Entre em contato com o TI para receber o convite por email</p>
-              <p><strong>Master:</strong> Use o email dalpozzo.ti@gmail.com</p>
+              <p><strong>Para funcionários:</strong> Faça o login com sua conta Google e aguarde aprovação.</p>
             </div>
           </CardContent>
         </Card>
