@@ -1,58 +1,47 @@
-
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
-
+  const {
+    user,
+    loading
+  } = useAuth();
   useEffect(() => {
     if (!loading && user) {
       navigate("/dashboard");
     }
   }, [user, loading, navigate]);
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-emerald-600 rounded-lg flex items-center justify-center mx-auto mb-6">
             <span className="text-white text-3xl font-bold">FLV</span>
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Sistema FLV</h1>
-          <p className="text-xl text-gray-600">Super Dal Pozzo</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Verdura Super Fácil</h1>
+          <p className="text-xl text-gray-600">Facilitando o gerenciamento das rotinas da feira</p>
           <p className="text-gray-500 mt-2">Gestão completa de frutas, legumes e verduras</p>
         </div>
 
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle className="text-center text-2xl">Bem-vindo ao Sistema</CardTitle>
+            <CardTitle className="text-center text-2xl">Bem-vindo</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="text-center space-y-4">
-              <p className="text-gray-600">
-                Sistema integrado para gestão de estoque, requisições, cotações e recebimento de produtos FLV.
-              </p>
+              <p className="text-gray-600">Sistema integrado para gestão de estoque, requisições, cotações e recebimento de produtos FLV.</p>
               
-              <Button
-                onClick={() => navigate("/auth")}
-                size="lg"
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3"
-              >
+              <Button onClick={() => navigate("/auth")} size="lg" className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3">
                 Acessar Sistema
               </Button>
             </div>
@@ -81,27 +70,19 @@ const Index = () => {
         </Card>
 
         <div className="text-center mt-6 text-sm text-gray-500">
-          <p>© 2024 Super Dal Pozzo - Sistema FLV v2.0</p>
-          <p>Desenvolvido com segurança e praticidade</p>
+          <p>© 2025 Verdura Super Fácil - Sistema FLV v2.0</p>
+          <p>Desenvolvido com inteligência sem experiência</p>
           <div className="flex justify-center space-x-4 mt-2">
-            <button
-              onClick={() => navigate("/politica-privacidade")}
-              className="text-gray-400 hover:text-gray-600 underline"
-            >
+            <button onClick={() => navigate("/politica-privacidade")} className="text-gray-400 hover:text-gray-600 underline">
               Política de Privacidade
             </button>
             <span className="text-gray-300">•</span>
-            <button
-              onClick={() => navigate("/termos-uso")}
-              className="text-gray-400 hover:text-gray-600 underline"
-            >
+            <button onClick={() => navigate("/termos-uso")} className="text-gray-400 hover:text-gray-600 underline">
               Termos de Uso
             </button>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
