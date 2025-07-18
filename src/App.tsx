@@ -154,7 +154,7 @@ function App() {
                 path="/transferencias/:lojaDestino" 
                 element={
                   <ProtectedRoute allowedTypes={['master', 'cd']}>
-                    <Transferências />
+                    <Transferencias />
                   </ProtectedRoute>
                 } 
               />
