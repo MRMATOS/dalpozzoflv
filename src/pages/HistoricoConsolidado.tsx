@@ -11,6 +11,7 @@ import { useHistoricoConsolidado, EventoCalendario, PedidoConsolidado } from '@/
 import { useHistoricoOtimizado } from '@/hooks/useHistoricoOtimizado';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import CalendarioView from '@/components/historico/CalendarioView';
+import ListaPorProdutos from '@/components/historico/ListaPorProdutos';
 import MetricasDashboard from '@/components/historico/MetricasDashboard';
 import DetalheEvento from '@/components/historico/DetalheEvento';
 import FiltrosAvancados from '@/components/historico/FiltrosAvancados';
@@ -31,6 +32,7 @@ export default function HistoricoConsolidado() {
   const [pedidosDoDiaAtual, setPedidosDoDiaAtual] = useState<PedidoConsolidado[]>([]);
   const [textoBusca, setTextoBusca] = useState('');
   const [currentCalendarView, setCurrentCalendarView] = useState('month');
+  const [modoLista, setModoLista] = useState<'fornecedor' | 'produtos'>('fornecedor');
   // CORREÇÃO: Inicializar sem filtros para não carregar automaticamente com filtros aplicados
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
@@ -275,12 +277,67 @@ export default function HistoricoConsolidado() {
             metricasTab={loading ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
             listaTab={loading ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">
+                {/* PARTE 4: Seletor de visualização */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">Listar por:</span>
+                        <div className="flex gap-1">
+                          <Button
+                            variant={modoLista === 'fornecedor' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setModoLista('fornecedor')}
+                            className="h-8"
+                          >
+                            Fornecedor
+                          </Button>
+                          <Button
+                            variant={modoLista === 'produtos' ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setModoLista('produtos')}
+                            className="h-8"
+                          >
+                            Produtos
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Badge variant="secondary" className="text-xs">
+                        {modoLista === 'fornecedor' 
+                          ? `${dadosFiltrados.length} pedidos`
+                          : `Agrupados por produto`
+                        }
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {dadosFiltrados.length === 0 ? (
                   <Card><CardContent className="p-8 text-center">
                     <List className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-medium mb-2">Nenhum resultado encontrado</h3>
                     <p className="text-muted-foreground">Tente ajustar os filtros ou o período de busca</p>
                   </CardContent></Card>
+                ) : modoLista === 'produtos' ? (
+                  <ListaPorProdutos 
+                    pedidos={dadosFiltrados}
+                    onPedidoClick={(pedido) => handleEventClick({
+                      id: pedido.id,
+                      title: `${pedido.fornecedor} - R$ ${pedido.valorTotal.toFixed(2)}`,
+                      start: new Date(pedido.data),
+                      end: new Date(pedido.data),
+                      resource: {
+                        pedidos: [pedido],
+                        totalValor: pedido.valorTotal,
+                        totalItens: pedido.totalItens,
+                        tipos: [pedido.tipo],
+                        fornecedores: [pedido.fornecedor],
+                        dataCompleta: pedido.data.split('T')[0]
+                      }
+                    })}
+                    loading={loading}
+                  />
                 ) : (
                   <StaggerContainer className="space-y-2">
                     {dadosFiltrados.map((pedido) => (
@@ -301,17 +358,24 @@ export default function HistoricoConsolidado() {
                         })}>
                           <Card><CardContent className="p-4">
                             <div className="flex justify-between items-start">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant={pedido.tipo === 'cotacao' ? 'default' : 'secondary'}>{pedido.tipo}</Badge>
-                                  <span className="font-medium">{pedido.fornecedor}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant={pedido.tipo === 'cotacao' ? 'default' : 'secondary'} className="text-xs">
+                                    {pedido.tipo === 'cotacao' ? 'Cotação' : 'Simples'}
+                                  </Badge>
+                                  <span className="font-medium truncate">{pedido.fornecedor}</span>
                                 </div>
-                                <p className="text-sm text-muted-foreground">Comprador: {pedido.comprador}</p>
-                                <p className="text-sm text-muted-foreground">{pedido.totalItens} itens • {new Date(pedido.data).toLocaleDateString()}</p>
+                                <div className="text-sm text-muted-foreground">
+                                  {pedido.comprador} • {pedido.usuario_loja} • {pedido.totalItens} itens
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(pedido.data).toLocaleString('pt-BR')}
+                                </div>
                               </div>
                               <div className="text-right">
-                                <div className="font-semibold">R$ {pedido.valorTotal.toFixed(2)}</div>
-                                <div className="text-xs text-muted-foreground">{new Date(pedido.data).toLocaleDateString()}</div>
+                                <div className="font-semibold text-green-600">
+                                  R$ {pedido.valorTotal.toFixed(2)}
+                                </div>
                               </div>
                             </div>
                           </CardContent></Card>
