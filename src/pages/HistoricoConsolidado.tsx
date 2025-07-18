@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,6 +14,7 @@ import CalendarioView from '@/components/historico/CalendarioView';
 import MetricasDashboard from '@/components/historico/MetricasDashboard';
 import DetalheEvento from '@/components/historico/DetalheEvento';
 import FiltrosAvancados from '@/components/historico/FiltrosAvancados';
+import FiltroRapido from '@/components/historico/FiltroRapido';
 import ExportacaoHistorico from '@/components/historico/ExportacaoHistorico';
 import { CalendarioLoadingSkeleton, MetricasLoadingSkeleton, TabelaLoadingSkeleton } from '@/components/historico/LoadingStates';
 import { TooltipHelper, AtalhosTeclado } from '@/components/historico/TooltipHelpers';
@@ -35,6 +37,7 @@ export default function HistoricoConsolidado() {
     valorMax: undefined as number | undefined,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [dadosCarregados, setDadosCarregados] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -56,18 +59,36 @@ export default function HistoricoConsolidado() {
 
   // Carregar dados iniciais
   useEffect(() => {
-    const filtrosIniciais = {
-      dataInicio: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-      dataFim: new Date().toISOString().split('T')[0],
-      comprador: '',
-      fornecedor: '',
-      tipo: undefined as 'cotacao' | 'simples' | undefined,
-      valorMin: undefined as number | undefined,
-      valorMax: undefined as number | undefined,
-    };
-    setFiltrosAtivos(filtrosIniciais);
-    buscarDadosConsolidados(filtrosIniciais);
-  }, []);
+    if (!dadosCarregados) {
+      console.log('Carregando dados iniciais...');
+      const hoje = new Date();
+      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      
+      const filtrosIniciais = {
+        dataInicio: inicioMes.toISOString().split('T')[0],
+        dataFim: hoje.toISOString().split('T')[0],
+        comprador: '',
+        fornecedor: '',
+        tipo: undefined as 'cotacao' | 'simples' | undefined,
+        valorMin: undefined as number | undefined,
+        valorMax: undefined as number | undefined,
+      };
+      
+      setFiltrosAtivos(filtrosIniciais);
+      buscarDadosConsolidados(filtrosIniciais).then(() => {
+        setDadosCarregados(true);
+        console.log('Dados iniciais carregados');
+      });
+    }
+  }, [dadosCarregados, buscarDadosConsolidados]);
+
+  // Aplicar filtros nos dados otimizados quando os dados consolidados mudarem
+  useEffect(() => {
+    if (pedidosConsolidados.length > 0) {
+      console.log('Aplicando filtros nos dados consolidados:', pedidosConsolidados.length, 'pedidos');
+      aplicarFiltros(filtrosAtivos, pedidosConsolidados);
+    }
+  }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros]);
 
   // Configurar atalhos de teclado
   useKeyboardShortcuts({
@@ -114,6 +135,26 @@ export default function HistoricoConsolidado() {
     setIsRefreshing(false);
   };
 
+  const handleFiltroChange = (novosFiltros: typeof filtrosAtivos) => {
+    console.log('Alterando filtros:', novosFiltros);
+    setFiltrosAtivos(novosFiltros);
+    buscarDadosConsolidados(novosFiltros);
+  };
+
+  const handleLimparFiltros = () => {
+    const filtrosLimpos = {
+      dataInicio: '',
+      dataFim: '',
+      comprador: '',
+      fornecedor: '',
+      tipo: undefined as 'cotacao' | 'simples' | undefined,
+      valorMin: undefined as number | undefined,
+      valorMax: undefined as number | undefined,
+    };
+    setFiltrosAtivos(filtrosLimpos);
+    buscarDadosConsolidados(filtrosLimpos);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <FadeInWrapper>
@@ -141,15 +182,11 @@ export default function HistoricoConsolidado() {
             </div>
           </div>
 
-          <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {['hoje', 'semana', 'mes', 'trimestre'].map((periodo, index) => (
-              <StaggerItem key={periodo}>
-                <Button variant="outline" size="sm" onClick={() => aplicarFiltroRapido(periodo)} className="w-full capitalize" disabled={isRefreshing}>
-                  {periodo}
-                </Button>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+          <FiltroRapido 
+            filtros={filtrosAtivos}
+            onFiltroChange={handleFiltroChange}
+            onLimparFiltros={handleLimparFiltros}
+          />
 
           <div className="flex items-center gap-2">
             <div className="relative flex-1 max-w-md">
@@ -182,18 +219,7 @@ export default function HistoricoConsolidado() {
                     onBuscar={async () => {
                       await buscarDadosConsolidados(filtrosAtivos);
                     }}
-                    onLimpar={() => {
-                      const filtrosLimpos = {
-                        dataInicio: '',
-                        dataFim: '',
-                        comprador: '',
-                        fornecedor: '',
-                        tipo: undefined as 'cotacao' | 'simples' | undefined,
-                        valorMin: undefined as number | undefined,
-                        valorMax: undefined as number | undefined,
-                      };
-                      setFiltrosAtivos(filtrosLimpos);
-                    }}
+                    onLimpar={handleLimparFiltros}
                   />
                 </CardContent>
               </Card>

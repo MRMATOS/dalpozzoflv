@@ -3,9 +3,9 @@ import React from 'react';
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pt-br';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { EventoCalendario } from '@/hooks/useHistoricoConsolidado';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 
 // Configurar moment para português
 moment.locale('pt-br');
@@ -24,11 +24,11 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
   };
 
   const EventComponent = ({ event }: { event: EventoCalendario }) => (
-    <div className="p-1">
-      <div className="text-xs font-medium text-white">
+    <div className="p-1 text-white">
+      <div className="text-xs font-medium">
         {event.resource.pedidos.length} pedidos
       </div>
-      <div className="text-xs text-white/80">
+      <div className="text-xs opacity-80">
         R$ {event.resource.totalValor.toFixed(2)}
       </div>
     </div>
@@ -49,7 +49,7 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
     }
 
     // Intensidade baseada no valor total
-    const opacity = Math.min(0.6 + (totalValor / 1000) * 0.4, 1);
+    const opacity = Math.min(0.7 + (totalValor / 1000) * 0.3, 1);
 
     return {
       style: {
@@ -58,7 +58,8 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
         border: 'none',
         borderRadius: '4px',
         color: 'white',
-        padding: '2px 4px'
+        padding: '2px 4px',
+        fontSize: '11px'
       }
     };
   };
@@ -82,23 +83,26 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
   return (
     <Card className="h-[600px]">
       <CardContent className="p-4 h-full">
-        <Calendar
-          localizer={localizer}
-          events={eventos}
-          startAccessor="start"
-          endAccessor="end"
-          style={{ height: '100%' }}
-          onSelectEvent={handleSelectEvent}
-          eventPropGetter={eventStyleGetter}
-          components={{
-            event: EventComponent
-          }}
-          messages={messages}
-          defaultView={Views.MONTH}
-          views={[Views.MONTH, Views.WEEK, Views.DAY]}
-          popup
-          popupOffset={{ x: 10, y: 10 }}
-        />
+        <div className="h-full">
+          <Calendar
+            localizer={localizer}
+            events={eventos}
+            startAccessor="start"
+            endAccessor="end"
+            style={{ height: '100%' }}
+            onSelectEvent={handleSelectEvent}
+            eventPropGetter={eventStyleGetter}
+            components={{
+              event: EventComponent
+            }}
+            messages={messages}
+            defaultView={Views.MONTH}
+            views={[Views.MONTH, Views.WEEK, Views.DAY]}
+            popup
+            popupOffset={{ x: 10, y: 10 }}
+            className="react-big-calendar-custom"
+          />
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -98,4 +99,67 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Estilos customizados para o React Big Calendar */
+.react-big-calendar-custom {
+  font-size: 14px;
+}
+
+.react-big-calendar-custom .rbc-header {
+  padding: 8px 6px;
+  font-weight: 600;
+  background-color: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.react-big-calendar-custom .rbc-month-view {
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.react-big-calendar-custom .rbc-date-cell {
+  padding: 4px 6px;
+  font-size: 13px;
+}
+
+.react-big-calendar-custom .rbc-today {
+  background-color: hsl(var(--accent));
+}
+
+.react-big-calendar-custom .rbc-toolbar {
+  padding: 10px;
+  background-color: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  margin-bottom: 0;
+}
+
+.react-big-calendar-custom .rbc-toolbar button {
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--background));
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.react-big-calendar-custom .rbc-toolbar button:hover {
+  background-color: hsl(var(--accent));
+}
+
+.react-big-calendar-custom .rbc-toolbar button.rbc-active {
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.react-big-calendar-custom .rbc-event {
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+  margin: 1px 0;
+}
+
+.react-big-calendar-custom .rbc-day-slot .rbc-events-container {
+  margin-right: 2px;
 }

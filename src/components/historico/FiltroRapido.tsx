@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,44 +16,61 @@ const FiltroRapido: React.FC<FiltroRapidoProps> = ({
   onFiltroChange, 
   onLimparFiltros 
 }) => {
+  const hoje = new Date();
+  const hojeFmt = hoje.toISOString().split('T')[0];
+  
+  // Calcular datas para comparação
+  const semanaPassada = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, hoje.getDate()).toISOString().split('T')[0];
+  
+  // Função para detectar qual filtro está ativo
+  const getFiltroAtivo = () => {
+    if (filtros.dataInicio === hojeFmt && filtros.dataFim === hojeFmt) return 'hoje';
+    if (filtros.dataInicio === semanaPassada && filtros.dataFim === hojeFmt) return 'semana';
+    if (filtros.dataInicio === mesPassado && filtros.dataFim === hojeFmt) return 'mes';
+    return null;
+  };
+
+  const filtroAtivo = getFiltroAtivo();
+
   const filtrosRapidos = [
     {
       label: 'Hoje',
+      key: 'hoje',
       aplicar: () => {
-        const hoje = new Date().toISOString().split('T')[0];
-        onFiltroChange({ ...filtros, dataInicio: hoje, dataFim: hoje });
+        onFiltroChange({ ...filtros, dataInicio: hojeFmt, dataFim: hojeFmt });
       }
     },
     {
       label: 'Última Semana',
+      key: 'semana',
       aplicar: () => {
-        const hoje = new Date();
-        const semanaPassada = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000);
         onFiltroChange({ 
           ...filtros, 
-          dataInicio: semanaPassada.toISOString().split('T')[0],
-          dataFim: hoje.toISOString().split('T')[0]
+          dataInicio: semanaPassada,
+          dataFim: hojeFmt
         });
       }
     },
     {
       label: 'Último Mês',
+      key: 'mes',
       aplicar: () => {
-        const hoje = new Date();
-        const mesPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, hoje.getDate());
         onFiltroChange({ 
           ...filtros, 
-          dataInicio: mesPassado.toISOString().split('T')[0],
-          dataFim: hoje.toISOString().split('T')[0]
+          dataInicio: mesPassado,
+          dataFim: hojeFmt
         });
       }
     },
     {
       label: 'Só Cotações',
+      key: 'cotacao',
       aplicar: () => onFiltroChange({ ...filtros, tipo: 'cotacao' })
     },
     {
       label: 'Só Pedidos Simples',
+      key: 'simples',
       aplicar: () => onFiltroChange({ ...filtros, tipo: 'simples' })
     }
   ];
@@ -76,10 +94,10 @@ const FiltroRapido: React.FC<FiltroRapidoProps> = ({
       {/* Filtros Rápidos */}
       <div className="flex gap-2 flex-wrap">
         <span className="text-sm font-medium text-muted-foreground">Filtros rápidos:</span>
-        {filtrosRapidos.map((filtro, index) => (
+        {filtrosRapidos.map((filtro) => (
           <Button
-            key={index}
-            variant="outline"
+            key={filtro.key}
+            variant={filtroAtivo === filtro.key ? "default" : "outline"}
             size="sm"
             onClick={filtro.aplicar}
             className="h-8"
