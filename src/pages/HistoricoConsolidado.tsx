@@ -30,6 +30,7 @@ export default function HistoricoConsolidado() {
   const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
   const [pedidosDoDiaAtual, setPedidosDoDiaAtual] = useState<PedidoConsolidado[]>([]);
   const [textoBusca, setTextoBusca] = useState('');
+  const [currentCalendarView, setCurrentCalendarView] = useState('month');
   // CORREÇÃO: Inicializar sem filtros para não carregar automaticamente com filtros aplicados
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
@@ -263,7 +264,14 @@ export default function HistoricoConsolidado() {
           <ResponsiveWrapper
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            calendarioTab={loading ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventClick={handleEventClick} />}
+            calendarioTab={loading ? <CalendarioLoadingSkeleton /> : (
+              <CalendarioView 
+                eventos={eventosCalendario} 
+                onEventClick={handleEventClick} 
+                currentView={currentCalendarView}
+                onViewChange={setCurrentCalendarView}
+              />
+            )}
             metricasTab={loading ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
             listaTab={loading ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">

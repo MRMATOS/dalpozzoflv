@@ -1,8 +1,9 @@
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package2, Users, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Package2, Users, TrendingUp, Eye } from 'lucide-react';
 
 interface ProdutoDia {
   produto_nome: string;
@@ -11,16 +12,31 @@ interface ProdutoDia {
   fornecedores: string[];
   preco_medio?: number;
   unidade?: string;
+  tipos?: string[]; // Adicionar tipos de pedido (cotacao/simples)
 }
 
 interface ResumoProdutosDiaProps {
   produtos: ProdutoDia[];
   data: string;
   loading?: boolean;
+  onVerPedido?: (fornecedor: string) => void;
 }
 
-const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, loading }) => {
+type FiltroTipo = 'todos' | 'simples' | 'cotacao';
+
+const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, loading, onVerPedido }) => {
   const dataFormatada = new Date(data).toLocaleDateString('pt-BR');
+  const [filtroAtivo, setFiltroAtivo] = useState<FiltroTipo>('todos');
+
+  // FUNCIONALIDADE: Filtrar produtos por tipo
+  const produtosFiltrados = useMemo(() => {
+    if (filtroAtivo === 'todos') return produtos;
+    
+    return produtos.filter(produto => {
+      if (!produto.tipos || produto.tipos.length === 0) return filtroAtivo === 'simples';
+      return produto.tipos.includes(filtroAtivo);
+    });
+  }, [produtos, filtroAtivo]);
 
   if (loading) {
     return (
@@ -63,15 +79,48 @@ const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, l
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package2 className="h-5 w-5" />
-          Produtos Pedidos em {dataFormatada}
-          <Badge variant="secondary">{produtos.length} produtos</Badge>
+        <CardTitle className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Package2 className="h-5 w-5" />
+            Produtos Pedidos em {dataFormatada}
+            <Badge variant="secondary">{produtosFiltrados.length} produtos</Badge>
+          </div>
+          
+          {/* FUNCIONALIDADE: Filtros por tipo de pedido */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Filtrar:</span>
+            <div className="flex gap-1">
+              <Button
+                variant={filtroAtivo === 'todos' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFiltroAtivo('todos')}
+                className="h-7 px-3"
+              >
+                Todos
+              </Button>
+              <Button
+                variant={filtroAtivo === 'simples' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFiltroAtivo('simples')}
+                className="h-7 px-3"
+              >
+                Pedido Simples
+              </Button>
+              <Button
+                variant={filtroAtivo === 'cotacao' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setFiltroAtivo('cotacao')}
+                className="h-7 px-3"
+              >
+                Cotação
+              </Button>
+            </div>
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {produtos.map((produto, index) => (
+          {produtosFiltrados.map((produto, index) => (
             <div 
               key={index}
               className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
@@ -105,14 +154,31 @@ const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, l
                 
                 {produto.fornecedores.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {produto.fornecedores.slice(0, 3).map((fornecedor, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        {fornecedor}
-                      </Badge>
+                    {produto.fornecedores.slice(0, 2).map((fornecedor, idx) => (
+                      <div key={idx} className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {fornecedor}
+                        </Badge>
+                        {/* FUNCIONALIDADE: Botão Ver Pedido para cada fornecedor */}
+                        {onVerPedido && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onVerPedido(fornecedor);
+                            }}
+                            className="h-5 w-5 p-0 hover:bg-primary/20"
+                            title="Ver pedido deste fornecedor"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     ))}
-                    {produto.fornecedores.length > 3 && (
+                    {produto.fornecedores.length > 2 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{produto.fornecedores.length - 3} mais
+                        +{produto.fornecedores.length - 2} mais
                       </Badge>
                     )}
                   </div>

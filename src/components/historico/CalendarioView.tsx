@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Calendar, momentLocalizer, Views } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/pt-br';
@@ -14,17 +14,63 @@ const localizer = momentLocalizer(moment);
 interface CalendarioViewProps {
   eventos: EventoCalendario[];
   onEventClick?: (evento: EventoCalendario) => void;
+  currentView?: string;
+  onViewChange?: (view: string) => void;
 }
 
-const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }) => {
+const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick, currentView, onViewChange }) => {
+  const calendarRef = useRef<any>(null);
+
+  // FUNCIONALIDADE: Auto-scroll para primeiro pedido nas vistas diária e semanal
+  useEffect(() => {
+    if (eventos.length > 0 && (currentView === Views.DAY || currentView === Views.WEEK)) {
+      // Encontrar o primeiro pedido do dia/semana
+      const primeiroEvento = eventos
+        .filter(evento => evento.start.getTime() >= Date.now() - 24 * 60 * 60 * 1000) // eventos de hoje em diante
+        .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
+
+      if (primeiroEvento) {
+        setTimeout(() => {
+          // Scroll para o horário do primeiro pedido
+          const timeSlots = document.querySelectorAll('.rbc-time-slot');
+          const targetHour = primeiroEvento.start.getHours();
+          
+          // Encontrar o slot de tempo correspondente ao horário do pedido
+          const targetSlot = Array.from(timeSlots).find((slot: any) => {
+            const slotTime = slot.getAttribute('data-time');
+            if (slotTime) {
+              const slotHour = parseInt(slotTime.split(':')[0]);
+              return slotHour >= targetHour - 1; // Scroll um pouco antes
+            }
+            return false;
+          });
+
+          if (targetSlot) {
+            targetSlot.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'start',
+              inline: 'nearest'
+            });
+          }
+        }, 500); // Delay para garantir que o calendário foi renderizado
+      }
+    }
+  }, [eventos, currentView]);
   const handleSelectEvent = (event: EventoCalendario) => {
     if (onEventClick) {
       onEventClick(event);
     }
   };
 
+  const handleViewChange = (view: string) => {
+    if (onViewChange) {
+      onViewChange(view);
+    }
+  };
+
   const EventComponent = ({ event }: { event: EventoCalendario }) => {
-    // Verificar se há múltiplos pedidos no mesmo dia
+    // PARTE 2: Exibir fornecedores consolidados no card
+    const fornecedores = event.resource.fornecedores || [];
     const dataEvento = event.start.toISOString().split('T')[0];
     const pedidosMesmoDia = eventos.filter(e => 
       e.start.toISOString().split('T')[0] === dataEvento
@@ -111,6 +157,7 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
             messages={messages}
             defaultView={Views.MONTH}
             views={[Views.MONTH, Views.WEEK, Views.DAY]}
+            onView={handleViewChange}
             popup
             popupOffset={{ x: 10, y: 10 }}
             className="react-big-calendar-custom"

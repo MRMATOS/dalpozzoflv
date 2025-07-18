@@ -189,6 +189,7 @@ export const useHistoricoConsolidado = () => {
     fornecedores: string[];
     preco_medio?: number;
     unidade?: string;
+    tipos?: string[];
   }>> => {
     try {
       const pedidosDoDia = await buscarPedidosDoDia(data);
@@ -207,12 +208,14 @@ export const useHistoricoConsolidado = () => {
             pedidos_count: 0,
             fornecedores: new Set<string>(),
             precos: [],
-            unidade: item.unidade
+            unidade: item.unidade,
+            tipos: new Set<string>()
           };
 
           existing.quantidade_total += item.quantidade;
           existing.pedidos_count += 1;
           existing.fornecedores.add(pedido.fornecedor);
+          existing.tipos.add(pedido.tipo);
           if (item.preco) existing.precos.push(item.preco);
           
           todosProdutos.set(key, existing);
@@ -228,7 +231,8 @@ export const useHistoricoConsolidado = () => {
         preco_medio: produto.precos.length > 0 
           ? produto.precos.reduce((a: number, b: number) => a + b, 0) / produto.precos.length
           : undefined,
-        unidade: produto.unidade
+        unidade: produto.unidade,
+        tipos: Array.from(produto.tipos) as string[]
       })).sort((a, b) => b.quantidade_total - a.quantidade_total);
 
     } catch (error) {
@@ -415,37 +419,82 @@ export const useHistoricoConsolidado = () => {
   };
 
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
-    const eventos: EventoCalendario[] = [];
-    
-    pedidos.forEach((pedido, index) => {
-      // Usar o horário real do pedido
+    // PARTE 3: Consolidar pedidos por dia para mostrar fornecedores separados por vírgula
+    const eventosPorDia = new Map<string, {
+      pedidos: PedidoConsolidado[];
+      fornecedores: Set<string>;
+      tipos: Set<string>;
+      totalValor: number;
+      totalItens: number;
+      primeiroHorario: Date;
+    }>();
+
+    // Agrupar pedidos por dia
+    pedidos.forEach(pedido => {
+      const dataKey = pedido.data.split('T')[0];
       const dataCompleta = new Date(pedido.data);
       
-      // Se a data for inválida, usar meio-dia como fallback
       if (isNaN(dataCompleta.getTime())) {
-        const dataKey = pedido.data.split('T')[0];
         dataCompleta.setTime(new Date(dataKey + 'T12:00:00').getTime());
       }
 
+      const existing = eventosPorDia.get(dataKey) || {
+        pedidos: [],
+        fornecedores: new Set<string>(),
+        tipos: new Set<string>(),
+        totalValor: 0,
+        totalItens: 0,
+        primeiroHorario: dataCompleta
+      };
+
+      existing.pedidos.push(pedido);
+      existing.fornecedores.add(pedido.fornecedor);
+      existing.tipos.add(pedido.tipo);
+      existing.totalValor += pedido.valorTotal;
+      existing.totalItens += pedido.totalItens;
+      
+      // Manter o primeiro horário do dia
+      if (dataCompleta.getTime() < existing.primeiroHorario.getTime()) {
+        existing.primeiroHorario = dataCompleta;
+      }
+
+      eventosPorDia.set(dataKey, existing);
+    });
+
+    // Gerar eventos consolidados
+    const eventos: EventoCalendario[] = [];
+    
+    eventosPorDia.forEach((dadosDia, dataKey) => {
+      const fornecedoresList = Array.from(dadosDia.fornecedores);
+      let titulo = '';
+      
+      if (fornecedoresList.length <= 2) {
+        titulo = fornecedoresList.join(', ');
+      } else if (fornecedoresList.length === 3) {
+        titulo = fornecedoresList.slice(0, 2).join(', ') + ' e mais 1';
+      } else {
+        titulo = fornecedoresList.slice(0, 2).join(', ') + ` e mais ${fornecedoresList.length - 2}`;
+      }
+
       const evento: EventoCalendario = {
-        id: `${pedido.id}-${index}`,
-        title: `${pedido.fornecedor} - R$ ${pedido.valorTotal.toFixed(2)}`,
-        start: dataCompleta,
-        end: new Date(dataCompleta.getTime() + 60 * 60 * 1000), // Duração de 1 hora
+        id: `consolidated-${dataKey}`,
+        title: titulo,
+        start: dadosDia.primeiroHorario,
+        end: new Date(dadosDia.primeiroHorario.getTime() + 60 * 60 * 1000),
         resource: {
-          pedidos: [pedido],
-          totalValor: pedido.valorTotal,
-          totalItens: pedido.totalItens,
-          tipos: [pedido.tipo],
-          fornecedores: [pedido.fornecedor],
-          dataCompleta: pedido.data.split('T')[0] // Adicionar data para buscar pedidos do mesmo dia
+          pedidos: dadosDia.pedidos,
+          totalValor: dadosDia.totalValor,
+          totalItens: dadosDia.totalItens,
+          tipos: Array.from(dadosDia.tipos),
+          fornecedores: fornecedoresList,
+          dataCompleta: dataKey
         }
       };
 
       eventos.push(evento);
     });
 
-    return eventos;
+    return eventos.sort((a, b) => a.start.getTime() - b.start.getTime());
   };
 
   const calcularMetricas = (pedidos: PedidoConsolidado[]): MetricasConsolidadas => {

@@ -37,6 +37,7 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
   const [produtosDoDia, setProdutosDoDia] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProdutos, setLoadingProdutos] = useState(false);
+  const [activeTab, setActiveTab] = useState('produtos');
 
   useEffect(() => {
     if (evento && isOpen) {
@@ -117,35 +118,38 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
               <Calendar className="h-5 w-5" />
               Pedidos de {new Date(evento.start).toLocaleDateString('pt-BR')}
             </div>
-            {temMultiplosPedidos && (
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={pedidoAnterior}
-                  disabled={pedidosDoDia.length <= 1}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground min-w-[80px] text-center">
-                  {pedidoAtualIndex + 1} de {pedidosDoDia.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={proximoPedido}
-                  disabled={pedidosDoDia.length <= 1}
-                  className="h-8 w-8 p-0"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            {/* CORREÇÃO: Centralizar navegação para longe do botão fechar */}
+            <div className="flex items-center justify-center flex-1">
+              {temMultiplosPedidos && (
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={pedidoAnterior}
+                    disabled={pedidosDoDia.length <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground min-w-[80px] text-center">
+                    {pedidoAtualIndex + 1} de {pedidosDoDia.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={proximoPedido}
+                    disabled={pedidosDoDia.length <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="produtos" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="produtos">Produtos do Dia</TabsTrigger>
             <TabsTrigger value="pedido">Pedido Atual</TabsTrigger>
@@ -157,6 +161,14 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
               produtos={produtosDoDia}
               data={evento.resource.dataCompleta}
               loading={loadingProdutos}
+              onVerPedido={(fornecedor) => {
+                // FUNCIONALIDADE: Ver pedido específico do fornecedor
+                const indicePedido = pedidosDoDia.findIndex(p => p.fornecedor === fornecedor);
+                if (indicePedido >= 0) {
+                  setPedidoAtualIndex(indicePedido);
+                  setActiveTab('pedido');
+                }
+              }}
             />
           </TabsContent>
           
@@ -265,7 +277,11 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
                     className={`cursor-pointer transition-colors ${
                       index === pedidoAtualIndex ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
                     }`}
-                    onClick={() => setPedidoAtualIndex(index)}
+                    onClick={() => {
+                      // FUNCIONALIDADE: Click em pedido muda para aba atual automaticamente
+                      setPedidoAtualIndex(index);
+                      setActiveTab('pedido');
+                    }}
                   >
                     <CardContent className="p-3">
                       <div className="flex justify-between items-center">
