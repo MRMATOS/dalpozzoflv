@@ -156,14 +156,15 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
+          <DialogTitle className="flex items-center justify-between w-full">
+            {/* TÍTULO À ESQUERDA */}
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
               Pedidos de {new Date(dataAtual + 'T00:00:00').toLocaleDateString('pt-BR')}
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* CORREÇÃO: Navegação entre dias CENTRALIZADA */}
+            {/* NAVEGAÇÃO CENTRALIZADA */}
+            <div className="flex-1 flex justify-center">
               {onBuscarPedidosDiaAdjacente && (
                 <div className="flex items-center gap-2">
                   <Button
@@ -191,18 +192,18 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
                   </Button>
                 </div>
               )}
-              
-              {/* CORREÇÃO: Botão X posicionado à direita */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="h-8 w-8 p-0"
-                title="Fechar"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
+            
+            {/* BOTÃO FECHAR À DIREITA */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0"
+              title="Fechar"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </DialogTitle>
         </DialogHeader>
 

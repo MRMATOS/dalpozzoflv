@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -533,9 +532,8 @@ export const useHistoricoConsolidado = () => {
     pedidos.forEach(pedido => {
       const dataCompleta = new Date(pedido.data);
       
-      // CORREÇÃO CRÍTICA: Usar timezone local para evitar inconsistências
-      const dataLocal = new Date(dataCompleta.getTime() - (dataCompleta.getTimezoneOffset() * 60000));
-      const dataKey = dataLocal.toISOString().split('T')[0]; // YYYY-MM-DD em timezone local
+      // CORREÇÃO CRÍTICA: Usar a data diretamente sem conversões de timezone
+      const dataKey = pedido.data.split('T')[0]; // YYYY-MM-DD direto da string
 
       const existing = eventosPorDia.get(dataKey) || {
         pedidos: [],
@@ -543,7 +541,7 @@ export const useHistoricoConsolidado = () => {
         tipos: new Set<string>(),
         totalValor: 0,
         totalItens: 0,
-        primeiroHorario: dataLocal
+        primeiroHorario: dataCompleta
       };
 
       existing.pedidos.push(pedido);
@@ -552,15 +550,15 @@ export const useHistoricoConsolidado = () => {
       existing.totalValor += pedido.valorTotal;
       existing.totalItens += pedido.totalItens;
       
-      // Manter o primeiro horário do dia em timezone local
-      if (dataLocal.getTime() < existing.primeiroHorario.getTime()) {
-        existing.primeiroHorario = dataLocal;
+      // Manter o primeiro horário do dia
+      if (dataCompleta.getTime() < existing.primeiroHorario.getTime()) {
+        existing.primeiroHorario = dataCompleta;
       }
 
       eventosPorDia.set(dataKey, existing);
     });
 
-    // Gerar eventos consolidados com data correta
+    // Gerar eventos consolidados
     const eventos: EventoCalendario[] = [];
     
     eventosPorDia.forEach((dadosDia, dataKey) => {
@@ -574,7 +572,7 @@ export const useHistoricoConsolidado = () => {
         titulo = `${fornecedoresList.slice(0, 2).join(', ')} +${fornecedoresList.length - 2}`;
       }
 
-      // CORREÇÃO CRÍTICA: Criar data no timezone local correto
+      // CORREÇÃO CRÍTICA: Criar data correta sem conversões desnecessárias
       const [ano, mes, dia] = dataKey.split('-').map(Number);
       const startDate = new Date(ano, mes - 1, dia, dadosDia.primeiroHorario.getHours(), dadosDia.primeiroHorario.getMinutes());
       const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
@@ -590,7 +588,7 @@ export const useHistoricoConsolidado = () => {
           totalItens: dadosDia.totalItens,
           tipos: Array.from(dadosDia.tipos),
           fornecedores: fornecedoresList,
-          dataCompleta: dataKey // CORREÇÃO: Garantir que dataCompleta seja sempre YYYY-MM-DD
+          dataCompleta: dataKey // CORREÇÃO: Garantir que dataCompleta seja sempre YYYY-MM-DD correto
         }
       };
 
