@@ -1,284 +1,235 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Calendar, List, BarChart3 } from 'lucide-react';
-import { useHistoricoConsolidado, FiltrosHistorico, EventoCalendario } from '@/hooks/useHistoricoConsolidado';
-import FiltrosAvancados from '@/components/historico/FiltrosAvancados';
-import CalendarioView from '@/components/historico/CalendarioView';
-import DetalheEvento from '@/components/historico/DetalheEvento';
-import MetricasDashboard from '@/components/historico/MetricasDashboard';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Calendar, BarChart3, List, Search, Filter, Download, RefreshCw } from 'lucide-react';
 
-const HistoricoConsolidado = () => {
-  const navigate = useNavigate();
+import { useHistoricoConsolidado } from '@/hooks/useHistoricoConsolidado';
+import { useHistoricoOtimizado } from '@/hooks/useHistoricoOtimizado';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import CalendarioView from '@/components/historico/CalendarioView';
+import MetricasDashboard from '@/components/historico/MetricasDashboard';
+import DetalheEvento from '@/components/historico/DetalheEvento';
+import FiltrosAvancados from '@/components/historico/FiltrosAvancados';
+import ExportacaoHistorico from '@/components/historico/ExportacaoHistorico';
+import { CalendarioLoadingSkeleton, MetricasLoadingSkeleton, TabelaLoadingSkeleton } from '@/components/historico/LoadingStates';
+import { TooltipHelper, AtalhosTeclado } from '@/components/historico/TooltipHelpers';
+import { ResponsiveWrapper } from '@/components/historico/ResponsiveWrapper';
+import { FadeInWrapper, StaggerContainer, StaggerItem, HoverCard } from '@/components/historico/AnimationUtils';
+
+export default function HistoricoConsolidado() {
+  const [activeTab, setActiveTab] = useState('calendario');
+  const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false);
+  const [mostrarExportacao, setMostrarExportacao] = useState(false);
+  const [eventoSelecionado, setEventoSelecionado] = useState<any>(null);
+  const [textoBusca, setTextoBusca] = useState('');
+  const [filtrosAtivos, setFiltrosAtivos] = useState({
+    dataInicio: '',
+    dataFim: '',
+    comprador: '',
+    fornecedor: '',
+    tipo: undefined as 'cotacao' | 'simples' | undefined,
+    valorMin: undefined as number | undefined,
+    valorMax: undefined as number | undefined,
+  });
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
   const {
-    pedidosConsolidados,
+    dadosConsolidados,
     eventosCalendario,
     metricas,
     compradores,
-    loading,
-    buscarDadosConsolidados,
-    isComprador,
-    isMaster
+    carregando,
+    buscarDadosConsolidados
   } = useHistoricoConsolidado();
 
-  const [filtros, setFiltros] = useState<FiltrosHistorico>({
-    dataInicio: '',
-    dataFim: '',
-    comprador: 'meus',
-    fornecedor: '',
-    tipo: undefined
-  });
+  const {
+    dadosFiltrados,
+    filtrandoStatus,
+    aplicarFiltros,
+    ordenarDados,
+    buscarTexto
+  } = useHistoricoOtimizado();
 
-  const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
-  const [detalheAberto, setDetalheAberto] = useState(false);
-
-  // Buscar dados iniciais
+  // Carregar dados iniciais
   useEffect(() => {
-    // Definir período padrão (últimos 30 dias)
-    const hoje = new Date();
-    const inicio = new Date();
-    inicio.setDate(hoje.getDate() - 30);
-    
     const filtrosIniciais = {
-      ...filtros,
-      dataInicio: inicio.toISOString().split('T')[0],
-      dataFim: hoje.toISOString().split('T')[0]
+      dataInicio: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+      dataFim: new Date().toISOString().split('T')[0]
     };
-    
-    setFiltros(filtrosIniciais);
+    setFiltrosAtivos(filtrosIniciais);
     buscarDadosConsolidados(filtrosIniciais);
   }, []);
 
-  const handleBuscar = () => {
-    buscarDadosConsolidados(filtros);
-  };
+  // Configurar atalhos de teclado
+  useKeyboardShortcuts({
+    onFilterQuick: (index) => {
+      const periodos = ['hoje', 'semana', 'mes', 'trimestre'];
+      if (periodos[index]) aplicarFiltroRapido(periodos[index]);
+    },
+    onExport: () => setMostrarExportacao(true),
+    onSearch: () => searchInputRef.current?.focus(),
+    onEscape: () => {
+      setEventoSelecionado(null);
+      setMostrarFiltrosAvancados(false);
+      setMostrarExportacao(false);
+    }
+  });
 
-  const handleLimparFiltros = () => {
+  const aplicarFiltroRapido = async (periodo: string) => {
+    setIsRefreshing(true);
     const hoje = new Date();
-    const inicio = new Date();
-    inicio.setDate(hoje.getDate() - 30);
+    let dataInicio = '';
     
-    const filtrosLimpos = {
-      dataInicio: inicio.toISOString().split('T')[0],
-      dataFim: hoje.toISOString().split('T')[0],
-      comprador: 'meus',
-      fornecedor: '',
-      produto: '',
-      tipoPedido: 'todos' as const
-    };
+    switch (periodo) {
+      case 'hoje':
+        dataInicio = hoje.toISOString().split('T')[0];
+        break;
+      case 'semana':
+        const inicioSemana = new Date(hoje);
+        inicioSemana.setDate(hoje.getDate() - 7);
+        dataInicio = inicioSemana.toISOString().split('T')[0];
+        break;
+      case 'mes':
+        const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        dataInicio = inicioMes.toISOString().split('T')[0];
+        break;
+      case 'trimestre':
+        const inicioTrimestre = new Date(hoje.getFullYear(), Math.floor(hoje.getMonth() / 3) * 3, 1);
+        dataInicio = inicioTrimestre.toISOString().split('T')[0];
+        break;
+    }
     
-    setFiltros(filtrosLimpos);
-    buscarDadosConsolidados(filtrosLimpos);
-  };
-
-  const handleEventClick = (evento: EventoCalendario) => {
-    setEventoSelecionado(evento);
-    setDetalheAberto(true);
+    const novosFiltros = { ...filtrosAtivos, dataInicio, dataFim: hoje.toISOString().split('T')[0] };
+    setFiltrosAtivos(novosFiltros);
+    await buscarDadosConsolidados(novosFiltros);
+    setIsRefreshing(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Voltar
+    <div className="min-h-screen bg-background">
+      <FadeInWrapper>
+        <div className="container mx-auto p-6 space-y-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Histórico Consolidado</h1>
+              <p className="text-muted-foreground">Análise completa de pedidos e cotações</p>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              <TooltipHelper content="Atualizar dados">
+                <Button variant="outline" size="sm" onClick={() => aplicarFiltroRapido('mes')} disabled={isRefreshing}>
+                  {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                </Button>
+              </TooltipHelper>
+              
+              <Button variant="outline" size="sm" onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}>
+                <Filter className="h-4 w-4" />
               </Button>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900">Histórico Consolidado de Pedidos</h1>
-                <p className="text-sm text-gray-500">Visão completa e métricas dos seus pedidos</p>
-              </div>
+              
+              <Button variant="outline" size="sm" onClick={() => setMostrarExportacao(!mostrarExportacao)}>
+                <Download className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <FiltrosAvancados
-          filtros={filtros}
-          onFiltrosChange={setFiltros}
-          onBuscar={handleBuscar}
-          onLimpar={handleLimparFiltros}
-          compradores={compradores}
-          isComprador={isComprador}
-          isMaster={isMaster}
-        />
+          <StaggerContainer className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {['hoje', 'semana', 'mes', 'trimestre'].map((periodo, index) => (
+              <StaggerItem key={periodo}>
+                <Button variant="outline" size="sm" onClick={() => aplicarFiltroRapido(periodo)} className="w-full capitalize" disabled={isRefreshing}>
+                  {periodo}
+                </Button>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
 
-        <Tabs defaultValue="calendario" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="calendario" className="flex items-center space-x-2">
-              <Calendar className="h-4 w-4" />
-              <span>Calendário</span>
-            </TabsTrigger>
-            <TabsTrigger value="metricas" className="flex items-center space-x-2">
-              <BarChart3 className="h-4 w-4" />
-              <span>Métricas</span>
-            </TabsTrigger>
-            <TabsTrigger value="tradicional" className="flex items-center space-x-2">
-              <List className="h-4 w-4" />
-              <span>Lista</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Buscar pedidos... (Ctrl+F)"
+                value={textoBusca}
+                onChange={(e) => {
+                  setTextoBusca(e.target.value);
+                  buscarTexto(e.target.value);
+                }}
+                className="pl-10"
+              />
+            </div>
+            {textoBusca && <Badge variant="secondary">{dadosFiltrados.length} resultado(s)</Badge>}
+          </div>
 
-          <TabsContent value="calendario" className="space-y-6">
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Carregando calendário...</p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Resumo Rápido */}
-                {metricas && (
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-blue-600">{metricas.totalPedidos}</div>
-                        <div className="text-sm text-gray-600">Total de Pedidos</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-green-600">
-                          R$ {metricas.valorTotal.toFixed(2)}
-                        </div>
-                        <div className="text-sm text-gray-600">Valor Total</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-purple-600">{metricas.totalItens}</div>
-                        <div className="text-sm text-gray-600">Total de Itens</div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-2xl font-bold text-orange-600">
-                          {eventosCalendario.length}
-                        </div>
-                        <div className="text-sm text-gray-600">Dias com Pedidos</div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-
-                {/* Calendário */}
-                <CalendarioView 
-                  eventos={eventosCalendario} 
-                  onEventClick={handleEventClick}
-                />
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="metricas" className="space-y-6">
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Carregando métricas...</p>
-              </div>
-            ) : metricas ? (
-              <MetricasDashboard metricas={metricas} />
-            ) : (
+          {mostrarFiltrosAvancados && (
+            <FadeInWrapper>
               <Card>
-                <CardContent className="p-8 text-center">
-                  <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhum dado encontrado</h2>
-                  <p className="text-gray-600 mb-4">
-                    Tente ajustar os filtros ou ampliar o período de busca.
-                  </p>
+                <CardHeader><CardTitle>Filtros Avançados</CardTitle></CardHeader>
+                <CardContent>
+                  <FiltrosAvancados
+                    filtros={filtrosAtivos}
+                    compradores={compradores}
+                    onFiltrosChange={async (novosFiltros) => {
+                      setFiltrosAtivos(novosFiltros);
+                      await buscarDadosConsolidados(novosFiltros);
+                    }}
+                  />
                 </CardContent>
               </Card>
-            )}
-          </TabsContent>
+            </FadeInWrapper>
+          )}
 
-          <TabsContent value="tradicional" className="space-y-6">
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Carregando lista tradicional...</p>
-              </div>
-            ) : pedidosConsolidados.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <List className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhum pedido encontrado</h2>
-                  <p className="text-gray-600 mb-4">
-                    Tente ajustar os filtros ou ampliar o período de busca.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
+          <ResponsiveWrapper
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            calendarioTab={carregando ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventoClick={setEventoSelecionado} />}
+            metricasTab={carregando ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
+            listaTab={carregando ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-gray-600">
-                    Encontrados {pedidosConsolidados.length} pedidos
-                  </p>
-                </div>
-                {pedidosConsolidados.map((pedido) => (
-                  <Card key={pedido.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900">{pedido.fornecedor}</h3>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              pedido.tipo === 'cotacao' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {pedido.tipo === 'cotacao' ? 'Cotação' : 'Simples'}
-                            </span>
-                            {(isComprador || isMaster) && filtros.comprador !== 'meus' && (
-                              <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                {pedido.comprador} - {pedido.usuario_loja}
-                              </span>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600 mb-2">
-                            <div>
-                              <span className="font-medium">Itens:</span> {pedido.totalItens}
+                {dadosFiltrados.length === 0 ? (
+                  <Card><CardContent className="p-8 text-center">
+                    <List className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Nenhum resultado encontrado</h3>
+                    <p className="text-muted-foreground">Tente ajustar os filtros ou o período de busca</p>
+                  </CardContent></Card>
+                ) : (
+                  <StaggerContainer className="space-y-2">
+                    {dadosFiltrados.map((pedido) => (
+                      <StaggerItem key={pedido.id}>
+                        <HoverCard className="cursor-pointer" onClick={() => setEventoSelecionado({ pedidos: [pedido] })}>
+                          <Card><CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={pedido.tipo === 'cotacao' ? 'default' : 'secondary'}>{pedido.tipo}</Badge>
+                                  <span className="font-medium">{pedido.fornecedor}</span>
+                                </div>
+                                <p className="text-sm text-muted-foreground">Comprador: {pedido.comprador}</p>
+                                <p className="text-sm text-muted-foreground">{pedido.totalItens} itens • {new Date(pedido.data).toLocaleDateString()}</p>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-semibold">R$ {pedido.valorTotal.toFixed(2)}</div>
+                                <div className="text-xs text-muted-foreground">{new Date(pedido.data).toLocaleDateString()}</div>
+                              </div>
                             </div>
-                            <div>
-                              <span className="font-medium">Total:</span> R$ {pedido.valorTotal.toFixed(2)}
-                            </div>
-                            <div>
-                              <span className="font-medium">Data:</span> {new Date(pedido.data).toLocaleDateString('pt-BR')}
-                            </div>
-                            <div className="col-span-2 md:col-span-1">
-                              <span className="font-medium">Hora:</span> {new Date(pedido.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
-                          {pedido.observacoes && (
-                            <div className="text-xs text-gray-500 mt-2 p-2 bg-gray-50 rounded">
-                              <strong>Observações:</strong> {pedido.observacoes}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                          </CardContent></Card>
+                        </HoverCard>
+                      </StaggerItem>
+                    ))}
+                  </StaggerContainer>
+                )}
               </div>
             )}
-          </TabsContent>
-        </Tabs>
+          />
+        </div>
+      </FadeInWrapper>
 
-        {/* Modal de Detalhes do Evento */}
-        <DetalheEvento 
-          evento={eventoSelecionado}
-          isOpen={detalheAberto}
-          onClose={() => setDetalheAberto(false)}
-        />
-      </main>
+      {eventoSelecionado && <DetalheEvento evento={eventoSelecionado} onClose={() => setEventoSelecionado(null)} />}
+      {mostrarExportacao && <ExportacaoHistorico dados={dadosFiltrados} onClose={() => setMostrarExportacao(false)} />}
+      <AtalhosTeclado />
     </div>
   );
-};
-
-export default HistoricoConsolidado;
+}
