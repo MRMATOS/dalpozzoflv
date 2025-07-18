@@ -249,40 +249,33 @@ export const useHistoricoConsolidado = () => {
   };
 
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
-    const eventosPorDia = new Map<string, PedidoConsolidado[]>();
-
-    // Agrupar pedidos por dia
-    pedidos.forEach(pedido => {
-      const dataKey = pedido.data.split('T')[0];
-      if (!eventosPorDia.has(dataKey)) {
-        eventosPorDia.set(dataKey, []);
-      }
-      eventosPorDia.get(dataKey)!.push(pedido);
-    });
-
-    // Converter para eventos do calendário
     const eventos: EventoCalendario[] = [];
     
-    eventosPorDia.forEach((pedidosDoDia, dataKey) => {
-      const data = new Date(dataKey + 'T12:00:00');
-      const totalValor = pedidosDoDia.reduce((sum, p) => sum + p.valorTotal, 0);
-      const totalItens = pedidosDoDia.reduce((sum, p) => sum + p.totalItens, 0);
-      const tipos = [...new Set(pedidosDoDia.map(p => p.tipo))];
-      const fornecedores = [...new Set(pedidosDoDia.map(p => p.fornecedor))];
+    pedidos.forEach((pedido, index) => {
+      // Usar o horário real do pedido
+      const dataCompleta = new Date(pedido.data);
+      
+      // Se a data for inválida, usar meio-dia como fallback
+      if (isNaN(dataCompleta.getTime())) {
+        const dataKey = pedido.data.split('T')[0];
+        dataCompleta.setTime(new Date(dataKey + 'T12:00:00').getTime());
+      }
 
-      eventos.push({
-        id: dataKey,
-        title: `${pedidosDoDia.length} pedidos - R$ ${totalValor.toFixed(2)}`,
-        start: data,
-        end: data,
+      const evento: EventoCalendario = {
+        id: `${pedido.id}-${index}`,
+        title: `${pedido.fornecedor} - R$ ${pedido.valorTotal.toFixed(2)}`,
+        start: dataCompleta,
+        end: new Date(dataCompleta.getTime() + 60 * 60 * 1000), // Duração de 1 hora
         resource: {
-          pedidos: pedidosDoDia,
-          totalValor,
-          totalItens,
-          tipos,
-          fornecedores
+          pedidos: [pedido],
+          totalValor: pedido.valorTotal,
+          totalItens: pedido.totalItens,
+          tipos: [pedido.tipo],
+          fornecedores: [pedido.fornecedor]
         }
-      });
+      };
+
+      eventos.push(evento);
     });
 
     return eventos;
