@@ -30,6 +30,7 @@ export default function HistoricoConsolidado() {
   const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
   const [pedidosDoDiaAtual, setPedidosDoDiaAtual] = useState<PedidoConsolidado[]>([]);
   const [textoBusca, setTextoBusca] = useState('');
+  // CORREÇÃO: Inicializar sem filtros para não carregar automaticamente com filtros aplicados
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
     dataFim: '',
@@ -63,16 +64,15 @@ export default function HistoricoConsolidado() {
     buscarTexto
   } = useHistoricoOtimizado();
 
-  // Carregar dados iniciais apenas uma vez
+  // CORREÇÃO: Carregar dados iniciais SEM filtros automáticos
   useEffect(() => {
     if (!inicializado) {
-      console.log('Inicializando dados...');
-      const hoje = new Date();
-      const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+      console.log('Inicializando dados sem filtros...');
       
+      // Inicializar sem filtros para mostrar todos os dados
       const filtrosIniciais = {
-        dataInicio: inicioMes.toISOString().split('T')[0],
-        dataFim: hoje.toISOString().split('T')[0],
+        dataInicio: '',
+        dataFim: '',
         comprador: '',
         fornecedor: '',
         tipo: undefined as 'cotacao' | 'simples' | undefined,
@@ -83,7 +83,7 @@ export default function HistoricoConsolidado() {
       setFiltrosAtivos(filtrosIniciais);
       buscarDadosConsolidados(filtrosIniciais).then(() => {
         setInicializado(true);
-        console.log('Dados iniciais carregados');
+        console.log('Dados iniciais carregados sem filtros');
       });
     }
   }, [inicializado, buscarDadosConsolidados]);
@@ -161,24 +161,23 @@ export default function HistoricoConsolidado() {
     buscarDadosConsolidados(filtrosLimpos);
   };
 
-  // Nova função para lidar com clique em evento do calendário
+  // CORREÇÃO: Função melhorada para lidar com clique em evento do calendário
   const handleEventClick = async (evento: EventoCalendario) => {
     setEventoSelecionado(evento);
     
-    // Buscar todos os pedidos do mesmo dia com itens
-    if (evento.resource.dataCompleta) {
-      try {
-        const pedidosDoDia = await buscarPedidosDoDiaComItens(evento.resource.dataCompleta);
-        setPedidosDoDiaAtual(pedidosDoDia);
-      } catch (error) {
-        console.error('Erro ao buscar pedidos do dia:', error);
-        setPedidosDoDiaAtual(evento.resource.pedidos);
-      }
-    } else {
+    // CORREÇÃO: Usar a data correta do evento para buscar pedidos
+    const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
+    
+    try {
+      const pedidosDoDia = await buscarPedidosDoDiaComItens(dataEvento);
+      setPedidosDoDiaAtual(pedidosDoDia);
+      console.log(`Carregados ${pedidosDoDia.length} pedidos para ${dataEvento}:`, pedidosDoDia);
+    } catch (error) {
+      console.error('Erro ao buscar pedidos do dia:', error);
       setPedidosDoDiaAtual(evento.resource.pedidos);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-background">
       <FadeInWrapper>

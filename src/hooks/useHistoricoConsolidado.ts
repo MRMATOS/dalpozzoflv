@@ -114,7 +114,8 @@ export const useHistoricoConsolidado = () => {
             preco,
             tipo,
             unidade,
-            produtos!inner(produto)
+            produto_id,
+            produtos(produto)
           `)
           .eq('pedido_id', pedidoId);
 
@@ -156,9 +157,6 @@ export const useHistoricoConsolidado = () => {
 
   // Nova função para buscar pedidos de um dia específico
   const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
-    const dataInicio = data + 'T00:00:00';
-    const dataFim = data + 'T23:59:59';
-    
     try {
       // Buscar pedidos de cotação do dia
       const pedidosCotacao = await buscarPedidosCotacao({
@@ -243,11 +241,15 @@ export const useHistoricoConsolidado = () => {
   const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
     const pedidos = await buscarPedidosDoDia(data);
     
-    // Buscar itens para cada pedido
+    // Buscar itens para cada pedido e atualizar totalItens
     const pedidosComItens = await Promise.all(
       pedidos.map(async (pedido) => {
         const itens = await buscarItensPedido(pedido.id, pedido.tipo);
-        return { ...pedido, itens };
+        return { 
+          ...pedido, 
+          itens,
+          totalItens: itens.length // Atualizar com número real de itens
+        };
       })
     );
 
