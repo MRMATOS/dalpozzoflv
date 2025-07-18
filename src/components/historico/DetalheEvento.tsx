@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +23,10 @@ interface DetalheEventoProps {
     preco_medio?: number;
     unidade?: string;
   }>>;
+  onBuscarPedidosDiaAdjacente?: (dataAtual: string, direcao: 'anterior' | 'proximo') => Promise<{
+    data: string;
+    pedidos: PedidoConsolidado[];
+  } | null>;
 }
 
 const DetalheEvento: React.FC<DetalheEventoProps> = ({ 
@@ -30,7 +35,8 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
   isOpen, 
   onClose,
   onBuscarPedidosDoDiaComItens,
-  onBuscarProdutosDoDia
+  onBuscarProdutosDoDia,
+  onBuscarPedidosDiaAdjacente
 }) => {
   const [pedidoAtualIndex, setPedidoAtualIndex] = useState(0);
   const [pedidosDoDia, setPedidosDoDia] = useState<PedidoConsolidado[]>([]);
@@ -38,15 +44,22 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [activeTab, setActiveTab] = useState('produtos');
+  
+  // NOVA: Estado para controlar data atual e navegação entre dias
+  const [dataAtual, setDataAtual] = useState<string>('');
+  const [loadingDiaAdjacente, setLoadingDiaAdjacente] = useState(false);
 
   useEffect(() => {
     if (evento && isOpen) {
+      const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
+      setDataAtual(dataEvento);
+      
       setLoading(true);
       setLoadingProdutos(true);
       
       // Buscar pedidos com itens
-      if (onBuscarPedidosDoDiaComItens && evento.resource.dataCompleta) {
-        onBuscarPedidosDoDiaComItens(evento.resource.dataCompleta).then((pedidos) => {
+      if (onBuscarPedidosDoDiaComItens) {
+        onBuscarPedidosDoDiaComItens(dataEvento).then((pedidos) => {
           setPedidosDoDia(pedidos);
           const pedidoClicado = evento.resource.pedidos[0];
           const indexPedidoClicado = pedidos.findIndex(p => p.id === pedidoClicado.id);
@@ -62,8 +75,8 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
       }
 
       // Buscar produtos do dia
-      if (onBuscarProdutosDoDia && evento.resource.dataCompleta) {
-        onBuscarProdutosDoDia(evento.resource.dataCompleta).then((produtos) => {
+      if (onBuscarProdutosDoDia) {
+        onBuscarProdutosDoDia(dataEvento).then((produtos) => {
           setProdutosDoDia(produtos);
           setLoadingProdutos(false);
         }).catch(() => {
@@ -86,6 +99,35 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
 
   const pedidoAnterior = () => {
     setPedidoAtualIndex((prev) => (prev - 1 + pedidosDoDia.length) % pedidosDoDia.length);
+  };
+
+  // NOVA: Função para navegar entre dias
+  const navegarEntreDias = async (direcao: 'anterior' | 'proximo') => {
+    if (!onBuscarPedidosDiaAdjacente) return;
+    
+    setLoadingDiaAdjacente(true);
+    try {
+      const resultado = await onBuscarPedidosDiaAdjacente(dataAtual, direcao);
+      
+      if (resultado) {
+        // Atualizar estado com o novo dia
+        setDataAtual(resultado.data);
+        setPedidosDoDia(resultado.pedidos);
+        setPedidoAtualIndex(0); // Resetar para o primeiro pedido
+        
+        // Buscar produtos do novo dia
+        if (onBuscarProdutosDoDia) {
+          setLoadingProdutos(true);
+          const produtos = await onBuscarProdutosDoDia(resultado.data);
+          setProdutosDoDia(produtos);
+          setLoadingProdutos(false);
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao navegar entre dias:', error);
+    } finally {
+      setLoadingDiaAdjacente(false);
+    }
   };
 
   // Calcular estatísticas do dia
@@ -116,36 +158,37 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Pedidos de {new Date(evento.start).toLocaleDateString('pt-BR')}
+              Pedidos de {new Date(dataAtual).toLocaleDateString('pt-BR')}
             </div>
-            {/* CORREÇÃO: Centralizar navegação para longe do botão fechar */}
-            <div className="flex items-center justify-center flex-1">
-              {temMultiplosPedidos && (
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={pedidoAnterior}
-                    disabled={pedidosDoDia.length <= 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground min-w-[80px] text-center">
-                    {pedidoAtualIndex + 1} de {pedidosDoDia.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={proximoPedido}
-                    disabled={pedidosDoDia.length <= 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
+            
+            {/* NOVA: Navegação entre dias no header fixo */}
+            {onBuscarPedidosDiaAdjacente && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navegarEntreDias('anterior')}
+                  disabled={loadingDiaAdjacente}
+                  className="h-8 w-8 p-0"
+                  title="Dia anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="text-sm text-muted-foreground min-w-[100px] text-center">
+                  {loadingDiaAdjacente ? 'Carregando...' : 'Entre dias'}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navegarEntreDias('proximo')}
+                  disabled={loadingDiaAdjacente}
+                  className="h-8 w-8 p-0"
+                  title="Próximo dia"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -159,10 +202,9 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
           <TabsContent value="produtos" className="mt-4">
             <ResumoProdutosDia 
               produtos={produtosDoDia}
-              data={evento.resource.dataCompleta}
+              data={dataAtual}
               loading={loadingProdutos}
               onVerPedido={(fornecedor) => {
-                // FUNCIONALIDADE: Ver pedido específico do fornecedor
                 const indicePedido = pedidosDoDia.findIndex(p => p.fornecedor === fornecedor);
                 if (indicePedido >= 0) {
                   setPedidoAtualIndex(indicePedido);
@@ -175,17 +217,39 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
           <TabsContent value="pedido" className="mt-4">
             {pedidoAtual && (
               <div className="space-y-4">
+                {/* CORREÇÃO: Navegação entre pedidos movida para dentro da aba */}
+                {temMultiplosPedidos && (
+                  <Card className="border-primary/30">
+                    <CardContent className="p-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={pedidoAnterior}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <span className="text-sm font-medium">
+                          Pedido {pedidoAtualIndex + 1} de {pedidosDoDia.length}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={proximoPedido}
+                          className="h-8 w-8 p-0"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Resumo do Pedido */}
                 <Card className="border-primary/50">
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Pedido Atual</span>
-                      {temMultiplosPedidos && (
-                        <Badge variant="secondary">
-                          {pedidoAtualIndex + 1} de {pedidosDoDia.length}
-                        </Badge>
-                      )}
-                    </CardTitle>
+                    <CardTitle>Detalhes do Pedido</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid md:grid-cols-2 gap-4">
@@ -278,7 +342,6 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
                       index === pedidoAtualIndex ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
                     }`}
                     onClick={() => {
-                      // FUNCIONALIDADE: Click em pedido muda para aba atual automaticamente
                       setPedidoAtualIndex(index);
                       setActiveTab('pedido');
                     }}

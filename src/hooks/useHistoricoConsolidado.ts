@@ -101,11 +101,13 @@ export const useHistoricoConsolidado = () => {
     }
   };
 
-  // Nova função para buscar itens de um pedido específico
+  // CORREÇÃO CRÍTICA: Função melhorada para buscar itens de um pedido específico
   const buscarItensPedido = useCallback(async (pedidoId: string, tipoPedido: 'cotacao' | 'simples'): Promise<ItemPedido[]> => {
     try {
+      console.log(`Buscando itens para pedido ${pedidoId} do tipo ${tipoPedido}`);
+      
       if (tipoPedido === 'cotacao') {
-        // Buscar itens do pedido de cotação
+        // CORREÇÃO: Buscar itens do pedido de cotação com join correto
         const { data: itens, error } = await supabase
           .from('itens_pedido')
           .select(`
@@ -115,11 +117,16 @@ export const useHistoricoConsolidado = () => {
             tipo,
             unidade,
             produto_id,
-            produtos(produto)
+            produtos!inner(produto)
           `)
           .eq('pedido_id', pedidoId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao buscar itens de cotação:', error);
+          return [];
+        }
+
+        console.log(`Encontrados ${itens?.length || 0} itens para cotação ${pedidoId}:`, itens);
 
         return itens?.map(item => ({
           id: item.id,
@@ -138,7 +145,10 @@ export const useHistoricoConsolidado = () => {
           .eq('id', pedidoId)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao buscar pedido simples:', error);
+          return [];
+        }
 
         return [{
           id: pedido.id,
@@ -158,6 +168,8 @@ export const useHistoricoConsolidado = () => {
   // Nova função para buscar pedidos de um dia específico
   const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
     try {
+      console.log(`Buscando pedidos do dia: ${data}`);
+      
       // Buscar pedidos de cotação do dia
       const pedidosCotacao = await buscarPedidosCotacao({
         dataInicio: data,
@@ -172,6 +184,8 @@ export const useHistoricoConsolidado = () => {
 
       // Combinar e ordenar por horário
       const todosPedidosDoDia = [...pedidosCotacao, ...pedidosSimples];
+      console.log(`Total de pedidos encontrados para ${data}:`, todosPedidosDoDia.length);
+      
       return todosPedidosDoDia.sort((a, b) => 
         new Date(a.data).getTime() - new Date(b.data).getTime()
       );
@@ -180,6 +194,38 @@ export const useHistoricoConsolidado = () => {
       return [];
     }
   }, [user?.id]);
+
+  // NOVA FUNÇÃO: Buscar pedidos dos dias adjacentes
+  const buscarPedidosDiaAdjacente = useCallback(async (dataAtual: string, direcao: 'anterior' | 'proximo'): Promise<{
+    data: string;
+    pedidos: PedidoConsolidado[];
+  } | null> => {
+    try {
+      const dataBase = new Date(dataAtual);
+      const novaData = new Date(dataBase);
+      
+      if (direcao === 'anterior') {
+        novaData.setDate(dataBase.getDate() - 1);
+      } else {
+        novaData.setDate(dataBase.getDate() + 1);
+      }
+      
+      const novaDataStr = novaData.toISOString().split('T')[0];
+      const pedidos = await buscarPedidosDoDiaComItens(novaDataStr);
+      
+      if (pedidos.length === 0) {
+        return null; // Não há pedidos neste dia
+      }
+      
+      return {
+        data: novaDataStr,
+        pedidos
+      };
+    } catch (error) {
+      console.error('Erro ao buscar dia adjacente:', error);
+      return null;
+    }
+  }, []);
 
   // Nova função para buscar todos os produtos de um dia específico
   const buscarProdutosDoDia = useCallback(async (data: string): Promise<Array<{
@@ -192,6 +238,7 @@ export const useHistoricoConsolidado = () => {
     tipos?: string[];
   }>> => {
     try {
+      console.log(`Buscando produtos do dia: ${data}`);
       const pedidosDoDia = await buscarPedidosDoDia(data);
       
       // Buscar itens para todos os pedidos do dia
@@ -223,7 +270,7 @@ export const useHistoricoConsolidado = () => {
       }
 
       // Converter para array e calcular preço médio
-      return Array.from(todosProdutos.values()).map(produto => ({
+      const resultado = Array.from(todosProdutos.values()).map(produto => ({
         produto_nome: produto.produto_nome,
         quantidade_total: produto.quantidade_total,
         pedidos_count: produto.pedidos_count,
@@ -235,28 +282,35 @@ export const useHistoricoConsolidado = () => {
         tipos: Array.from(produto.tipos) as string[]
       })).sort((a, b) => b.quantidade_total - a.quantidade_total);
 
+      console.log(`Produtos do dia ${data}:`, resultado);
+      return resultado;
+
     } catch (error) {
       console.error('Erro ao buscar produtos do dia:', error);
       return [];
     }
   }, [buscarItensPedido, buscarPedidosDoDia]);
 
-  // Nova função para buscar pedidos de um dia específico com itens
+  // CORREÇÃO: Função melhorada para buscar pedidos de um dia específico com itens
   const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
+    console.log(`Buscando pedidos com itens para o dia: ${data}`);
     const pedidos = await buscarPedidosDoDia(data);
     
     // Buscar itens para cada pedido e atualizar totalItens
     const pedidosComItens = await Promise.all(
       pedidos.map(async (pedido) => {
         const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        console.log(`Pedido ${pedido.id} (${pedido.tipo}) tem ${itens.length} itens`);
+        
         return { 
           ...pedido, 
           itens,
-          totalItens: itens.length // Atualizar com número real de itens
+          totalItens: itens.length // CORREÇÃO: Usar número real de itens
         };
       })
     );
 
+    console.log(`Total de pedidos com itens carregados:`, pedidosComItens.length);
     return pedidosComItens;
   }, [buscarPedidosDoDia, buscarItensPedido]);
 
@@ -279,6 +333,7 @@ export const useHistoricoConsolidado = () => {
 
       // Consolidar todos os pedidos
       const todosOsPedidos = [...pedidosCotacao, ...pedidosSimples];
+      console.log(`Total de pedidos consolidados: ${todosOsPedidos.length}`);
       setPedidosConsolidados(todosOsPedidos);
 
       // Gerar eventos do calendário
@@ -296,6 +351,7 @@ export const useHistoricoConsolidado = () => {
     }
   }, [user?.id]);
 
+  // CORREÇÃO: Melhorar busca de pedidos de cotação
   const buscarPedidosCotacao = async (filtros: FiltrosHistorico): Promise<PedidoConsolidado[]> => {
     let query = supabase
       .from('pedidos_compra')
@@ -328,7 +384,7 @@ export const useHistoricoConsolidado = () => {
 
     if (error) throw error;
 
-    // Buscar dados dos usuários e contagem de itens
+    // CORREÇÃO: Buscar dados dos usuários e contagem REAL de itens
     const pedidosComDetalhes = await Promise.all(
       (pedidos || []).map(async (pedido: any) => {
         const { data: usuario } = await supabase
@@ -337,10 +393,14 @@ export const useHistoricoConsolidado = () => {
           .eq('id', pedido.user_id)
           .single();
 
+        // CORREÇÃO CRÍTICA: Contar itens reais do pedido
         const { data: itens } = await supabase
           .from('itens_pedido')
           .select('id')
           .eq('pedido_id', pedido.id);
+
+        const totalItensReal = itens?.length || 0;
+        console.log(`Pedido cotação ${pedido.id} tem ${totalItensReal} itens`);
 
         return {
           id: pedido.id,
@@ -350,11 +410,12 @@ export const useHistoricoConsolidado = () => {
           comprador: usuario?.nome || 'Não identificado',
           usuario_loja: usuario?.loja || '',
           valorTotal: pedido.total || 0,
-          totalItens: itens?.length || 0
+          totalItens: totalItensReal // CORREÇÃO: Usar contagem real
         };
       })
     );
 
+    console.log(`Pedidos de cotação encontrados: ${pedidosComDetalhes.length}`);
     return pedidosComDetalhes;
   };
 
@@ -419,7 +480,7 @@ export const useHistoricoConsolidado = () => {
   };
 
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
-    // PARTE 3: Consolidar pedidos por dia para mostrar fornecedores separados por vírgula
+    // Consolidar pedidos por dia para mostrar fornecedores separados por vírgula
     const eventosPorDia = new Map<string, {
       pedidos: PedidoConsolidado[];
       fornecedores: Set<string>;
@@ -578,6 +639,7 @@ export const useHistoricoConsolidado = () => {
     buscarItensPedido,
     buscarProdutosDoDia,
     buscarPedidosDoDiaComItens,
+    buscarPedidosDiaAdjacente,
     isComprador,
     isMaster
   };

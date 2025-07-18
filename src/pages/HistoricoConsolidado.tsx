@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,7 +34,8 @@ export default function HistoricoConsolidado() {
   const [textoBusca, setTextoBusca] = useState('');
   const [currentCalendarView, setCurrentCalendarView] = useState('month');
   const [modoLista, setModoLista] = useState<'fornecedor' | 'produtos'>('fornecedor');
-  // CORREÇÃO: Inicializar sem filtros para não carregar automaticamente com filtros aplicados
+  
+  // CORREÇÃO: Sempre inicializar sem filtros para não persistir
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
     dataFim: '',
@@ -44,7 +46,10 @@ export default function HistoricoConsolidado() {
     valorMax: undefined as number | undefined,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // CORREÇÃO: Controle mais rigoroso da inicialização
   const [inicializado, setInicializado] = useState(false);
+  const [forceReload, setForceReload] = useState(0); // Para forçar reload limpo
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -57,7 +62,8 @@ export default function HistoricoConsolidado() {
     buscarDadosConsolidados,
     buscarPedidosDoDia,
     buscarPedidosDoDiaComItens,
-    buscarProdutosDoDia
+    buscarProdutosDoDia,
+    buscarPedidosDiaAdjacente
   } = useHistoricoConsolidado();
 
   const {
@@ -67,37 +73,42 @@ export default function HistoricoConsolidado() {
     buscarTexto
   } = useHistoricoOtimizado();
 
-  // CORREÇÃO: Carregar dados iniciais SEM filtros automáticos
+  // CORREÇÃO: Inicialização sem filtros, sempre limpa
   useEffect(() => {
-    if (!inicializado) {
-      console.log('Inicializando dados sem filtros...');
-      
-      // Inicializar sem filtros para mostrar todos os dados
-      const filtrosIniciais = {
-        dataInicio: '',
-        dataFim: '',
-        comprador: '',
-        fornecedor: '',
-        tipo: undefined as 'cotacao' | 'simples' | undefined,
-        valorMin: undefined as number | undefined,
-        valorMax: undefined as number | undefined,
-      };
-      
-      setFiltrosAtivos(filtrosIniciais);
-      buscarDadosConsolidados(filtrosIniciais).then(() => {
-        setInicializado(true);
-        console.log('Dados iniciais carregados sem filtros');
-      });
-    }
-  }, [inicializado, buscarDadosConsolidados]);
+    console.log('Inicializando página HistoricoConsolidado...');
+    
+    // SEMPRE limpar tudo na inicialização
+    const filtrosLimpos = {
+      dataInicio: '',
+      dataFim: '',
+      comprador: '',
+      fornecedor: '',
+      tipo: undefined as 'cotacao' | 'simples' | undefined,
+      valorMin: undefined as number | undefined,
+      valorMax: undefined as number | undefined,
+    };
+    
+    setFiltrosAtivos(filtrosLimpos);
+    setTextoBusca('');
+    setEventoSelecionado(null);
+    setPedidosDoDiaAtual([]);
+    setMostrarFiltrosAvancados(false);
+    setMostrarExportacao(false);
+    
+    // Buscar dados sem filtros
+    buscarDadosConsolidados(filtrosLimpos).then(() => {
+      setInicializado(true);
+      console.log('Dados iniciais carregados sem filtros');
+    });
+  }, [forceReload]); // Dependência do forceReload para garantir reload limpo
 
   // Aplicar filtros nos dados otimizados quando os dados consolidados mudarem
   useEffect(() => {
-    if (pedidosConsolidados.length > 0) {
+    if (pedidosConsolidados.length > 0 && inicializado) {
       console.log('Aplicando filtros nos dados consolidados:', pedidosConsolidados.length, 'pedidos');
       aplicarFiltros(filtrosAtivos, pedidosConsolidados);
     }
-  }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros]);
+  }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros, inicializado]);
 
   // Configurar atalhos de teclado
   useKeyboardShortcuts({
@@ -150,25 +161,17 @@ export default function HistoricoConsolidado() {
     buscarDadosConsolidados(novosFiltros);
   };
 
+  // CORREÇÃO: Função de reload que limpa tudo
   const handleLimparFiltros = () => {
-    const filtrosLimpos = {
-      dataInicio: '',
-      dataFim: '',
-      comprador: '',
-      fornecedor: '',
-      tipo: undefined as 'cotacao' | 'simples' | undefined,
-      valorMin: undefined as number | undefined,
-      valorMax: undefined as number | undefined,
-    };
-    setFiltrosAtivos(filtrosLimpos);
-    buscarDadosConsolidados(filtrosLimpos);
+    console.log('Limpando filtros e recarregando dados...');
+    setForceReload(prev => prev + 1); // Força reload completo
   };
 
   // CORREÇÃO: Função melhorada para lidar com clique em evento do calendário
   const handleEventClick = async (evento: EventoCalendario) => {
     setEventoSelecionado(evento);
     
-    // CORREÇÃO: Usar a data correta do evento para buscar pedidos
+    // Usar a data correta do evento para buscar pedidos
     const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
     
     try {
@@ -203,8 +206,13 @@ export default function HistoricoConsolidado() {
             </div>
             
             <div className="flex flex-wrap items-center gap-2">
-              <TooltipHelper content="Atualizar dados">
-                <Button variant="outline" size="sm" onClick={() => aplicarFiltroRapido('mes')} disabled={isRefreshing}>
+              <TooltipHelper content="Recarregar dados sem filtros">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleLimparFiltros} 
+                  disabled={isRefreshing}
+                >
                   {isRefreshing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                 </Button>
               </TooltipHelper>
@@ -277,7 +285,7 @@ export default function HistoricoConsolidado() {
             metricasTab={loading ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
             listaTab={loading ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">
-                {/* PARTE 4: Seletor de visualização */}
+                {/* Seletor de visualização */}
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -401,6 +409,7 @@ export default function HistoricoConsolidado() {
           }}
           onBuscarPedidosDoDiaComItens={buscarPedidosDoDiaComItens}
           onBuscarProdutosDoDia={buscarProdutosDoDia}
+          onBuscarPedidosDiaAdjacente={buscarPedidosDiaAdjacente}
         />
       )}
       

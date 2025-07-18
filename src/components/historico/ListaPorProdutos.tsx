@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,64 +38,72 @@ const ListaPorProdutos: React.FC<ListaPorProdutosProps> = ({
 }) => {
   const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoAgrupado | null>(null);
 
-  // PARTE 4: Agrupar pedidos por produto
+  // CORREÇÃO: Agrupar produtos usando pedidos que já têm itens carregados
   const produtosAgrupados = useMemo(() => {
+    console.log('Agrupando produtos. Pedidos recebidos:', pedidos.length);
     const produtos = new Map<string, ProdutoAgrupado>();
 
-    pedidos.forEach(pedido => {
-      // Para cada pedido, precisamos buscar seus itens
-      if (pedido.itens && pedido.itens.length > 0) {
-        pedido.itens.forEach(item => {
-          const key = item.produto_nome;
-          const existing = produtos.get(key) || {
-            produto_nome: item.produto_nome,
-            quantidade_total: 0,
-            fornecedores: [],
-            unidade: item.unidade,
-            total_pedidos: 0
-          };
+    // CORREÇÃO: Filtrar apenas pedidos que têm itens carregados
+    const pedidosComItens = pedidos.filter(pedido => pedido.itens && pedido.itens.length > 0);
+    console.log('Pedidos com itens carregados:', pedidosComItens.length);
 
-          // Adicionar fornecedor e seus dados
-          const fornecedorExistente = existing.fornecedores.find(f => 
-            f.nome === pedido.fornecedor && f.data.split('T')[0] === pedido.data.split('T')[0]
-          );
+    pedidosComItens.forEach(pedido => {
+      console.log(`Processando pedido ${pedido.id} com ${pedido.itens?.length} itens`);
+      
+      pedido.itens?.forEach(item => {
+        const key = item.produto_nome;
+        const existing = produtos.get(key) || {
+          produto_nome: item.produto_nome,
+          quantidade_total: 0,
+          fornecedores: [],
+          unidade: item.unidade,
+          total_pedidos: 0
+        };
 
-          if (!fornecedorExistente) {
-            existing.fornecedores.push({
-              nome: pedido.fornecedor,
-              quantidade: item.quantidade,
-              valor_unitario: item.preco,
-              valor_total: item.preco ? item.preco * item.quantidade : 0,
-              data: pedido.data,
-              tipo: pedido.tipo,
-              pedido: pedido
-            });
-            existing.total_pedidos += 1;
-          } else {
-            fornecedorExistente.quantidade += item.quantidade;
-            if (item.preco) {
-              fornecedorExistente.valor_total += item.preco * item.quantidade;
-            }
+        // Verificar se já existe um fornecedor para o mesmo dia
+        const fornecedorExistente = existing.fornecedores.find(f => 
+          f.nome === pedido.fornecedor && f.data.split('T')[0] === pedido.data.split('T')[0]
+        );
+
+        if (!fornecedorExistente) {
+          existing.fornecedores.push({
+            nome: pedido.fornecedor,
+            quantidade: item.quantidade,
+            valor_unitario: item.preco,
+            valor_total: item.preco ? item.preco * item.quantidade : 0,
+            data: pedido.data,
+            tipo: pedido.tipo,
+            pedido: pedido
+          });
+          existing.total_pedidos += 1;
+        } else {
+          // Somar quantidades se for o mesmo fornecedor no mesmo dia
+          fornecedorExistente.quantidade += item.quantidade;
+          if (item.preco) {
+            fornecedorExistente.valor_total += item.preco * item.quantidade;
           }
+        }
 
-          existing.quantidade_total += item.quantidade;
-          
-          // Calcular preço médio
-          const precos = existing.fornecedores
-            .filter(f => f.valor_unitario && f.valor_unitario > 0)
-            .map(f => f.valor_unitario!);
-          
-          if (precos.length > 0) {
-            existing.preco_medio = precos.reduce((a, b) => a + b, 0) / precos.length;
-          }
+        existing.quantidade_total += item.quantidade;
+        
+        // Calcular preço médio
+        const precos = existing.fornecedores
+          .filter(f => f.valor_unitario && f.valor_unitario > 0)
+          .map(f => f.valor_unitario!);
+        
+        if (precos.length > 0) {
+          existing.preco_medio = precos.reduce((a, b) => a + b, 0) / precos.length;
+        }
 
-          produtos.set(key, existing);
-        });
-      }
+        produtos.set(key, existing);
+      });
     });
 
-    return Array.from(produtos.values())
+    const resultado = Array.from(produtos.values())
       .sort((a, b) => b.quantidade_total - a.quantidade_total);
+    
+    console.log('Produtos agrupados:', resultado.length);
+    return resultado;
   }, [pedidos]);
 
   const handleProdutoClick = (produto: ProdutoAgrupado) => {
@@ -129,7 +138,10 @@ const ListaPorProdutos: React.FC<ListaPorProdutosProps> = ({
           <Package2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhum produto encontrado</h3>
           <p className="text-muted-foreground">
-            Não há produtos nos pedidos filtrados
+            Os pedidos filtrados não possuem itens carregados ou não há produtos nos pedidos selecionados.
+          </p>
+          <p className="text-muted-foreground text-sm mt-2">
+            Nota: Produtos só aparecem quando os pedidos têm seus itens carregados.
           </p>
         </CardContent>
       </Card>
