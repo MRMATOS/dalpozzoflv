@@ -176,9 +176,11 @@ export default function HistoricoConsolidado() {
                   <FiltrosAvancados
                     filtros={filtrosAtivos}
                     compradores={compradores}
-                    onBuscar={async (novosFiltros) => {
+                    onFiltrosChange={(novosFiltros) => {
                       setFiltrosAtivos({ ...filtrosAtivos, ...novosFiltros });
-                      await buscarDadosConsolidados({ ...filtrosAtivos, ...novosFiltros });
+                    }}
+                    onBuscar={async () => {
+                      await buscarDadosConsolidados(filtrosAtivos);
                     }}
                     onLimpar={() => {
                       const filtrosLimpos = {
@@ -244,7 +246,19 @@ export default function HistoricoConsolidado() {
       </FadeInWrapper>
 
       {eventoSelecionado && <DetalheEvento evento={eventoSelecionado} isOpen={true} onClose={() => setEventoSelecionado(null)} />}
-      {mostrarExportacao && <ExportacaoHistorico dados={dadosFiltrados} isOpen={mostrarExportacao} onOpenChange={setMostrarExportacao} />}
+      {mostrarExportacao && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Exportar Dados</h3>
+            <ExportacaoHistorico dados={dadosFiltrados} filtrosAtivos="Filtros aplicados" />
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={() => setMostrarExportacao(false)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <AtalhosTeclado />
     </div>
   );
