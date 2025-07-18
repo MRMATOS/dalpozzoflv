@@ -4,9 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Calendar, List } from 'lucide-react';
-import { useHistoricoConsolidado, FiltrosHistorico } from '@/hooks/useHistoricoConsolidado';
+import { ArrowLeft, Calendar, List, BarChart3 } from 'lucide-react';
+import { useHistoricoConsolidado, FiltrosHistorico, EventoCalendario } from '@/hooks/useHistoricoConsolidado';
 import FiltrosAvancados from '@/components/historico/FiltrosAvancados';
+import CalendarioView from '@/components/historico/CalendarioView';
+import DetalheEvento from '@/components/historico/DetalheEvento';
+import MetricasDashboard from '@/components/historico/MetricasDashboard';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 
 const HistoricoConsolidado = () => {
   const navigate = useNavigate();
@@ -29,6 +33,9 @@ const HistoricoConsolidado = () => {
     produto: '',
     tipoPedido: 'todos'
   });
+
+  const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
+  const [detalheAberto, setDetalheAberto] = useState(false);
 
   // Buscar dados iniciais
   useEffect(() => {
@@ -69,6 +76,11 @@ const HistoricoConsolidado = () => {
     buscarDadosConsolidados(filtrosLimpos);
   };
 
+  const handleEventClick = (evento: EventoCalendario) => {
+    setEventoSelecionado(evento);
+    setDetalheAberto(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
@@ -99,23 +111,27 @@ const HistoricoConsolidado = () => {
           isMaster={isMaster}
         />
 
-        <Tabs defaultValue="consolidado" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="consolidado" className="flex items-center space-x-2">
+        <Tabs defaultValue="calendario" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="calendario" className="flex items-center space-x-2">
               <Calendar className="h-4 w-4" />
-              <span>Visão Consolidada</span>
+              <span>Calendário</span>
+            </TabsTrigger>
+            <TabsTrigger value="metricas" className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4" />
+              <span>Métricas</span>
             </TabsTrigger>
             <TabsTrigger value="tradicional" className="flex items-center space-x-2">
               <List className="h-4 w-4" />
-              <span>Visualização Tradicional</span>
+              <span>Lista</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="consolidado" className="space-y-6">
+          <TabsContent value="calendario" className="space-y-6">
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Carregando dados consolidados...</p>
+                <p className="text-gray-600">Carregando calendário...</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -145,87 +161,41 @@ const HistoricoConsolidado = () => {
                     <Card>
                       <CardContent className="p-4">
                         <div className="text-2xl font-bold text-orange-600">
-                          {metricas.fornecedoresMaisAcionados.length}
+                          {eventosCalendario.length}
                         </div>
-                        <div className="text-sm text-gray-600">Fornecedores Únicos</div>
+                        <div className="text-sm text-gray-600">Dias com Pedidos</div>
                       </CardContent>
                     </Card>
                   </div>
                 )}
 
-                {/* Placeholder para o Calendário (será implementado na próxima fase) */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Calendário de Pedidos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-96 flex items-center justify-center bg-gray-100 rounded-lg">
-                      <div className="text-center">
-                        <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">Calendário será implementado na próxima fase</p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          {eventosCalendario.length} eventos encontrados no período
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Métricas em formato de cards */}
-                {metricas && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Fornecedores Mais Acionados */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Fornecedores Mais Acionados</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {metricas.fornecedoresMaisAcionados.slice(0, 8).map((fornecedor, index) => (
-                            <div key={fornecedor.nome} className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium">
-                                  {index + 1}
-                                </div>
-                                <span className="text-sm font-medium">{fornecedor.nome}</span>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-medium">{fornecedor.pedidos} pedidos</div>
-                                <div className="text-xs text-gray-500">R$ {fornecedor.valor.toFixed(2)}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Estatísticas por Comprador */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base">Estatísticas por Comprador</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {metricas.compradorEstatisticas.slice(0, 8).map((comprador, index) => (
-                            <div key={comprador.nome} className="flex justify-between items-center">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-medium">
-                                  {index + 1}
-                                </div>
-                                <span className="text-sm font-medium">{comprador.nome}</span>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-medium">{comprador.pedidos} pedidos</div>
-                                <div className="text-xs text-gray-500">R$ {comprador.valor.toFixed(2)}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                {/* Calendário */}
+                <CalendarioView 
+                  eventos={eventosCalendario} 
+                  onEventClick={handleEventClick}
+                />
               </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="metricas" className="space-y-6">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Carregando métricas...</p>
+              </div>
+            ) : metricas ? (
+              <MetricasDashboard metricas={metricas} />
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2">Nenhum dado encontrado</h2>
+                  <p className="text-gray-600 mb-4">
+                    Tente ajustar os filtros ou ampliar o período de busca.
+                  </p>
+                </CardContent>
+              </Card>
             )}
           </TabsContent>
 
@@ -300,6 +270,13 @@ const HistoricoConsolidado = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Modal de Detalhes do Evento */}
+        <DetalheEvento 
+          evento={eventoSelecionado}
+          isOpen={detalheAberto}
+          onClose={() => setDetalheAberto(false)}
+        />
       </main>
     </div>
   );
