@@ -39,17 +39,16 @@ export default function HistoricoConsolidado() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const {
-    dadosConsolidados,
+    pedidosConsolidados,
     eventosCalendario,
     metricas,
     compradores,
-    carregando,
+    loading,
     buscarDadosConsolidados
   } = useHistoricoConsolidado();
 
   const {
     dadosFiltrados,
-    filtrandoStatus,
     aplicarFiltros,
     ordenarDados,
     buscarTexto
@@ -59,7 +58,12 @@ export default function HistoricoConsolidado() {
   useEffect(() => {
     const filtrosIniciais = {
       dataInicio: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-      dataFim: new Date().toISOString().split('T')[0]
+      dataFim: new Date().toISOString().split('T')[0],
+      comprador: '',
+      fornecedor: '',
+      tipo: undefined as 'cotacao' | 'simples' | undefined,
+      valorMin: undefined as number | undefined,
+      valorMax: undefined as number | undefined,
     };
     setFiltrosAtivos(filtrosIniciais);
     buscarDadosConsolidados(filtrosIniciais);
@@ -172,9 +176,21 @@ export default function HistoricoConsolidado() {
                   <FiltrosAvancados
                     filtros={filtrosAtivos}
                     compradores={compradores}
-                    onFiltrosChange={async (novosFiltros) => {
-                      setFiltrosAtivos(novosFiltros);
-                      await buscarDadosConsolidados(novosFiltros);
+                    onBuscar={async (novosFiltros) => {
+                      setFiltrosAtivos({ ...filtrosAtivos, ...novosFiltros });
+                      await buscarDadosConsolidados({ ...filtrosAtivos, ...novosFiltros });
+                    }}
+                    onLimpar={() => {
+                      const filtrosLimpos = {
+                        dataInicio: '',
+                        dataFim: '',
+                        comprador: '',
+                        fornecedor: '',
+                        tipo: undefined as 'cotacao' | 'simples' | undefined,
+                        valorMin: undefined as number | undefined,
+                        valorMax: undefined as number | undefined,
+                      };
+                      setFiltrosAtivos(filtrosLimpos);
                     }}
                   />
                 </CardContent>
@@ -185,9 +201,9 @@ export default function HistoricoConsolidado() {
           <ResponsiveWrapper
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            calendarioTab={carregando ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventoClick={setEventoSelecionado} />}
-            metricasTab={carregando ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
-            listaTab={carregando ? <TabelaLoadingSkeleton /> : (
+            calendarioTab={loading ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventClick={setEventoSelecionado} />}
+            metricasTab={loading ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
+            listaTab={loading ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">
                 {dadosFiltrados.length === 0 ? (
                   <Card><CardContent className="p-8 text-center">
@@ -227,8 +243,8 @@ export default function HistoricoConsolidado() {
         </div>
       </FadeInWrapper>
 
-      {eventoSelecionado && <DetalheEvento evento={eventoSelecionado} onClose={() => setEventoSelecionado(null)} />}
-      {mostrarExportacao && <ExportacaoHistorico dados={dadosFiltrados} onClose={() => setMostrarExportacao(false)} />}
+      {eventoSelecionado && <DetalheEvento evento={eventoSelecionado} isOpen={true} onClose={() => setEventoSelecionado(null)} />}
+      {mostrarExportacao && <ExportacaoHistorico dados={dadosFiltrados} isOpen={mostrarExportacao} onOpenChange={setMostrarExportacao} />}
       <AtalhosTeclado />
     </div>
   );
