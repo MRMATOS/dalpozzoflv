@@ -5,13 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface PedidoConsolidado {
   id: string;
-  data: Date;
+  data: string;
   tipo: 'cotacao' | 'simples';
-  fornecedor_nome: string;
-  usuario_nome: string;
+  fornecedor: string;
+  comprador: string;
   usuario_loja: string;
-  total: number;
-  quantidade_itens: number;
+  valorTotal: number;
+  totalItens: number;
+  status?: string;
   observacoes?: string;
 }
 
@@ -31,21 +32,29 @@ export interface EventoCalendario {
 
 export interface MetricasConsolidadas {
   totalPedidos: number;
-  totalValor: number;
+  valorTotal: number;
   totalItens: number;
-  produtosMaisComprados: Array<{ nome: string; quantidade: number }>;
-  fornecedoresMaisAcionados: Array<{ nome: string; pedidos: number; valor: number }>;
-  compradorEstatisticas: Array<{ nome: string; pedidos: number; valor: number }>;
-  frequenciaPorDia: Array<{ data: string; pedidos: number }>;
+  valorMedio: number;
+  fornecedoresUnicos: number;
+  compradoresUnicos: number;
+  topFornecedores: Array<{ nome: string; pedidos: number; valor: number }>;
+  topCompradores: Array<{ nome: string; pedidos: number; valor: number }>;
+  distribuicaoTipos: Array<{ tipo: string; quantidade: number; percentual: number }>;
+  estatisticasFrequencia: {
+    diasComPedidos: number;
+    mediaPedidosPorDia: number;
+    diasSemPedidos: number;
+  };
 }
 
 export interface FiltrosHistorico {
-  dataInicio: string;
-  dataFim: string;
-  comprador: string;
-  fornecedor: string;
-  produto: string;
-  tipoPedido: 'todos' | 'cotacao' | 'simples';
+  dataInicio?: string;
+  dataFim?: string;
+  comprador?: string;
+  fornecedor?: string;
+  tipo?: 'cotacao' | 'simples';
+  valorMin?: number;
+  valorMax?: number;
 }
 
 export const useHistoricoConsolidado = () => {
@@ -89,13 +98,13 @@ export const useHistoricoConsolidado = () => {
       
       // Buscar pedidos de cotação
       let pedidosCotacao: PedidoConsolidado[] = [];
-      if (filtros.tipoPedido === 'todos' || filtros.tipoPedido === 'cotacao') {
+      if (!filtros.tipo || filtros.tipo === 'cotacao') {
         pedidosCotacao = await buscarPedidosCotacao(filtros);
       }
 
       // Buscar pedidos simples
       let pedidosSimples: PedidoConsolidado[] = [];
-      if (filtros.tipoPedido === 'todos' || filtros.tipoPedido === 'simples') {
+      if (!filtros.tipo || filtros.tipo === 'simples') {
         pedidosSimples = await buscarPedidosSimples(filtros);
       }
 
@@ -166,13 +175,13 @@ export const useHistoricoConsolidado = () => {
 
         return {
           id: pedido.id,
-          data: new Date(pedido.criado_em),
+          data: pedido.criado_em,
           tipo: 'cotacao' as const,
-          fornecedor_nome: pedido.fornecedores?.nome || 'Não informado',
-          usuario_nome: usuario?.nome || 'Não identificado',
+          fornecedor: pedido.fornecedores?.nome || 'Não informado',
+          comprador: usuario?.nome || 'Não identificado',
           usuario_loja: usuario?.loja || '',
-          total: pedido.total || 0,
-          quantidade_itens: itens?.length || 0
+          valorTotal: pedido.total || 0,
+          totalItens: itens?.length || 0
         };
       })
     );
@@ -194,9 +203,6 @@ export const useHistoricoConsolidado = () => {
 
     if (filtros.fornecedor) {
       query = query.ilike('fornecedor_nome', `%${filtros.fornecedor}%`);
-    }
-    if (filtros.produto) {
-      query = query.ilike('produto_nome', `%${filtros.produto}%`);
     }
     if (filtros.dataInicio) {
       query = query.gte('data_pedido', filtros.dataInicio);
@@ -229,13 +235,13 @@ export const useHistoricoConsolidado = () => {
       
       return {
         id: pedido.id,
-        data: new Date(pedido.data_pedido),
+        data: pedido.data_pedido,
         tipo: 'simples' as const,
-        fornecedor_nome: pedido.fornecedor_nome,
-        usuario_nome: usuario?.nome || 'Não identificado',
+        fornecedor: pedido.fornecedor_nome,
+        comprador: usuario?.nome || 'Não identificado',
         usuario_loja: usuario?.loja || '',
-        total: pedido.valor_total_estimado || 0,
-        quantidade_itens: 1, // Pedidos simples têm 1 item
+        valorTotal: pedido.valor_total_estimado || 0,
+        totalItens: 1, // Pedidos simples têm 1 item
         observacoes: pedido.observacoes
       };
     });
@@ -248,7 +254,7 @@ export const useHistoricoConsolidado = () => {
 
     // Agrupar pedidos por dia
     pedidos.forEach(pedido => {
-      const dataKey = pedido.data.toISOString().split('T')[0];
+      const dataKey = pedido.data.split('T')[0];
       if (!eventosPorDia.has(dataKey)) {
         eventosPorDia.set(dataKey, []);
       }
@@ -260,10 +266,10 @@ export const useHistoricoConsolidado = () => {
     
     eventosPorDia.forEach((pedidosDoDia, dataKey) => {
       const data = new Date(dataKey + 'T12:00:00');
-      const totalValor = pedidosDoDia.reduce((sum, p) => sum + p.total, 0);
-      const totalItens = pedidosDoDia.reduce((sum, p) => sum + p.quantidade_itens, 0);
+      const totalValor = pedidosDoDia.reduce((sum, p) => sum + p.valorTotal, 0);
+      const totalItens = pedidosDoDia.reduce((sum, p) => sum + p.totalItens, 0);
       const tipos = [...new Set(pedidosDoDia.map(p => p.tipo))];
-      const fornecedores = [...new Set(pedidosDoDia.map(p => p.fornecedor_nome))];
+      const fornecedores = [...new Set(pedidosDoDia.map(p => p.fornecedor))];
 
       eventos.push({
         id: dataKey,
@@ -285,57 +291,71 @@ export const useHistoricoConsolidado = () => {
 
   const calcularMetricas = (pedidos: PedidoConsolidado[]): MetricasConsolidadas => {
     const totalPedidos = pedidos.length;
-    const totalValor = pedidos.reduce((sum, p) => sum + p.total, 0);
-    const totalItens = pedidos.reduce((sum, p) => sum + p.quantidade_itens, 0);
+    const valorTotal = pedidos.reduce((sum, p) => sum + p.valorTotal, 0);
+    const totalItens = pedidos.reduce((sum, p) => sum + p.totalItens, 0);
 
-    // Fornecedores mais acionados
     const fornecedoresMap = new Map<string, { pedidos: number; valor: number }>();
-    pedidos.forEach(pedido => {
-      const current = fornecedoresMap.get(pedido.fornecedor_nome) || { pedidos: 0, valor: 0 };
-      fornecedoresMap.set(pedido.fornecedor_nome, {
-        pedidos: current.pedidos + 1,
-        valor: current.valor + pedido.total
-      });
-    });
-
-    const fornecedoresMaisAcionados = Array.from(fornecedoresMap.entries())
-      .map(([nome, data]) => ({ nome, ...data }))
-      .sort((a, b) => b.pedidos - a.pedidos)
-      .slice(0, 10);
-
-    // Estatísticas por comprador
     const compradoresMap = new Map<string, { pedidos: number; valor: number }>();
+    const tiposMap = new Map<string, number>();
+
     pedidos.forEach(pedido => {
-      const current = compradoresMap.get(pedido.usuario_nome) || { pedidos: 0, valor: 0 };
-      compradoresMap.set(pedido.usuario_nome, {
-        pedidos: current.pedidos + 1,
-        valor: current.valor + pedido.total
-      });
+      // Fornecedores
+      if (pedido.fornecedor) {
+        const current = fornecedoresMap.get(pedido.fornecedor) || { pedidos: 0, valor: 0 };
+        fornecedoresMap.set(pedido.fornecedor, {
+          pedidos: current.pedidos + 1,
+          valor: current.valor + pedido.valorTotal
+        });
+      }
+
+      // Compradores
+      if (pedido.comprador) {
+        const current = compradoresMap.get(pedido.comprador) || { pedidos: 0, valor: 0 };
+        compradoresMap.set(pedido.comprador, {
+          pedidos: current.pedidos + 1,
+          valor: current.valor + pedido.valorTotal
+        });
+      }
+
+      // Tipos
+      tiposMap.set(pedido.tipo, (tiposMap.get(pedido.tipo) || 0) + 1);
     });
 
-    const compradorEstatisticas = Array.from(compradoresMap.entries())
-      .map(([nome, data]) => ({ nome, ...data }))
-      .sort((a, b) => b.valor - a.valor);
-
-    // Frequência por dia
-    const frequenciaMap = new Map<string, number>();
+    // Estatísticas de frequência
+    const pedidosPorDia = new Map<string, number>();
     pedidos.forEach(pedido => {
-      const dataKey = pedido.data.toISOString().split('T')[0];
-      frequenciaMap.set(dataKey, (frequenciaMap.get(dataKey) || 0) + 1);
+      const dia = pedido.data.split('T')[0];
+      pedidosPorDia.set(dia, (pedidosPorDia.get(dia) || 0) + 1);
     });
 
-    const frequenciaPorDia = Array.from(frequenciaMap.entries())
-      .map(([data, pedidos]) => ({ data, pedidos }))
-      .sort((a, b) => a.data.localeCompare(b.data));
+    const diasComPedidos = pedidosPorDia.size;
+    const mediaPedidosPorDia = diasComPedidos > 0 ? totalPedidos / diasComPedidos : 0;
 
     return {
       totalPedidos,
-      totalValor,
+      valorTotal,
       totalItens,
-      produtosMaisComprados: [], // TODO: Implementar após ter dados de produtos
-      fornecedoresMaisAcionados,
-      compradorEstatisticas,
-      frequenciaPorDia
+      valorMedio: totalPedidos > 0 ? valorTotal / totalPedidos : 0,
+      fornecedoresUnicos: fornecedoresMap.size,
+      compradoresUnicos: compradoresMap.size,
+      topFornecedores: Array.from(fornecedoresMap.entries())
+        .sort((a, b) => b[1].valor - a[1].valor)
+        .slice(0, 5)
+        .map(([nome, dados]) => ({ nome, ...dados })),
+      topCompradores: Array.from(compradoresMap.entries())
+        .sort((a, b) => b[1].valor - a[1].valor)
+        .slice(0, 5)
+        .map(([nome, dados]) => ({ nome, ...dados })),
+      distribuicaoTipos: Array.from(tiposMap.entries()).map(([tipo, quantidade]) => ({
+        tipo,
+        quantidade,
+        percentual: totalPedidos > 0 ? (quantidade / totalPedidos) * 100 : 0
+      })),
+      estatisticasFrequencia: {
+        diasComPedidos,
+        mediaPedidosPorDia,
+        diasSemPedidos: 0
+      }
     };
   };
 
