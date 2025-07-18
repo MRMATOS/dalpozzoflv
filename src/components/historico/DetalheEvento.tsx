@@ -156,15 +156,18 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between w-full">
-            {/* TÍTULO À ESQUERDA */}
-            <div className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Pedidos de {new Date(dataAtual + 'T00:00:00').toLocaleDateString('pt-BR')}
+          {/* CORREÇÃO CRÍTICA: Layout com CSS Grid ao invés de Flexbox */}
+          <DialogTitle className="grid grid-cols-[2fr_3fr_auto] items-center gap-4 w-full">
+            {/* TÍTULO À ESQUERDA - Menos espaço */}
+            <div className="flex items-center gap-2 min-w-0">
+              <Calendar className="h-5 w-5 flex-shrink-0" />
+              <span className="truncate">
+                Pedidos de {new Date(dataAtual + 'T12:00:00').toLocaleDateString('pt-BR')}
+              </span>
             </div>
             
-            {/* NAVEGAÇÃO CENTRALIZADA */}
-            <div className="flex-1 flex justify-center">
+            {/* NAVEGAÇÃO CENTRALIZADA - Mais espaço */}
+            <div className="flex justify-center">
               {onBuscarPedidosDiaAdjacente && (
                 <div className="flex items-center gap-2">
                   <Button

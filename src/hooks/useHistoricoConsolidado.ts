@@ -383,16 +383,19 @@ export const useHistoricoConsolidado = () => {
     }
   }, [user?.id]);
 
-  // CORREÇÃO CRÍTICA: Melhorar busca de pedidos de cotação com contagem real
+  // CORREÇÃO CRÍTICA: Melhorar busca de pedidos de cotação com fonte de dados correta
   const buscarPedidosCotacao = async (filtros: FiltrosHistorico): Promise<PedidoConsolidado[]> => {
     let query = supabase
-      .from('pedidos_compra')
+      .from('cotacoes')
       .select(`
         id,
-        criado_em,
-        total,
+        data,
         user_id,
-        fornecedores!inner(nome)
+        fornecedores!inner(nome),
+        pedidos_compra!inner(
+          id,
+          total
+        )
       `);
 
     // Aplicar filtros
@@ -406,44 +409,41 @@ export const useHistoricoConsolidado = () => {
       query = query.eq('fornecedores.nome', filtros.fornecedor);
     }
     if (filtros.dataInicio) {
-      query = query.gte('criado_em', filtros.dataInicio);
+      query = query.gte('data', filtros.dataInicio);
     }
     if (filtros.dataFim) {
-      query = query.lte('criado_em', filtros.dataFim + 'T23:59:59');
+      query = query.lte('data', filtros.dataFim + 'T23:59:59');
     }
 
-    const { data: pedidos, error } = await query.order('criado_em', { ascending: false });
+    const { data: cotacoes, error } = await query.order('data', { ascending: false });
 
     if (error) throw error;
 
     // CORREÇÃO CRÍTICA: Contar itens reais com query otimizada
     const pedidosComDetalhes = await Promise.all(
-      (pedidos || []).map(async (pedido: any) => {
+      (cotacoes || []).map(async (cotacao: any) => {
         const { data: usuario } = await supabase
           .from('usuarios')
           .select('nome, loja')
-          .eq('id', pedido.user_id)
+          .eq('id', cotacao.user_id)
           .single();
 
         // CORREÇÃO CRÍTICA: Contar itens reais com query mais robusta
         const { count: totalItensReal } = await supabase
           .from('itens_pedido')
           .select('*', { count: 'exact', head: true })
-          .eq('pedido_id', pedido.id);
+          .eq('pedido_id', cotacao.pedidos_compra?.id);
 
-        console.log(`[COTACAO COUNT] Pedido ${pedido.id} tem ${totalItensReal || 0} itens reais`);
+        console.log(`[COTACAO COUNT] Cotação ${cotacao.id} tem ${totalItensReal || 0} itens reais`);
 
-        // CORREÇÃO CRÍTICA: Garantir timezone local correto
-        const dataOriginal = new Date(pedido.criado_em);
-        
         return {
-          id: pedido.id,
-          data: pedido.criado_em, // Manter formato ISO para consistência
+          id: cotacao.pedidos_compra?.id || cotacao.id,
+          data: cotacao.data, // CORREÇÃO: Usar cotacoes.data diretamente
           tipo: 'cotacao' as const,
-          fornecedor: pedido.fornecedores?.nome || 'Não informado',
+          fornecedor: cotacao.fornecedores?.nome || 'Não informado',
           comprador: usuario?.nome || 'Não identificado',
           usuario_loja: usuario?.loja || '',
-          valorTotal: pedido.total || 0,
+          valorTotal: cotacao.pedidos_compra?.total || 0,
           totalItens: totalItensReal || 0 // CORREÇÃO: Usar contagem real robusta
         };
       })
@@ -475,7 +475,7 @@ export const useHistoricoConsolidado = () => {
       query = query.lte('data_pedido', filtros.dataFim);
     }
 
-    const { data: pedidos, error } = await query.order('criado_em', { ascending: false });
+    const { data: pedidos, error } = await query.order('data_pedido', { ascending: false });
 
     if (error) throw error;
 
@@ -497,12 +497,12 @@ export const useHistoricoConsolidado = () => {
     const pedidosComDetalhes = (pedidos || []).map(pedido => {
       const usuario = usuariosMap.get(pedido.user_id);
       
-      // CORREÇÃO: Usar data_pedido para consistency, mas formatar corretamente
-      const dataFormatada = pedido.data_pedido ? `${pedido.data_pedido}T${new Date(pedido.criado_em).toTimeString().split(' ')[0]}` : pedido.criado_em;
+      // CORREÇÃO CRÍTICA: Usar apenas data_pedido com horário padrão
+      const dataFormatada = `${pedido.data_pedido}T12:00:00`;
       
       return {
         id: pedido.id,
-        data: dataFormatada, // CORREÇÃO: Manter timezone consistente
+        data: dataFormatada, // CORREÇÃO: Usar data_pedido com horário fixo
         tipo: 'simples' as const,
         fornecedor: pedido.fornecedor_nome,
         comprador: usuario?.nome || 'Não identificado',
@@ -513,10 +513,11 @@ export const useHistoricoConsolidado = () => {
       };
     });
 
+    console.log(`[SIMPLES SUCCESS] Pedidos simples encontrados: ${pedidosComDetalhes.length}`);
     return pedidosComDetalhes;
   };
 
-  // CORREÇÃO: Melhorar geração de eventos com horários consistentes
+  // CORREÇÃO CRÍTICA: Geração de eventos com datas consistentes
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
     // Consolidar pedidos por dia
     const eventosPorDia = new Map<string, {
@@ -532,7 +533,7 @@ export const useHistoricoConsolidado = () => {
     pedidos.forEach(pedido => {
       const dataCompleta = new Date(pedido.data);
       
-      // CORREÇÃO CRÍTICA: Usar a data diretamente sem conversões de timezone
+      // CORREÇÃO CRÍTICA: Extrair apenas a parte da data sem conversões de timezone
       const dataKey = pedido.data.split('T')[0]; // YYYY-MM-DD direto da string
 
       const existing = eventosPorDia.get(dataKey) || {
@@ -572,9 +573,9 @@ export const useHistoricoConsolidado = () => {
         titulo = `${fornecedoresList.slice(0, 2).join(', ')} +${fornecedoresList.length - 2}`;
       }
 
-      // CORREÇÃO CRÍTICA: Criar data correta sem conversões desnecessárias
+      // CORREÇÃO CRÍTICA: Criar data sem conversões desnecessárias
       const [ano, mes, dia] = dataKey.split('-').map(Number);
-      const startDate = new Date(ano, mes - 1, dia, dadosDia.primeiroHorario.getHours(), dadosDia.primeiroHorario.getMinutes());
+      const startDate = new Date(ano, mes - 1, dia, 12, 0, 0); // Meio-dia para evitar problemas de timezone
       const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
       const evento: EventoCalendario = {
@@ -588,13 +589,14 @@ export const useHistoricoConsolidado = () => {
           totalItens: dadosDia.totalItens,
           tipos: Array.from(dadosDia.tipos),
           fornecedores: fornecedoresList,
-          dataCompleta: dataKey // CORREÇÃO: Garantir que dataCompleta seja sempre YYYY-MM-DD correto
+          dataCompleta: dataKey // CORREÇÃO: dataCompleta sempre YYYY-MM-DD
         }
       };
 
       eventos.push(evento);
     });
 
+    console.log(`[EVENTOS GERADOS] Total de eventos: ${eventos.length}`);
     return eventos.sort((a, b) => a.start.getTime() - b.start.getTime());
   };
 
