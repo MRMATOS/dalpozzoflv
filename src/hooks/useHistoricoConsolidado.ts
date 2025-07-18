@@ -532,7 +532,10 @@ export const useHistoricoConsolidado = () => {
     // Agrupar pedidos por dia
     pedidos.forEach(pedido => {
       const dataCompleta = new Date(pedido.data);
-      const dataKey = dataCompleta.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      // CORREÇÃO CRÍTICA: Usar timezone local para evitar inconsistências
+      const dataLocal = new Date(dataCompleta.getTime() - (dataCompleta.getTimezoneOffset() * 60000));
+      const dataKey = dataLocal.toISOString().split('T')[0]; // YYYY-MM-DD em timezone local
 
       const existing = eventosPorDia.get(dataKey) || {
         pedidos: [],
@@ -540,7 +543,7 @@ export const useHistoricoConsolidado = () => {
         tipos: new Set<string>(),
         totalValor: 0,
         totalItens: 0,
-        primeiroHorario: dataCompleta
+        primeiroHorario: dataLocal
       };
 
       existing.pedidos.push(pedido);
@@ -549,21 +552,21 @@ export const useHistoricoConsolidado = () => {
       existing.totalValor += pedido.valorTotal;
       existing.totalItens += pedido.totalItens;
       
-      // Manter o primeiro horário do dia
-      if (dataCompleta.getTime() < existing.primeiroHorario.getTime()) {
-        existing.primeiroHorario = dataCompleta;
+      // Manter o primeiro horário do dia em timezone local
+      if (dataLocal.getTime() < existing.primeiroHorario.getTime()) {
+        existing.primeiroHorario = dataLocal;
       }
 
       eventosPorDia.set(dataKey, existing);
     });
 
-    // Gerar eventos consolidados com título limpo
+    // Gerar eventos consolidados com data correta
     const eventos: EventoCalendario[] = [];
     
     eventosPorDia.forEach((dadosDia, dataKey) => {
       const fornecedoresList = Array.from(dadosDia.fornecedores);
       
-      // CORREÇÃO: Título mais limpo - apenas fornecedores principais
+      // Título mais limpo - apenas fornecedores principais
       let titulo = '';
       if (fornecedoresList.length <= 2) {
         titulo = fornecedoresList.join(', ');
@@ -571,8 +574,9 @@ export const useHistoricoConsolidado = () => {
         titulo = `${fornecedoresList.slice(0, 2).join(', ')} +${fornecedoresList.length - 2}`;
       }
 
-      // CORREÇÃO: Garantir que start e end estejam no timezone local
-      const startDate = new Date(dadosDia.primeiroHorario);
+      // CORREÇÃO CRÍTICA: Criar data no timezone local correto
+      const [ano, mes, dia] = dataKey.split('-').map(Number);
+      const startDate = new Date(ano, mes - 1, dia, dadosDia.primeiroHorario.getHours(), dadosDia.primeiroHorario.getMinutes());
       const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
       const evento: EventoCalendario = {
@@ -586,7 +590,7 @@ export const useHistoricoConsolidado = () => {
           totalItens: dadosDia.totalItens,
           tipos: Array.from(dadosDia.tipos),
           fornecedores: fornecedoresList,
-          dataCompleta: dataKey // CORREÇÃO: Sempre usar formato YYYY-MM-DD
+          dataCompleta: dataKey // CORREÇÃO: Garantir que dataCompleta seja sempre YYYY-MM-DD
         }
       };
 
@@ -678,7 +682,7 @@ export const useHistoricoConsolidado = () => {
     buscarProdutosDoDia,
     buscarPedidosDoDiaComItens,
     buscarPedidosDiaAdjacente,
-    carregarItensParaPedidos, // NOVA: Expor função de carregamento em lote
+    carregarItensParaPedidos,
     isComprador,
     isMaster
   };

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2, TrendingUp } from 'lucide-react';
+import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2, X } from 'lucide-react';
 import { EventoCalendario, PedidoConsolidado } from '@/hooks/useHistoricoConsolidado';
 import ResumoProdutosDia from './ResumoProdutosDia';
 
@@ -45,13 +45,14 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
   const [loadingProdutos, setLoadingProdutos] = useState(false);
   const [activeTab, setActiveTab] = useState('produtos');
   
-  // NOVA: Estado para controlar data atual e navegação entre dias
+  // Estado para controlar data atual e navegação entre dias
   const [dataAtual, setDataAtual] = useState<string>('');
   const [loadingDiaAdjacente, setLoadingDiaAdjacente] = useState(false);
 
   useEffect(() => {
     if (evento && isOpen) {
-      const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
+      // CORREÇÃO CRÍTICA: Usar sempre dataCompleta para consistência
+      const dataEvento = evento.resource.dataCompleta;
       setDataAtual(dataEvento);
       
       setLoading(true);
@@ -101,7 +102,7 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     setPedidoAtualIndex((prev) => (prev - 1 + pedidosDoDia.length) % pedidosDoDia.length);
   };
 
-  // NOVA: Função para navegar entre dias
+  // Função para navegar entre dias
   const navegarEntreDias = async (direcao: 'anterior' | 'proximo') => {
     if (!onBuscarPedidosDiaAdjacente) return;
     
@@ -158,37 +159,50 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
           <DialogTitle className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Pedidos de {new Date(dataAtual).toLocaleDateString('pt-BR')}
+              Pedidos de {new Date(dataAtual + 'T00:00:00').toLocaleDateString('pt-BR')}
             </div>
             
-            {/* NOVA: Navegação entre dias no header fixo */}
-            {onBuscarPedidosDiaAdjacente && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navegarEntreDias('anterior')}
-                  disabled={loadingDiaAdjacente}
-                  className="h-8 w-8 p-0"
-                  title="Dia anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground min-w-[100px] text-center">
-                  {loadingDiaAdjacente ? 'Carregando...' : 'Entre dias'}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navegarEntreDias('proximo')}
-                  disabled={loadingDiaAdjacente}
-                  className="h-8 w-8 p-0"
-                  title="Próximo dia"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-4">
+              {/* CORREÇÃO: Navegação entre dias CENTRALIZADA */}
+              {onBuscarPedidosDiaAdjacente && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navegarEntreDias('anterior')}
+                    disabled={loadingDiaAdjacente}
+                    className="h-8 w-8 p-0"
+                    title="Dia anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="text-sm text-muted-foreground min-w-[100px] text-center">
+                    {loadingDiaAdjacente ? 'Carregando...' : 'Entre dias'}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navegarEntreDias('proximo')}
+                    disabled={loadingDiaAdjacente}
+                    className="h-8 w-8 p-0"
+                    title="Próximo dia"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              
+              {/* CORREÇÃO: Botão X posicionado à direita */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-8 w-8 p-0"
+                title="Fechar"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
@@ -217,7 +231,7 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
           <TabsContent value="pedido" className="mt-4">
             {pedidoAtual && (
               <div className="space-y-4">
-                {/* CORREÇÃO: Navegação entre pedidos movida para dentro da aba */}
+                {/* Navegação entre pedidos */}
                 {temMultiplosPedidos && (
                   <Card className="border-primary/30">
                     <CardContent className="p-3">
