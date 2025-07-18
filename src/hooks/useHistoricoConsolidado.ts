@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -101,13 +102,13 @@ export const useHistoricoConsolidado = () => {
     }
   };
 
-  // CORREÇÃO CRÍTICA: Função melhorada para buscar itens de um pedido específico
+  // CORREÇÃO CRÍTICA: Função otimizada para buscar itens com contagem precisa
   const buscarItensPedido = useCallback(async (pedidoId: string, tipoPedido: 'cotacao' | 'simples'): Promise<ItemPedido[]> => {
     try {
-      console.log(`[DEBUG] Buscando itens para pedido ${pedidoId} do tipo ${tipoPedido}`);
+      console.log(`[CRITICAL DEBUG] Buscando itens para pedido ${pedidoId} do tipo ${tipoPedido}`);
       
       if (tipoPedido === 'cotacao') {
-        // CORREÇÃO: Query melhorada para cotações
+        // CORREÇÃO CRÍTICA: Query otimizada com LEFT JOIN para garantir todos os dados
         const { data: itens, error } = await supabase
           .from('itens_pedido')
           .select(`
@@ -117,7 +118,7 @@ export const useHistoricoConsolidado = () => {
             tipo,
             unidade,
             produto_id,
-            produtos!inner(
+            produtos:produto_id (
               id,
               produto,
               nome_variacao,
@@ -127,27 +128,39 @@ export const useHistoricoConsolidado = () => {
           .eq('pedido_id', pedidoId);
 
         if (error) {
-          console.error(`[ERROR] Erro ao buscar itens de cotação para ${pedidoId}:`, error);
+          console.error(`[CRITICAL ERROR] Erro na query de itens para ${pedidoId}:`, error);
           return [];
         }
 
-        console.log(`[DEBUG] Encontrados ${itens?.length || 0} itens para cotação ${pedidoId}:`, itens);
+        console.log(`[CRITICAL DEBUG] Query resultado para ${pedidoId}:`, itens);
 
         if (!itens || itens.length === 0) {
-          console.warn(`[WARNING] Nenhum item encontrado para cotação ${pedidoId}`);
+          console.warn(`[CRITICAL WARNING] Nenhum item encontrado para cotação ${pedidoId}`);
           return [];
         }
 
-        return itens.map(item => ({
-          id: item.id,
-          produto_nome: item.produtos?.nome_variacao 
-            ? `${item.produtos.produto} ${item.produtos.nome_variacao}`
-            : item.produtos?.produto || 'Produto não identificado',
-          quantidade: item.quantidade || 0,
-          preco: item.preco,
-          tipo: item.tipo,
-          unidade: item.unidade
-        }));
+        const itensFormatados = itens.map(item => {
+          const produto = item.produtos;
+          let produto_nome = 'Produto não identificado';
+          
+          if (produto) {
+            produto_nome = produto.nome_variacao 
+              ? `${produto.produto} ${produto.nome_variacao}`
+              : produto.produto || 'Produto não identificado';
+          }
+
+          return {
+            id: item.id,
+            produto_nome,
+            quantidade: item.quantidade || 0,
+            preco: item.preco,
+            tipo: item.tipo,
+            unidade: item.unidade
+          };
+        });
+
+        console.log(`[CRITICAL SUCCESS] ${itensFormatados.length} itens formatados para cotação ${pedidoId}`);
+        return itensFormatados;
 
       } else {
         // Para pedidos simples, buscar direto da tabela
@@ -158,7 +171,7 @@ export const useHistoricoConsolidado = () => {
           .single();
 
         if (error) {
-          console.error('Erro ao buscar pedido simples:', error);
+          console.error('[ERROR] Erro ao buscar pedido simples:', error);
           return [];
         }
 
@@ -172,15 +185,34 @@ export const useHistoricoConsolidado = () => {
         }];
       }
     } catch (error) {
-      console.error('Erro ao buscar itens do pedido:', error);
+      console.error('[CRITICAL ERROR] Erro geral ao buscar itens do pedido:', error);
       return [];
     }
   }, []);
 
+  // CORREÇÃO: Função para carregar itens em lote para múltiplos pedidos
+  const carregarItensParaPedidos = useCallback(async (pedidos: PedidoConsolidado[]): Promise<PedidoConsolidado[]> => {
+    console.log(`[BATCH LOADING] Carregando itens para ${pedidos.length} pedidos`);
+    
+    const pedidosComItens = await Promise.all(
+      pedidos.map(async (pedido) => {
+        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        return { 
+          ...pedido, 
+          itens,
+          totalItens: itens.length // CORREÇÃO: Usar contagem real dos itens carregados
+        };
+      })
+    );
+
+    console.log(`[BATCH SUCCESS] Itens carregados para todos os pedidos`);
+    return pedidosComItens;
+  }, [buscarItensPedido]);
+
   // Nova função para buscar pedidos de um dia específico
   const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
     try {
-      console.log(`Buscando pedidos do dia: ${data}`);
+      console.log(`[DAY SEARCH] Buscando pedidos do dia: ${data}`);
       
       // Buscar pedidos de cotação do dia
       const pedidosCotacao = await buscarPedidosCotacao({
@@ -196,13 +228,13 @@ export const useHistoricoConsolidado = () => {
 
       // Combinar e ordenar por horário
       const todosPedidosDoDia = [...pedidosCotacao, ...pedidosSimples];
-      console.log(`Total de pedidos encontrados para ${data}:`, todosPedidosDoDia.length);
+      console.log(`[DAY SUCCESS] Total de pedidos encontrados para ${data}:`, todosPedidosDoDia.length);
       
       return todosPedidosDoDia.sort((a, b) => 
         new Date(a.data).getTime() - new Date(b.data).getTime()
       );
     } catch (error) {
-      console.error('Erro ao buscar pedidos do dia:', error);
+      console.error('[DAY ERROR] Erro ao buscar pedidos do dia:', error);
       return [];
     }
   }, [user?.id]);
@@ -303,33 +335,22 @@ export const useHistoricoConsolidado = () => {
     }
   }, [buscarItensPedido, buscarPedidosDoDia]);
 
-  // CORREÇÃO: Função melhorada para buscar pedidos de um dia específico com itens
+  // CORREÇÃO CRÍTICA: Função melhorada para buscar pedidos de um dia específico com itens
   const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
-    console.log(`Buscando pedidos com itens para o dia: ${data}`);
+    console.log(`[WITH ITEMS] Buscando pedidos com itens para o dia: ${data}`);
     const pedidos = await buscarPedidosDoDia(data);
     
-    // Buscar itens para cada pedido e atualizar totalItens
-    const pedidosComItens = await Promise.all(
-      pedidos.map(async (pedido) => {
-        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
-        console.log(`Pedido ${pedido.id} (${pedido.tipo}) tem ${itens.length} itens`);
-        
-        return { 
-          ...pedido, 
-          itens,
-          totalItens: itens.length // CORREÇÃO: Usar número real de itens
-        };
-      })
-    );
-
-    console.log(`Total de pedidos com itens carregados:`, pedidosComItens.length);
+    // Usar função de carregamento em lote para melhor performance
+    const pedidosComItens = await carregarItensParaPedidos(pedidos);
+    
+    console.log(`[WITH ITEMS SUCCESS] Total de pedidos com itens carregados:`, pedidosComItens.length);
     return pedidosComItens;
-  }, [buscarPedidosDoDia, buscarItensPedido]);
+  }, [buscarPedidosDoDia, carregarItensParaPedidos]);
 
   const buscarDadosConsolidados = useCallback(async (filtros: FiltrosHistorico) => {
     setLoading(true);
     try {
-      console.log('Buscando dados consolidados com filtros:', filtros);
+      console.log('[CONSOLIDATED] Buscando dados consolidados com filtros:', filtros);
       
       // Buscar pedidos de cotação
       let pedidosCotacao: PedidoConsolidado[] = [];
@@ -345,7 +366,7 @@ export const useHistoricoConsolidado = () => {
 
       // Consolidar todos os pedidos
       const todosOsPedidos = [...pedidosCotacao, ...pedidosSimples];
-      console.log(`Total de pedidos consolidados: ${todosOsPedidos.length}`);
+      console.log(`[CONSOLIDATED] Total de pedidos consolidados: ${todosOsPedidos.length}`);
       setPedidosConsolidados(todosOsPedidos);
 
       // Gerar eventos do calendário
@@ -357,13 +378,13 @@ export const useHistoricoConsolidado = () => {
       setMetricas(metricasCalculadas);
 
     } catch (error) {
-      console.error('Erro ao buscar dados consolidados:', error);
+      console.error('[CONSOLIDATED ERROR] Erro ao buscar dados consolidados:', error);
     } finally {
       setLoading(false);
     }
   }, [user?.id]);
 
-  // CORREÇÃO: Melhorar busca de pedidos de cotação
+  // CORREÇÃO CRÍTICA: Melhorar busca de pedidos de cotação com contagem real
   const buscarPedidosCotacao = async (filtros: FiltrosHistorico): Promise<PedidoConsolidado[]> => {
     let query = supabase
       .from('pedidos_compra')
@@ -396,7 +417,7 @@ export const useHistoricoConsolidado = () => {
 
     if (error) throw error;
 
-    // CORREÇÃO: Buscar dados dos usuários e contagem REAL de itens
+    // CORREÇÃO CRÍTICA: Contar itens reais com query otimizada
     const pedidosComDetalhes = await Promise.all(
       (pedidos || []).map(async (pedido: any) => {
         const { data: usuario } = await supabase
@@ -405,32 +426,31 @@ export const useHistoricoConsolidado = () => {
           .eq('id', pedido.user_id)
           .single();
 
-        // CORREÇÃO CRÍTICA: Contar itens reais do pedido
-        const { data: itens } = await supabase
+        // CORREÇÃO CRÍTICA: Contar itens reais com query mais robusta
+        const { count: totalItensReal } = await supabase
           .from('itens_pedido')
-          .select('id')
+          .select('*', { count: 'exact', head: true })
           .eq('pedido_id', pedido.id);
 
-        const totalItensReal = itens?.length || 0;
-        console.log(`[DEBUG] Pedido cotação ${pedido.id} tem ${totalItensReal} itens`);
+        console.log(`[COTACAO COUNT] Pedido ${pedido.id} tem ${totalItensReal || 0} itens reais`);
 
-        // CORREÇÃO: Garantir horário correto (manter timezone original)
+        // CORREÇÃO CRÍTICA: Garantir timezone local correto
         const dataOriginal = new Date(pedido.criado_em);
         
         return {
           id: pedido.id,
-          data: pedido.criado_em, // Manter formato ISO original
+          data: pedido.criado_em, // Manter formato ISO para consistência
           tipo: 'cotacao' as const,
           fornecedor: pedido.fornecedores?.nome || 'Não informado',
           comprador: usuario?.nome || 'Não identificado',
           usuario_loja: usuario?.loja || '',
           valorTotal: pedido.total || 0,
-          totalItens: totalItensReal // CORREÇÃO: Usar contagem real
+          totalItens: totalItensReal || 0 // CORREÇÃO: Usar contagem real robusta
         };
       })
     );
 
-    console.log(`[DEBUG] Pedidos de cotação encontrados: ${pedidosComDetalhes.length}`);
+    console.log(`[COTACAO SUCCESS] Pedidos de cotação encontrados: ${pedidosComDetalhes.length}`);
     return pedidosComDetalhes;
   };
 
@@ -478,9 +498,12 @@ export const useHistoricoConsolidado = () => {
     const pedidosComDetalhes = (pedidos || []).map(pedido => {
       const usuario = usuariosMap.get(pedido.user_id);
       
+      // CORREÇÃO: Usar data_pedido para consistency, mas formatar corretamente
+      const dataFormatada = pedido.data_pedido ? `${pedido.data_pedido}T${new Date(pedido.criado_em).toTimeString().split(' ')[0]}` : pedido.criado_em;
+      
       return {
         id: pedido.id,
-        data: pedido.data_pedido,
+        data: dataFormatada, // CORREÇÃO: Manter timezone consistente
         tipo: 'simples' as const,
         fornecedor: pedido.fornecedor_nome,
         comprador: usuario?.nome || 'Não identificado',
@@ -494,6 +517,7 @@ export const useHistoricoConsolidado = () => {
     return pedidosComDetalhes;
   };
 
+  // CORREÇÃO: Melhorar geração de eventos com horários consistentes
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
     // Consolidar pedidos por dia
     const eventosPorDia = new Map<string, {
@@ -507,9 +531,8 @@ export const useHistoricoConsolidado = () => {
 
     // Agrupar pedidos por dia
     pedidos.forEach(pedido => {
-      const dataKey = pedido.data.split('T')[0];
-      // CORREÇÃO: Preservar horário original para auto-scroll
       const dataCompleta = new Date(pedido.data);
+      const dataKey = dataCompleta.toISOString().split('T')[0]; // YYYY-MM-DD
 
       const existing = eventosPorDia.get(dataKey) || {
         pedidos: [],
@@ -534,34 +557,36 @@ export const useHistoricoConsolidado = () => {
       eventosPorDia.set(dataKey, existing);
     });
 
-    // Gerar eventos consolidados - CORREÇÃO: Formatação limpa
+    // Gerar eventos consolidados com título limpo
     const eventos: EventoCalendario[] = [];
     
     eventosPorDia.forEach((dadosDia, dataKey) => {
       const fornecedoresList = Array.from(dadosDia.fornecedores);
       
-      // CORREÇÃO: Título limpo apenas com fornecedores
+      // CORREÇÃO: Título mais limpo - apenas fornecedores principais
       let titulo = '';
       if (fornecedoresList.length <= 2) {
         titulo = fornecedoresList.join(', ');
-      } else if (fornecedoresList.length === 3) {
-        titulo = fornecedoresList.slice(0, 2).join(', ') + ' e mais 1';
       } else {
-        titulo = fornecedoresList.slice(0, 2).join(', ') + ` e mais ${fornecedoresList.length - 2}`;
+        titulo = `${fornecedoresList.slice(0, 2).join(', ')} +${fornecedoresList.length - 2}`;
       }
+
+      // CORREÇÃO: Garantir que start e end estejam no timezone local
+      const startDate = new Date(dadosDia.primeiroHorario);
+      const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
 
       const evento: EventoCalendario = {
         id: `consolidated-${dataKey}`,
         title: titulo,
-        start: dadosDia.primeiroHorario,
-        end: new Date(dadosDia.primeiroHorario.getTime() + 60 * 60 * 1000),
+        start: startDate,
+        end: endDate,
         resource: {
           pedidos: dadosDia.pedidos,
           totalValor: dadosDia.totalValor,
           totalItens: dadosDia.totalItens,
           tipos: Array.from(dadosDia.tipos),
           fornecedores: fornecedoresList,
-          dataCompleta: dataKey
+          dataCompleta: dataKey // CORREÇÃO: Sempre usar formato YYYY-MM-DD
         }
       };
 
@@ -653,6 +678,7 @@ export const useHistoricoConsolidado = () => {
     buscarProdutosDoDia,
     buscarPedidosDoDiaComItens,
     buscarPedidosDiaAdjacente,
+    carregarItensParaPedidos, // NOVA: Expor função de carregamento em lote
     isComprador,
     isMaster
   };

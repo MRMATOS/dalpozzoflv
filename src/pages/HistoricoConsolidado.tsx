@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -47,6 +48,7 @@ export default function HistoricoConsolidado() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [inicializado, setInicializado] = useState(false);
   const [forceReload, setForceReload] = useState(0);
+  const [pedidosComItensCarregados, setPedidosComItensCarregados] = useState<PedidoConsolidado[]>([]);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -61,6 +63,7 @@ export default function HistoricoConsolidado() {
     buscarPedidosDoDiaComItens,
     buscarProdutosDoDia,
     buscarPedidosDiaAdjacente,
+    carregarItensParaPedidos, // NOVA: Usar função de carregamento em lote
     isComprador,
     isMaster
   } = useHistoricoConsolidado();
@@ -91,6 +94,7 @@ export default function HistoricoConsolidado() {
     setTextoBusca('');
     setEventoSelecionado(null);
     setPedidosDoDiaAtual([]);
+    setPedidosComItensCarregados([]);
     setMostrarFiltrosAvancados(false);
     setMostrarExportacao(false);
     
@@ -101,13 +105,22 @@ export default function HistoricoConsolidado() {
     });
   }, [forceReload]);
 
-  // Aplicar filtros nos dados otimizados quando os dados consolidados mudarem
+  // CORREÇÃO CRÍTICA: Carregar itens quando pedidos mudarem ou modo for "produtos"
   useEffect(() => {
     if (pedidosConsolidados.length > 0 && inicializado) {
       console.log('[FILTER] Aplicando filtros nos dados consolidados:', pedidosConsolidados.length, 'pedidos');
       aplicarFiltros(filtrosAtivos, pedidosConsolidados);
+      
+      // CRÍTICO: Se modo é "produtos", carregar itens automaticamente
+      if (modoLista === 'produtos') {
+        console.log('[PRODUCTS MODE] Carregando itens para modo produtos...');
+        carregarItensParaPedidos(pedidosConsolidados).then(pedidosComItens => {
+          setPedidosComItensCarregados(pedidosComItens);
+          console.log('[PRODUCTS MODE] Itens carregados para', pedidosComItens.length, 'pedidos');
+        });
+      }
     }
-  }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros, inicializado]);
+  }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros, inicializado, modoLista, carregarItensParaPedidos]);
 
   // Configurar atalhos de teclado
   useKeyboardShortcuts({
@@ -163,16 +176,17 @@ export default function HistoricoConsolidado() {
   // CORREÇÃO: Função de reload que limpa tudo completamente
   const handleLimparFiltros = () => {
     console.log('[RELOAD] Limpando filtros e recarregando dados...');
+    setPedidosComItensCarregados([]); // Limpar itens carregados também
     setForceReload(prev => prev + 1); // Força reload completo
   };
 
-  // CORREÇÃO: Função melhorada para lidar com clique em evento do calendário
+  // CORREÇÃO CRÍTICA: Função melhorada para lidar com clique em evento do calendário
   const handleEventClick = async (evento: EventoCalendario) => {
     console.log('[EVENT] Clique no evento:', evento);
     setEventoSelecionado(evento);
     
-    // Usar a data correta do evento para buscar pedidos
-    const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
+    // CORREÇÃO: Usar sempre resource.dataCompleta para consistência
+    const dataEvento = evento.resource.dataCompleta;
     
     try {
       console.log('[EVENT] Buscando pedidos com itens para:', dataEvento);
@@ -325,7 +339,7 @@ export default function HistoricoConsolidado() {
                   </CardContent></Card>
                 ) : modoLista === 'produtos' ? (
                   <ListaPorProdutos 
-                    pedidos={dadosFiltrados}
+                    pedidos={pedidosComItensCarregados.length > 0 ? pedidosComItensCarregados : dadosFiltrados}
                     onPedidoClick={(pedido) => handleEventClick({
                       id: pedido.id,
                       title: `${pedido.fornecedor} - R$ ${pedido.valorTotal.toFixed(2)}`,

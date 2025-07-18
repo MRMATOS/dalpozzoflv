@@ -38,19 +38,41 @@ const ListaPorProdutos: React.FC<ListaPorProdutosProps> = ({
 }) => {
   const [produtoSelecionado, setProdutoSelecionado] = useState<ProdutoAgrupado | null>(null);
 
-  // CORREÇÃO: Agrupar produtos usando pedidos que já têm itens carregados
+  // CORREÇÃO CRÍTICA: Agrupar produtos usando pedidos que DEVEM ter itens carregados
   const produtosAgrupados = useMemo(() => {
-    console.log('Agrupando produtos. Pedidos recebidos:', pedidos.length);
+    console.log('[PRODUCTS GROUPING] Iniciando agrupamento. Pedidos recebidos:', pedidos.length);
+    
+    if (pedidos.length === 0) {
+      console.log('[PRODUCTS GROUPING] Nenhum pedido para agrupar');
+      return [];
+    }
+
     const produtos = new Map<string, ProdutoAgrupado>();
 
-    // CORREÇÃO: Filtrar apenas pedidos que têm itens carregados
-    const pedidosComItens = pedidos.filter(pedido => pedido.itens && pedido.itens.length > 0);
-    console.log('Pedidos com itens carregados:', pedidosComItens.length);
-
-    pedidosComItens.forEach(pedido => {
-      console.log(`Processando pedido ${pedido.id} com ${pedido.itens?.length} itens`);
+    // CORREÇÃO CRÍTICA: Processar TODOS os pedidos, independente se têm itens ou não
+    // Se não tiverem itens, tentar carregá-los ou reportar o problema
+    pedidos.forEach((pedido, index) => {
+      console.log(`[PRODUCTS GROUPING] Processando pedido ${index + 1}/${pedidos.length}:`, {
+        id: pedido.id,
+        tipo: pedido.tipo,
+        fornecedor: pedido.fornecedor,
+        totalItens: pedido.totalItens,
+        temItensCarregados: !!pedido.itens,
+        quantidadeItens: pedido.itens?.length || 0
+      });
       
-      pedido.itens?.forEach(item => {
+      // CORREÇÃO: Se o pedido não tem itens carregados mas tem totalItens > 0, algo está errado
+      if (!pedido.itens || pedido.itens.length === 0) {
+        if (pedido.totalItens > 0) {
+          console.warn(`[PRODUCTS GROUPING] AVISO: Pedido ${pedido.id} tem ${pedido.totalItens} itens mas nenhum item carregado!`);
+        } else {
+          console.log(`[PRODUCTS GROUPING] Pedido ${pedido.id} não tem itens - pulando`);
+        }
+        return; // Pular este pedido
+      }
+
+      // Processar itens do pedido
+      pedido.itens.forEach(item => {
         const key = item.produto_nome;
         const existing = produtos.get(key) || {
           produto_nome: item.produto_nome,
@@ -102,7 +124,9 @@ const ListaPorProdutos: React.FC<ListaPorProdutosProps> = ({
     const resultado = Array.from(produtos.values())
       .sort((a, b) => b.quantidade_total - a.quantidade_total);
     
-    console.log('Produtos agrupados:', resultado.length);
+    console.log('[PRODUCTS GROUPING] Produtos agrupados:', resultado.length);
+    console.log('[PRODUCTS GROUPING] Exemplo dos primeiros produtos:', resultado.slice(0, 3));
+    
     return resultado;
   }, [pedidos]);
 
@@ -138,10 +162,10 @@ const ListaPorProdutos: React.FC<ListaPorProdutosProps> = ({
           <Package2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium mb-2">Nenhum produto encontrado</h3>
           <p className="text-muted-foreground">
-            Os pedidos filtrados não possuem itens carregados ou não há produtos nos pedidos selecionados.
+            Os pedidos selecionados não possuem itens carregados ou não há produtos nos pedidos.
           </p>
           <p className="text-muted-foreground text-sm mt-2">
-            Nota: Produtos só aparecem quando os pedidos têm seus itens carregados.
+            <strong>Debug:</strong> {pedidos.length} pedidos recebidos, {pedidos.filter(p => p.itens && p.itens.length > 0).length} com itens carregados.
           </p>
         </CardContent>
       </Card>

@@ -29,96 +29,108 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
   const [date, setDate] = useState(new Date());
   const calendarRef = useRef<any>(null);
 
-  // CORREÇÃO: Auto-scroll melhorado e mais preciso
+  // CORREÇÃO CRÍTICA: Auto-scroll mais preciso e confiável
   useEffect(() => {
     if ((currentView === 'week' || currentView === 'day') && eventos.length > 0) {
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         const calendar = document.querySelector('.rbc-time-view');
-        if (calendar) {
-          // Encontrar o primeiro evento do dia/semana visível
-          const eventosVisiveis = eventos.filter(evento => {
-            const eventoDate = evento.start;
-            const currentDate = new Date(date);
-            
-            if (currentView === 'day') {
-              return eventoDate.toDateString() === currentDate.toDateString();
-            } else {
-              // Para semana, verificar se está na semana atual
-              const inicioSemana = moment(currentDate).startOf('week').toDate();
-              const fimSemana = moment(currentDate).endOf('week').toDate();
-              return eventoDate >= inicioSemana && eventoDate <= fimSemana;
-            }
-          });
-
-          if (eventosVisiveis.length > 0) {
-            // Ordenar por horário e pegar o primeiro
-            const primeiroEvento = eventosVisiveis.sort((a, b) => 
-              a.start.getTime() - b.start.getTime()
-            )[0];
-
-            // CORREÇÃO: Cálculo mais preciso do horário
-            const horarioEvento = primeiroEvento.start.getHours();
-            const minutosEvento = primeiroEvento.start.getMinutes();
-            
-            // Scroll para 1 hora antes do primeiro evento, mas não antes das 6h
-            const horarioAlvo = Math.max(6, horarioEvento - 1);
-            
-            // CORREÇÃO: Cálculo mais preciso baseado na estrutura do calendário
-            const pixelsPorHora = 60; // Altura padrão por hora no calendário
-            const scrollPosition = horarioAlvo * pixelsPorHora;
-            
-            calendar.scrollTo({
-              top: scrollPosition,
-              behavior: 'smooth'
-            });
-
-            console.log(`[AUTO-SCROLL] Fazendo scroll para ${horarioAlvo}:00 (primeiro evento às ${horarioEvento}:${minutosEvento.toString().padStart(2, '0')})`);
-          } else {
-            // Se não há eventos visíveis, scroll para 8h (horário comercial)
-            const scrollPosition = 8 * 60;
-            calendar.scrollTo({
-              top: scrollPosition,
-              behavior: 'smooth'
-            });
-            console.log('[AUTO-SCROLL] Nenhum evento visível, scroll para 8:00');
-          }
+        if (!calendar) {
+          console.log('[AUTO-SCROLL] Calendário não encontrado, tentando novamente...');
+          return;
         }
-      }, 500); // Aguardar renderização do calendário
+
+        // Encontrar eventos visíveis na data/semana atual
+        const currentDate = new Date(date);
+        const eventosVisiveis = eventos.filter(evento => {
+          const eventoDate = new Date(evento.start);
+          
+          if (currentView === 'day') {
+            return eventoDate.toDateString() === currentDate.toDateString();
+          } else {
+            // Para semana, verificar se está na semana atual
+            const inicioSemana = moment(currentDate).startOf('week').toDate();
+            const fimSemana = moment(currentDate).endOf('week').toDate();
+            return eventoDate >= inicioSemana && eventoDate <= fimSemana;
+          }
+        });
+
+        console.log(`[AUTO-SCROLL] Encontrados ${eventosVisiveis.length} eventos visíveis`);
+
+        if (eventosVisiveis.length > 0) {
+          // Ordenar por horário e pegar o primeiro evento
+          const primeiroEvento = eventosVisiveis.sort((a, b) => 
+            a.start.getTime() - b.start.getTime()
+          )[0];
+
+          const horarioEvento = primeiroEvento.start.getHours();
+          const minutosEvento = primeiroEvento.start.getMinutes();
+          
+          // CORREÇÃO: Scroll para 1 hora antes do primeiro evento, mas não antes das 6h
+          const horarioAlvo = Math.max(6, horarioEvento - 1);
+          
+          // CORREÇÃO CRÍTICA: Cálculo mais preciso baseado na altura real do calendário
+          const timeSlotHeight = 60; // Altura padrão de cada hora no BigCalendar
+          const scrollPosition = horarioAlvo * timeSlotHeight;
+          
+          console.log(`[AUTO-SCROLL] Fazendo scroll para ${horarioAlvo}:00 (primeiro evento às ${horarioEvento}:${minutosEvento.toString().padStart(2, '0')})`);
+          
+          calendar.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
+        } else {
+          // Se não há eventos visíveis, scroll para 6h (horário inicial)
+          const scrollPosition = 6 * 60;
+          calendar.scrollTo({
+            top: scrollPosition,
+            behavior: 'smooth'
+          });
+          console.log('[AUTO-SCROLL] Nenhum evento visível, scroll para 6:00');
+        }
+      }, 700); // Aumentar timeout para garantir renderização completa
+
+      return () => clearTimeout(timeoutId);
     }
   }, [currentView, date, eventos]);
 
-  // CORREÇÃO: Componente de evento mais limpo e compacto
+  // CORREÇÃO CRÍTICA: Componente de evento mais limpo e compacto
   const EventComponent = ({ event }: { event: EventoCalendario }) => {
     const { resource } = event;
     const isMonthView = currentView === 'month';
     
     return (
       <div 
-        className={`p-1.5 rounded-md bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors ${
-          isMonthView ? 'text-xs' : 'text-sm'
+        className={`p-1 rounded-sm bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors ${
+          isMonthView ? 'text-xs' : 'text-xs'
         }`}
         onClick={(e) => {
           e.stopPropagation();
           onEventClick(event);
         }}
+        title={`${event.title} - ${resource.totalItens} itens - R$ ${resource.totalValor.toFixed(2)}`}
       >
         <div className="space-y-0.5">
-          {/* CORREÇÃO: Título limpo - apenas fornecedores */}
-          <div className={`font-medium truncate ${isMonthView ? 'text-xs' : 'text-sm'}`}>
+          {/* CORREÇÃO: Título mais limpo - apenas fornecedores */}
+          <div className={`font-medium truncate leading-tight ${isMonthView ? 'text-xs' : 'text-xs'}`}>
             {event.title}
           </div>
           
-          {/* CORREÇÃO: Informações compactas - sem hora redundante */}
+          {/* CORREÇÃO: Informações compactas apenas para views maiores */}
           {!isMonthView && (
-            <div className="flex items-center gap-1.5 text-xs opacity-90">
+            <div className="flex items-center gap-1 text-xs opacity-90">
               <span className="flex items-center gap-0.5">
-                <Package className="h-2.5 w-2.5" />
+                <Package className="h-2 w-2" />
                 {resource.totalItens}
               </span>
-              <span className="flex items-center gap-0.5">
-                <DollarSign className="h-2.5 w-2.5" />
-                R$ {resource.totalValor.toFixed(0)}
-              </span>
+              {resource.totalValor > 0 && (
+                <span className="flex items-center gap-0.5">
+                  <DollarSign className="h-2 w-2" />
+                  {resource.totalValor > 1000 
+                    ? `R$ ${(resource.totalValor / 1000).toFixed(1)}k` 
+                    : `R$ ${resource.totalValor.toFixed(0)}`
+                  }
+                </span>
+              )}
             </div>
           )}
         </div>
@@ -139,7 +151,7 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
     time: 'Hora',
     event: 'Evento',
     noEventsInRange: 'Não há eventos no período selecionado.',
-    showMore: (total: number) => `+ mais ${total}`
+    showMore: (total: number) => `+ ${total}`
   };
 
   const handleViewChange = (view: View) => {
@@ -236,6 +248,16 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
               popup={false}
               selectable={false}
               views={[Views.MONTH, Views.WEEK, Views.DAY]}
+              eventPropGetter={() => ({
+                style: {
+                  backgroundColor: 'hsl(var(--primary))',
+                  borderRadius: '4px',
+                  border: 'none',
+                  color: 'hsl(var(--primary-foreground))',
+                  fontSize: '11px',
+                  padding: '2px 4px'
+                }
+              })}
             />
           </div>
         </CardContent>
