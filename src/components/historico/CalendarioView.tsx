@@ -21,38 +21,36 @@ interface CalendarioViewProps {
 const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick, currentView, onViewChange }) => {
   const calendarRef = useRef<any>(null);
 
-  // FUNCIONALIDADE: Auto-scroll para primeiro pedido nas vistas diária e semanal
+  // PARTE 2: Auto-scroll melhorado para vistas temporais
   useEffect(() => {
     if (eventos.length > 0 && (currentView === Views.DAY || currentView === Views.WEEK)) {
-      // Encontrar o primeiro pedido do dia/semana
-      const primeiroEvento = eventos
-        .filter(evento => evento.start.getTime() >= Date.now() - 24 * 60 * 60 * 1000) // eventos de hoje em diante
+      const hoje = new Date();
+      const ontem = new Date(hoje.getTime() - 24 * 60 * 60 * 1000);
+      
+      // Encontrar primeiro evento relevante (hoje ou futuro)
+      const eventoRelevante = eventos
+        .filter(evento => evento.start.getTime() >= ontem.getTime())
         .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
 
-      if (primeiroEvento) {
+      if (eventoRelevante) {
         setTimeout(() => {
-          // Scroll para o horário do primeiro pedido
-          const timeSlots = document.querySelectorAll('.rbc-time-slot');
-          const targetHour = primeiroEvento.start.getHours();
+          const targetHour = Math.max(8, eventoRelevante.start.getHours() - 1); // Scroll 1h antes, mínimo 8h
           
-          // Encontrar o slot de tempo correspondente ao horário do pedido
-          const targetSlot = Array.from(timeSlots).find((slot: any) => {
-            const slotTime = slot.getAttribute('data-time');
-            if (slotTime) {
-              const slotHour = parseInt(slotTime.split(':')[0]);
-              return slotHour >= targetHour - 1; // Scroll um pouco antes
+          // Buscar elemento de tempo no calendário
+          const timeElements = document.querySelectorAll('.rbc-time-slot, .rbc-day-slot, [data-time]');
+          
+          for (let element of timeElements) {
+            const elementText = element.textContent || '';
+            if (elementText.includes(`${targetHour}:00`) || elementText.includes(`${targetHour.toString().padStart(2, '0')}:`)) {
+              element.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start',
+                inline: 'nearest'
+              });
+              break;
             }
-            return false;
-          });
-
-          if (targetSlot) {
-            targetSlot.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'start',
-              inline: 'nearest'
-            });
           }
-        }, 500); // Delay para garantir que o calendário foi renderizado
+        }, 800); // Delay maior para garantir renderização
       }
     }
   }, [eventos, currentView]);
@@ -69,26 +67,42 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick, 
   };
 
   const EventComponent = ({ event }: { event: EventoCalendario }) => {
-    // PARTE 2: Exibir fornecedores consolidados no card
     const fornecedores = event.resource.fornecedores || [];
-    const dataEvento = event.start.toISOString().split('T')[0];
-    const pedidosMesmoDia = eventos.filter(e => 
-      e.start.toISOString().split('T')[0] === dataEvento
-    );
     
+    // PARTE 2: Personalizar exibição conforme a vista
+    const getTituloPersonalizado = () => {
+      if (currentView === Views.MONTH) {
+        // Vista Mensal: Máximo 2 fornecedores + contador
+        if (fornecedores.length <= 2) {
+          return fornecedores.join(', ');
+        } else {
+          return `${fornecedores.slice(0, 2).join(', ')} e mais ${fornecedores.length - 2}`;
+        }
+      } else if (currentView === Views.WEEK) {
+        // Vista Semanal: Fornecedores compactos sem horário
+        if (fornecedores.length <= 3) {
+          return fornecedores.join(', ');
+        } else {
+          return `${fornecedores.slice(0, 2).join(', ')}... +${fornecedores.length - 2}`;
+        }
+      } else {
+        // Vista Diária: Máximo espaço para fornecedores
+        if (fornecedores.length <= 4) {
+          return fornecedores.join(', ');
+        } else {
+          return `${fornecedores.slice(0, 3).join(', ')} e mais ${fornecedores.length - 3}`;
+        }
+      }
+    };
+
     return (
-      <div className="p-1 text-white">
-        <div className="text-xs font-medium">
-          {event.resource.fornecedores[0]}
+      <div className="text-xs p-1 bg-primary text-primary-foreground rounded overflow-hidden h-full">
+        <div className="font-medium truncate text-[10px] leading-tight">
+          {getTituloPersonalizado()}
         </div>
-        <div className="text-xs opacity-80">
-          R$ {event.resource.totalValor.toFixed(2)}
+        <div className="text-[9px] opacity-90 truncate">
+          {event.resource.totalItens} itens
         </div>
-        {pedidosMesmoDia.length > 1 && (
-          <div className="text-xs opacity-70">
-            +{pedidosMesmoDia.length - 1} mais
-          </div>
-        )}
       </div>
     );
   };
