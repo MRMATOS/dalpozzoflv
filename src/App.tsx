@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import Configuracoes from "./pages/Configuracoes";
 import HistoricoRequisicoes from "./pages/HistoricoRequisicoes";
 import HistoricoPedidos from "./pages/HistoricoPedidos";
 import HistoricoPedidosCompleto from "./pages/HistoricoPedidosCompleto";
+import HistoricoConsolidado from "./pages/HistoricoConsolidado";
 import GestaoCd from "./pages/GestaoCd";
 import TransferenciasCD from "./pages/TransferenciasCD";
 import Transferencias from "./pages/Transferencias";
@@ -125,6 +127,14 @@ function App() {
                 } 
               />
               <Route 
+                path="/historico-consolidado" 
+                element={
+                  <ProtectedRoute allowedTypes={['master', 'comprador']}>
+                    <HistoricoConsolidado />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
                 path="/gestao-cd" 
                 element={
                   <ProtectedRoute allowedTypes={['master', 'cd']}>
@@ -144,7 +154,7 @@ function App() {
                 path="/transferencias/:lojaDestino" 
                 element={
                   <ProtectedRoute allowedTypes={['master', 'cd']}>
-                    <Transferencias />
+                    <Transferências />
                   </ProtectedRoute>
                 } 
               />

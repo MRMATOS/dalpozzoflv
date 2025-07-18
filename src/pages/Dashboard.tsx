@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -5,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield, FileText } from "lucide-react";
+import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield, FileText, TestTube } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -102,6 +103,14 @@ const Dashboard = () => {
       icon: Settings,
       color: "bg-gray-500",
       onClick: () => navigate("/configuracoes")
+    },
+    // Card temporário para teste
+    (hasRole('master') || hasRole('comprador')) && {
+      title: "🧪 Histórico Consolidado (TESTE)",
+      description: "Nova versão avançada do histórico de pedidos",
+      icon: TestTube,
+      color: "bg-yellow-500",
+      onClick: () => navigate("/historico-consolidado")
     }
   ].filter(Boolean);
 
