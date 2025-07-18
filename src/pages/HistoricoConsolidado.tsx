@@ -30,8 +30,7 @@ const HistoricoConsolidado = () => {
     dataFim: '',
     comprador: 'meus',
     fornecedor: '',
-    produto: '',
-    tipoPedido: 'todos'
+    tipo: undefined
   });
 
   const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
@@ -147,7 +146,7 @@ const HistoricoConsolidado = () => {
                     <Card>
                       <CardContent className="p-4">
                         <div className="text-2xl font-bold text-green-600">
-                          R$ {metricas.totalValor.toFixed(2)}
+                          R$ {metricas.valorTotal.toFixed(2)}
                         </div>
                         <div className="text-sm text-gray-600">Valor Total</div>
                       </CardContent>
@@ -228,7 +227,7 @@ const HistoricoConsolidado = () => {
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-gray-900">{pedido.fornecedor_nome}</h3>
+                            <h3 className="font-semibold text-gray-900">{pedido.fornecedor}</h3>
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               pedido.tipo === 'cotacao' 
                                 ? 'bg-blue-100 text-blue-800' 
@@ -238,22 +237,22 @@ const HistoricoConsolidado = () => {
                             </span>
                             {(isComprador || isMaster) && filtros.comprador !== 'meus' && (
                               <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
-                                {pedido.usuario_nome} - {pedido.usuario_loja}
+                                {pedido.comprador} - {pedido.usuario_loja}
                               </span>
                             )}
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-gray-600 mb-2">
                             <div>
-                              <span className="font-medium">Itens:</span> {pedido.quantidade_itens}
+                              <span className="font-medium">Itens:</span> {pedido.totalItens}
                             </div>
                             <div>
-                              <span className="font-medium">Total:</span> R$ {pedido.total.toFixed(2)}
+                              <span className="font-medium">Total:</span> R$ {pedido.valorTotal.toFixed(2)}
                             </div>
                             <div>
-                              <span className="font-medium">Data:</span> {pedido.data.toLocaleDateString('pt-BR')}
+                              <span className="font-medium">Data:</span> {new Date(pedido.data).toLocaleDateString('pt-BR')}
                             </div>
                             <div className="col-span-2 md:col-span-1">
-                              <span className="font-medium">Hora:</span> {pedido.data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                              <span className="font-medium">Hora:</span> {new Date(pedido.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           {pedido.observacoes && (
