@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, BarChart3, List, Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { Calendar, BarChart3, List, Search, Filter, Download, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import { useHistoricoConsolidado } from '@/hooks/useHistoricoConsolidado';
 import { useHistoricoOtimizado } from '@/hooks/useHistoricoOtimizado';
@@ -22,6 +23,8 @@ import { ResponsiveWrapper } from '@/components/historico/ResponsiveWrapper';
 import { FadeInWrapper, StaggerContainer, StaggerItem, HoverCard } from '@/components/historico/AnimationUtils';
 
 export default function HistoricoConsolidado() {
+  const navigate = useNavigate();
+  
   const [activeTab, setActiveTab] = useState('calendario');
   const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false);
   const [mostrarExportacao, setMostrarExportacao] = useState(false);
@@ -160,9 +163,20 @@ export default function HistoricoConsolidado() {
       <FadeInWrapper>
         <div className="container mx-auto p-6 space-y-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Histórico Consolidado</h1>
-              <p className="text-muted-foreground">Análise completa de pedidos e cotações</p>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Voltar
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Histórico Consolidado</h1>
+                <p className="text-muted-foreground">Análise completa de pedidos e cotações</p>
+              </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-2">
