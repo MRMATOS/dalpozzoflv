@@ -153,7 +153,10 @@ export const useHistoricoOtimizado = (): UseHistoricoOtimizadoReturn => {
       title: `${evento.pedidos.length} pedidos`,
       start: new Date(data + 'T00:00:00'),
       end: new Date(data + 'T23:59:59'),
-      resource: evento
+      resource: {
+        ...evento,
+        dataCompleta: data
+      }
     }));
   }, [dadosFiltrados]);
 
