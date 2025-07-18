@@ -26,6 +26,7 @@ export interface EventoCalendario {
     totalItens: number;
     tipos: string[];
     fornecedores: string[];
+    dataCompleta: string; // Adicionar data completa para buscar pedidos do mesmo dia
   };
 }
 
@@ -89,6 +90,35 @@ export const useHistoricoConsolidado = () => {
       console.error('Erro ao buscar compradores:', error);
     }
   };
+
+  // Nova função para buscar pedidos de um dia específico
+  const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
+    const dataInicio = data + 'T00:00:00';
+    const dataFim = data + 'T23:59:59';
+    
+    try {
+      // Buscar pedidos de cotação do dia
+      const pedidosCotacao = await buscarPedidosCotacao({
+        dataInicio: data,
+        dataFim: data
+      });
+
+      // Buscar pedidos simples do dia
+      const pedidosSimples = await buscarPedidosSimples({
+        dataInicio: data,
+        dataFim: data
+      });
+
+      // Combinar e ordenar por horário
+      const todosPedidosDoDia = [...pedidosCotacao, ...pedidosSimples];
+      return todosPedidosDoDia.sort((a, b) => 
+        new Date(a.data).getTime() - new Date(b.data).getTime()
+      );
+    } catch (error) {
+      console.error('Erro ao buscar pedidos do dia:', error);
+      return [];
+    }
+  }, [user?.id]);
 
   const buscarDadosConsolidados = useCallback(async (filtros: FiltrosHistorico) => {
     setLoading(true);
@@ -271,7 +301,8 @@ export const useHistoricoConsolidado = () => {
           totalValor: pedido.valorTotal,
           totalItens: pedido.totalItens,
           tipos: [pedido.tipo],
-          fornecedores: [pedido.fornecedor]
+          fornecedores: [pedido.fornecedor],
+          dataCompleta: pedido.data.split('T')[0] // Adicionar data para buscar pedidos do mesmo dia
         }
       };
 
@@ -358,6 +389,7 @@ export const useHistoricoConsolidado = () => {
     compradores,
     loading,
     buscarDadosConsolidados,
+    buscarPedidosDoDia, // Nova função exportada
     isComprador,
     isMaster
   };

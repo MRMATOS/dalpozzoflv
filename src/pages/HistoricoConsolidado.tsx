@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar, BarChart3, List, Search, Filter, Download, RefreshCw, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { useHistoricoConsolidado } from '@/hooks/useHistoricoConsolidado';
+import { useHistoricoConsolidado, EventoCalendario, PedidoConsolidado } from '@/hooks/useHistoricoConsolidado';
 import { useHistoricoOtimizado } from '@/hooks/useHistoricoOtimizado';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import CalendarioView from '@/components/historico/CalendarioView';
@@ -28,7 +27,8 @@ export default function HistoricoConsolidado() {
   const [activeTab, setActiveTab] = useState('calendario');
   const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false);
   const [mostrarExportacao, setMostrarExportacao] = useState(false);
-  const [eventoSelecionado, setEventoSelecionado] = useState<any>(null);
+  const [eventoSelecionado, setEventoSelecionado] = useState<EventoCalendario | null>(null);
+  const [pedidosDoDiaAtual, setPedidosDoDiaAtual] = useState<PedidoConsolidado[]>([]);
   const [textoBusca, setTextoBusca] = useState('');
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
@@ -50,7 +50,8 @@ export default function HistoricoConsolidado() {
     metricas,
     compradores,
     loading,
-    buscarDadosConsolidados
+    buscarDadosConsolidados,
+    buscarPedidosDoDia
   } = useHistoricoConsolidado();
 
   const {
@@ -158,6 +159,24 @@ export default function HistoricoConsolidado() {
     buscarDadosConsolidados(filtrosLimpos);
   };
 
+  // Nova função para lidar com clique em evento do calendário
+  const handleEventClick = async (evento: EventoCalendario) => {
+    setEventoSelecionado(evento);
+    
+    // Buscar todos os pedidos do mesmo dia
+    if (evento.resource.dataCompleta) {
+      try {
+        const pedidosDoDia = await buscarPedidosDoDia(evento.resource.dataCompleta);
+        setPedidosDoDiaAtual(pedidosDoDia);
+      } catch (error) {
+        console.error('Erro ao buscar pedidos do dia:', error);
+        setPedidosDoDiaAtual(evento.resource.pedidos);
+      }
+    } else {
+      setPedidosDoDiaAtual(evento.resource.pedidos);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <FadeInWrapper>
@@ -243,7 +262,7 @@ export default function HistoricoConsolidado() {
           <ResponsiveWrapper
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            calendarioTab={loading ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventClick={setEventoSelecionado} />}
+            calendarioTab={loading ? <CalendarioLoadingSkeleton /> : <CalendarioView eventos={eventosCalendario} onEventClick={handleEventClick} />}
             metricasTab={loading ? <MetricasLoadingSkeleton /> : <MetricasDashboard metricas={metricas} />}
             listaTab={loading ? <TabelaLoadingSkeleton /> : (
               <div className="space-y-4">
@@ -257,7 +276,20 @@ export default function HistoricoConsolidado() {
                   <StaggerContainer className="space-y-2">
                     {dadosFiltrados.map((pedido) => (
                       <StaggerItem key={pedido.id}>
-                        <HoverCard className="cursor-pointer" onClick={() => setEventoSelecionado({ pedidos: [pedido] })}>
+                        <HoverCard className="cursor-pointer" onClick={() => handleEventClick({ 
+                          id: pedido.id,
+                          title: `${pedido.fornecedor} - R$ ${pedido.valorTotal.toFixed(2)}`,
+                          start: new Date(pedido.data),
+                          end: new Date(pedido.data),
+                          resource: {
+                            pedidos: [pedido],
+                            totalValor: pedido.valorTotal,
+                            totalItens: pedido.totalItens,
+                            tipos: [pedido.tipo],
+                            fornecedores: [pedido.fornecedor],
+                            dataCompleta: pedido.data.split('T')[0]
+                          }
+                        })}>
                           <Card><CardContent className="p-4">
                             <div className="flex justify-between items-start">
                               <div className="space-y-1">
@@ -285,7 +317,19 @@ export default function HistoricoConsolidado() {
         </div>
       </FadeInWrapper>
 
-      {eventoSelecionado && <DetalheEvento evento={eventoSelecionado} isOpen={true} onClose={() => setEventoSelecionado(null)} />}
+      {eventoSelecionado && (
+        <DetalheEvento 
+          evento={eventoSelecionado} 
+          pedidosDoDia={pedidosDoDiaAtual}
+          isOpen={true} 
+          onClose={() => {
+            setEventoSelecionado(null);
+            setPedidosDoDiaAtual([]);
+          }}
+          onBuscarPedidosDoDia={buscarPedidosDoDia}
+        />
+      )}
+      
       {mostrarExportacao && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg p-6 max-w-md w-full mx-4">

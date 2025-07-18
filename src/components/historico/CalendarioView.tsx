@@ -23,16 +23,29 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({ eventos, onEventClick }
     }
   };
 
-  const EventComponent = ({ event }: { event: EventoCalendario }) => (
-    <div className="p-1 text-white">
-      <div className="text-xs font-medium">
-        {event.resource.pedidos.length} pedidos
+  const EventComponent = ({ event }: { event: EventoCalendario }) => {
+    // Verificar se há múltiplos pedidos no mesmo dia
+    const dataEvento = event.start.toISOString().split('T')[0];
+    const pedidosMesmoDia = eventos.filter(e => 
+      e.start.toISOString().split('T')[0] === dataEvento
+    );
+    
+    return (
+      <div className="p-1 text-white">
+        <div className="text-xs font-medium">
+          {event.resource.fornecedores[0]}
+        </div>
+        <div className="text-xs opacity-80">
+          R$ {event.resource.totalValor.toFixed(2)}
+        </div>
+        {pedidosMesmoDia.length > 1 && (
+          <div className="text-xs opacity-70">
+            +{pedidosMesmoDia.length - 1} mais
+          </div>
+        )}
       </div>
-      <div className="text-xs opacity-80">
-        R$ {event.resource.totalValor.toFixed(2)}
-      </div>
-    </div>
-  );
+    );
+  };
 
   const eventStyleGetter = (event: EventoCalendario) => {
     const { tipos, totalValor } = event.resource;
