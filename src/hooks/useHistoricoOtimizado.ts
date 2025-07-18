@@ -118,7 +118,9 @@ export const useHistoricoOtimizado = (): UseHistoricoOtimizadoReturn => {
     const eventosMap = new Map<string, {
       pedidos: PedidoConsolidado[];
       totalValor: number;
+      totalItens: number;
       tipos: string[];
+      fornecedores: string[];
     }>();
 
     dadosFiltrados.forEach(pedido => {
