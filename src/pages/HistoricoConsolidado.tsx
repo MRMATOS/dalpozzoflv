@@ -51,7 +51,9 @@ export default function HistoricoConsolidado() {
     compradores,
     loading,
     buscarDadosConsolidados,
-    buscarPedidosDoDia
+    buscarPedidosDoDia,
+    buscarPedidosDoDiaComItens,
+    buscarProdutosDoDia
   } = useHistoricoConsolidado();
 
   const {
@@ -163,10 +165,10 @@ export default function HistoricoConsolidado() {
   const handleEventClick = async (evento: EventoCalendario) => {
     setEventoSelecionado(evento);
     
-    // Buscar todos os pedidos do mesmo dia
+    // Buscar todos os pedidos do mesmo dia com itens
     if (evento.resource.dataCompleta) {
       try {
-        const pedidosDoDia = await buscarPedidosDoDia(evento.resource.dataCompleta);
+        const pedidosDoDia = await buscarPedidosDoDiaComItens(evento.resource.dataCompleta);
         setPedidosDoDiaAtual(pedidosDoDia);
       } catch (error) {
         console.error('Erro ao buscar pedidos do dia:', error);
@@ -326,7 +328,8 @@ export default function HistoricoConsolidado() {
             setEventoSelecionado(null);
             setPedidosDoDiaAtual([]);
           }}
-          onBuscarPedidosDoDia={buscarPedidosDoDia}
+          onBuscarPedidosDoDiaComItens={buscarPedidosDoDiaComItens}
+          onBuscarProdutosDoDia={buscarProdutosDoDia}
         />
       )}
       

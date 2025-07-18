@@ -2,6 +2,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+export interface ItemPedido {
+  id: string;
+  produto_nome: string;
+  quantidade: number;
+  preco?: number;
+  tipo?: string;
+  unidade?: string;
+}
+
 export interface PedidoConsolidado {
   id: string;
   data: string;
@@ -13,6 +22,7 @@ export interface PedidoConsolidado {
   totalItens: number;
   status?: string;
   observacoes?: string;
+  itens?: ItemPedido[]; // Opcional, carregado sob demanda
 }
 
 export interface EventoCalendario {
@@ -26,7 +36,7 @@ export interface EventoCalendario {
     totalItens: number;
     tipos: string[];
     fornecedores: string[];
-    dataCompleta: string; // Adicionar data completa para buscar pedidos do mesmo dia
+    dataCompleta: string;
   };
 }
 
@@ -90,6 +100,130 @@ export const useHistoricoConsolidado = () => {
       console.error('Erro ao buscar compradores:', error);
     }
   };
+
+  // Nova função para buscar itens de um pedido específico
+  const buscarItensPedido = useCallback(async (pedidoId: string, tipoPedido: 'cotacao' | 'simples'): Promise<ItemPedido[]> => {
+    try {
+      if (tipoPedido === 'cotacao') {
+        // Buscar itens do pedido de cotação
+        const { data: itens, error } = await supabase
+          .from('itens_pedido')
+          .select(`
+            id,
+            quantidade,
+            preco,
+            tipo,
+            unidade,
+            produtos!inner(produto)
+          `)
+          .eq('pedido_id', pedidoId);
+
+        if (error) throw error;
+
+        return itens?.map(item => ({
+          id: item.id,
+          produto_nome: item.produtos?.produto || 'Produto não identificado',
+          quantidade: item.quantidade || 0,
+          preco: item.preco,
+          tipo: item.tipo,
+          unidade: item.unidade
+        })) || [];
+
+      } else {
+        // Para pedidos simples, buscar direto da tabela
+        const { data: pedido, error } = await supabase
+          .from('pedidos_simples')
+          .select('id, produto_nome, quantidade, valor_unitario, unidade, tipo')
+          .eq('id', pedidoId)
+          .single();
+
+        if (error) throw error;
+
+        return [{
+          id: pedido.id,
+          produto_nome: pedido.produto_nome,
+          quantidade: pedido.quantidade,
+          preco: pedido.valor_unitario,
+          unidade: pedido.unidade,
+          tipo: pedido.tipo
+        }];
+      }
+    } catch (error) {
+      console.error('Erro ao buscar itens do pedido:', error);
+      return [];
+    }
+  }, []);
+
+  // Nova função para buscar todos os produtos de um dia específico
+  const buscarProdutosDoDia = useCallback(async (data: string): Promise<Array<{
+    produto_nome: string;
+    quantidade_total: number;
+    pedidos_count: number;
+    fornecedores: string[];
+    preco_medio?: number;
+    unidade?: string;
+  }>> => {
+    try {
+      const pedidosDoDia = await buscarPedidosDoDia(data);
+      
+      // Buscar itens para todos os pedidos do dia
+      const todosProdutos = new Map();
+
+      for (const pedido of pedidosDoDia) {
+        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        
+        itens.forEach(item => {
+          const key = item.produto_nome;
+          const existing = todosProdutos.get(key) || {
+            produto_nome: item.produto_nome,
+            quantidade_total: 0,
+            pedidos_count: 0,
+            fornecedores: new Set(),
+            precos: [],
+            unidade: item.unidade
+          };
+
+          existing.quantidade_total += item.quantidade;
+          existing.pedidos_count += 1;
+          existing.fornecedores.add(pedido.fornecedor);
+          if (item.preco) existing.precos.push(item.preco);
+          
+          todosProdutos.set(key, existing);
+        });
+      }
+
+      // Converter para array e calcular preço médio
+      return Array.from(todosProdutos.values()).map(produto => ({
+        produto_nome: produto.produto_nome,
+        quantidade_total: produto.quantidade_total,
+        pedidos_count: produto.pedidos_count,
+        fornecedores: Array.from(produto.fornecedores),
+        preco_medio: produto.precos.length > 0 
+          ? produto.precos.reduce((a, b) => a + b, 0) / produto.precos.length
+          : undefined,
+        unidade: produto.unidade
+      })).sort((a, b) => b.quantidade_total - a.quantidade_total);
+
+    } catch (error) {
+      console.error('Erro ao buscar produtos do dia:', error);
+      return [];
+    }
+  }, [buscarItensPedido, buscarPedidosDoDia]);
+
+  // Nova função para buscar pedidos de um dia específico com itens
+  const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
+    const pedidos = await buscarPedidosDoDia(data);
+    
+    // Buscar itens para cada pedido
+    const pedidosComItens = await Promise.all(
+      pedidos.map(async (pedido) => {
+        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        return { ...pedido, itens };
+      })
+    );
+
+    return pedidosComItens;
+  }, [buscarPedidosDoDia, buscarItensPedido]);
 
   // Nova função para buscar pedidos de um dia específico
   const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
@@ -389,7 +523,10 @@ export const useHistoricoConsolidado = () => {
     compradores,
     loading,
     buscarDadosConsolidados,
-    buscarPedidosDoDia, // Nova função exportada
+    buscarPedidosDoDia,
+    buscarItensPedido,
+    buscarProdutosDoDia,
+    buscarPedidosDoDiaComItens,
     isComprador,
     isMaster
   };
