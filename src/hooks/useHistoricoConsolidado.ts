@@ -154,77 +154,6 @@ export const useHistoricoConsolidado = () => {
     }
   }, []);
 
-  // Nova função para buscar todos os produtos de um dia específico
-  const buscarProdutosDoDia = useCallback(async (data: string): Promise<Array<{
-    produto_nome: string;
-    quantidade_total: number;
-    pedidos_count: number;
-    fornecedores: string[];
-    preco_medio?: number;
-    unidade?: string;
-  }>> => {
-    try {
-      const pedidosDoDia = await buscarPedidosDoDia(data);
-      
-      // Buscar itens para todos os pedidos do dia
-      const todosProdutos = new Map();
-
-      for (const pedido of pedidosDoDia) {
-        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
-        
-        itens.forEach(item => {
-          const key = item.produto_nome;
-          const existing = todosProdutos.get(key) || {
-            produto_nome: item.produto_nome,
-            quantidade_total: 0,
-            pedidos_count: 0,
-            fornecedores: new Set(),
-            precos: [],
-            unidade: item.unidade
-          };
-
-          existing.quantidade_total += item.quantidade;
-          existing.pedidos_count += 1;
-          existing.fornecedores.add(pedido.fornecedor);
-          if (item.preco) existing.precos.push(item.preco);
-          
-          todosProdutos.set(key, existing);
-        });
-      }
-
-      // Converter para array e calcular preço médio
-      return Array.from(todosProdutos.values()).map(produto => ({
-        produto_nome: produto.produto_nome,
-        quantidade_total: produto.quantidade_total,
-        pedidos_count: produto.pedidos_count,
-        fornecedores: Array.from(produto.fornecedores),
-        preco_medio: produto.precos.length > 0 
-          ? produto.precos.reduce((a, b) => a + b, 0) / produto.precos.length
-          : undefined,
-        unidade: produto.unidade
-      })).sort((a, b) => b.quantidade_total - a.quantidade_total);
-
-    } catch (error) {
-      console.error('Erro ao buscar produtos do dia:', error);
-      return [];
-    }
-  }, [buscarItensPedido, buscarPedidosDoDia]);
-
-  // Nova função para buscar pedidos de um dia específico com itens
-  const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
-    const pedidos = await buscarPedidosDoDia(data);
-    
-    // Buscar itens para cada pedido
-    const pedidosComItens = await Promise.all(
-      pedidos.map(async (pedido) => {
-        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
-        return { ...pedido, itens };
-      })
-    );
-
-    return pedidosComItens;
-  }, [buscarPedidosDoDia, buscarItensPedido]);
-
   // Nova função para buscar pedidos de um dia específico
   const buscarPedidosDoDia = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
     const dataInicio = data + 'T00:00:00';
@@ -253,6 +182,77 @@ export const useHistoricoConsolidado = () => {
       return [];
     }
   }, [user?.id]);
+
+  // Nova função para buscar todos os produtos de um dia específico
+  const buscarProdutosDoDia = useCallback(async (data: string): Promise<Array<{
+    produto_nome: string;
+    quantidade_total: number;
+    pedidos_count: number;
+    fornecedores: string[];
+    preco_medio?: number;
+    unidade?: string;
+  }>> => {
+    try {
+      const pedidosDoDia = await buscarPedidosDoDia(data);
+      
+      // Buscar itens para todos os pedidos do dia
+      const todosProdutos = new Map();
+
+      for (const pedido of pedidosDoDia) {
+        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        
+        itens.forEach(item => {
+          const key = item.produto_nome;
+          const existing = todosProdutos.get(key) || {
+            produto_nome: item.produto_nome,
+            quantidade_total: 0,
+            pedidos_count: 0,
+            fornecedores: new Set<string>(),
+            precos: [],
+            unidade: item.unidade
+          };
+
+          existing.quantidade_total += item.quantidade;
+          existing.pedidos_count += 1;
+          existing.fornecedores.add(pedido.fornecedor);
+          if (item.preco) existing.precos.push(item.preco);
+          
+          todosProdutos.set(key, existing);
+        });
+      }
+
+      // Converter para array e calcular preço médio
+      return Array.from(todosProdutos.values()).map(produto => ({
+        produto_nome: produto.produto_nome,
+        quantidade_total: produto.quantidade_total,
+        pedidos_count: produto.pedidos_count,
+        fornecedores: Array.from(produto.fornecedores) as string[],
+        preco_medio: produto.precos.length > 0 
+          ? produto.precos.reduce((a: number, b: number) => a + b, 0) / produto.precos.length
+          : undefined,
+        unidade: produto.unidade
+      })).sort((a, b) => b.quantidade_total - a.quantidade_total);
+
+    } catch (error) {
+      console.error('Erro ao buscar produtos do dia:', error);
+      return [];
+    }
+  }, [buscarItensPedido, buscarPedidosDoDia]);
+
+  // Nova função para buscar pedidos de um dia específico com itens
+  const buscarPedidosDoDiaComItens = useCallback(async (data: string): Promise<PedidoConsolidado[]> => {
+    const pedidos = await buscarPedidosDoDia(data);
+    
+    // Buscar itens para cada pedido
+    const pedidosComItens = await Promise.all(
+      pedidos.map(async (pedido) => {
+        const itens = await buscarItensPedido(pedido.id, pedido.tipo);
+        return { ...pedido, itens };
+      })
+    );
+
+    return pedidosComItens;
+  }, [buscarPedidosDoDia, buscarItensPedido]);
 
   const buscarDadosConsolidados = useCallback(async (filtros: FiltrosHistorico) => {
     setLoading(true);
