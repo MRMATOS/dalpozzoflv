@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Filter, X } from 'lucide-react';
 import { FiltrosHistorico } from '@/hooks/useHistoricoConsolidado';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FiltrosAvancadosProps {
   filtros: FiltrosHistorico;
@@ -27,6 +29,31 @@ const FiltrosAvancados: React.FC<FiltrosAvancadosProps> = ({
   isComprador = false,
   isMaster = false
 }) => {
+  const [fornecedores, setFornecedores] = useState<Array<{ id: string; nome: string }>>([]);
+  const [loadingFornecedores, setLoadingFornecedores] = useState(false);
+
+  // Buscar fornecedores cadastrados
+  useEffect(() => {
+    const buscarFornecedores = async () => {
+      setLoadingFornecedores(true);
+      try {
+        const { data, error } = await supabase
+          .from('fornecedores')
+          .select('id, nome')
+          .order('nome');
+
+        if (error) throw error;
+        setFornecedores(data || []);
+      } catch (error) {
+        console.error('Erro ao buscar fornecedores:', error);
+      } finally {
+        setLoadingFornecedores(false);
+      }
+    };
+
+    buscarFornecedores();
+  }, []);
+
   const handleFiltroChange = (campo: keyof FiltrosHistorico, valor: any) => {
     onFiltrosChange({
       ...filtros,
@@ -105,14 +132,26 @@ const FiltrosAvancados: React.FC<FiltrosAvancadosProps> = ({
             </div>
           )}
 
-          {/* Fornecedor */}
+          {/* Fornecedor - CORREÇÃO: Agora é um dropdown */}
           <div className="space-y-2">
             <Label>Fornecedor</Label>
-            <Input
-              placeholder="Nome do fornecedor..."
-              value={filtros.fornecedor || ''}
-              onChange={(e) => handleFiltroChange('fornecedor', e.target.value)}
-            />
+            <Select 
+              value={filtros.fornecedor || 'todos'} 
+              onValueChange={(value) => handleFiltroChange('fornecedor', value === 'todos' ? '' : value)}
+              disabled={loadingFornecedores}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingFornecedores ? "Carregando..." : "Selecione um fornecedor"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os fornecedores</SelectItem>
+                {fornecedores.map((fornecedor) => (
+                  <SelectItem key={fornecedor.id} value={fornecedor.nome}>
+                    {fornecedor.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Data Início */}

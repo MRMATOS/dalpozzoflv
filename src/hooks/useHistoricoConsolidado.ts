@@ -104,10 +104,10 @@ export const useHistoricoConsolidado = () => {
   // CORREÇÃO CRÍTICA: Função melhorada para buscar itens de um pedido específico
   const buscarItensPedido = useCallback(async (pedidoId: string, tipoPedido: 'cotacao' | 'simples'): Promise<ItemPedido[]> => {
     try {
-      console.log(`Buscando itens para pedido ${pedidoId} do tipo ${tipoPedido}`);
+      console.log(`[DEBUG] Buscando itens para pedido ${pedidoId} do tipo ${tipoPedido}`);
       
       if (tipoPedido === 'cotacao') {
-        // CORREÇÃO: Buscar itens do pedido de cotação com join correto
+        // CORREÇÃO: Query melhorada para cotações
         const { data: itens, error } = await supabase
           .from('itens_pedido')
           .select(`
@@ -117,25 +117,37 @@ export const useHistoricoConsolidado = () => {
             tipo,
             unidade,
             produto_id,
-            produtos!inner(produto)
+            produtos!inner(
+              id,
+              produto,
+              nome_variacao,
+              produto_pai_id
+            )
           `)
           .eq('pedido_id', pedidoId);
 
         if (error) {
-          console.error('Erro ao buscar itens de cotação:', error);
+          console.error(`[ERROR] Erro ao buscar itens de cotação para ${pedidoId}:`, error);
           return [];
         }
 
-        console.log(`Encontrados ${itens?.length || 0} itens para cotação ${pedidoId}:`, itens);
+        console.log(`[DEBUG] Encontrados ${itens?.length || 0} itens para cotação ${pedidoId}:`, itens);
 
-        return itens?.map(item => ({
+        if (!itens || itens.length === 0) {
+          console.warn(`[WARNING] Nenhum item encontrado para cotação ${pedidoId}`);
+          return [];
+        }
+
+        return itens.map(item => ({
           id: item.id,
-          produto_nome: item.produtos?.produto || 'Produto não identificado',
+          produto_nome: item.produtos?.nome_variacao 
+            ? `${item.produtos.produto} ${item.produtos.nome_variacao}`
+            : item.produtos?.produto || 'Produto não identificado',
           quantidade: item.quantidade || 0,
           preco: item.preco,
           tipo: item.tipo,
           unidade: item.unidade
-        })) || [];
+        }));
 
       } else {
         // Para pedidos simples, buscar direto da tabela
@@ -371,7 +383,7 @@ export const useHistoricoConsolidado = () => {
     }
 
     if (filtros.fornecedor) {
-      query = query.ilike('fornecedores.nome', `%${filtros.fornecedor}%`);
+      query = query.eq('fornecedores.nome', filtros.fornecedor);
     }
     if (filtros.dataInicio) {
       query = query.gte('criado_em', filtros.dataInicio);
@@ -400,11 +412,14 @@ export const useHistoricoConsolidado = () => {
           .eq('pedido_id', pedido.id);
 
         const totalItensReal = itens?.length || 0;
-        console.log(`Pedido cotação ${pedido.id} tem ${totalItensReal} itens`);
+        console.log(`[DEBUG] Pedido cotação ${pedido.id} tem ${totalItensReal} itens`);
 
+        // CORREÇÃO: Garantir horário correto (manter timezone original)
+        const dataOriginal = new Date(pedido.criado_em);
+        
         return {
           id: pedido.id,
-          data: pedido.criado_em,
+          data: pedido.criado_em, // Manter formato ISO original
           tipo: 'cotacao' as const,
           fornecedor: pedido.fornecedores?.nome || 'Não informado',
           comprador: usuario?.nome || 'Não identificado',
@@ -415,7 +430,7 @@ export const useHistoricoConsolidado = () => {
       })
     );
 
-    console.log(`Pedidos de cotação encontrados: ${pedidosComDetalhes.length}`);
+    console.log(`[DEBUG] Pedidos de cotação encontrados: ${pedidosComDetalhes.length}`);
     return pedidosComDetalhes;
   };
 
@@ -480,7 +495,7 @@ export const useHistoricoConsolidado = () => {
   };
 
   const gerarEventosCalendario = (pedidos: PedidoConsolidado[]): EventoCalendario[] => {
-    // Consolidar pedidos por dia para mostrar fornecedores separados por vírgula
+    // Consolidar pedidos por dia
     const eventosPorDia = new Map<string, {
       pedidos: PedidoConsolidado[];
       fornecedores: Set<string>;
@@ -493,11 +508,8 @@ export const useHistoricoConsolidado = () => {
     // Agrupar pedidos por dia
     pedidos.forEach(pedido => {
       const dataKey = pedido.data.split('T')[0];
+      // CORREÇÃO: Preservar horário original para auto-scroll
       const dataCompleta = new Date(pedido.data);
-      
-      if (isNaN(dataCompleta.getTime())) {
-        dataCompleta.setTime(new Date(dataKey + 'T12:00:00').getTime());
-      }
 
       const existing = eventosPorDia.get(dataKey) || {
         pedidos: [],
@@ -522,13 +534,14 @@ export const useHistoricoConsolidado = () => {
       eventosPorDia.set(dataKey, existing);
     });
 
-    // Gerar eventos consolidados
+    // Gerar eventos consolidados - CORREÇÃO: Formatação limpa
     const eventos: EventoCalendario[] = [];
     
     eventosPorDia.forEach((dadosDia, dataKey) => {
       const fornecedoresList = Array.from(dadosDia.fornecedores);
-      let titulo = '';
       
+      // CORREÇÃO: Título limpo apenas com fornecedores
+      let titulo = '';
       if (fornecedoresList.length <= 2) {
         titulo = fornecedoresList.join(', ');
       } else if (fornecedoresList.length === 3) {

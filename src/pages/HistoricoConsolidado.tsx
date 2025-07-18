@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,7 +34,7 @@ export default function HistoricoConsolidado() {
   const [currentCalendarView, setCurrentCalendarView] = useState('month');
   const [modoLista, setModoLista] = useState<'fornecedor' | 'produtos'>('fornecedor');
   
-  // CORREÇÃO: Sempre inicializar sem filtros para não persistir
+  // CORREÇÃO: Inicialização sempre limpa de filtros
   const [filtrosAtivos, setFiltrosAtivos] = useState({
     dataInicio: '',
     dataFim: '',
@@ -46,10 +45,8 @@ export default function HistoricoConsolidado() {
     valorMax: undefined as number | undefined,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // CORREÇÃO: Controle mais rigoroso da inicialização
   const [inicializado, setInicializado] = useState(false);
-  const [forceReload, setForceReload] = useState(0); // Para forçar reload limpo
+  const [forceReload, setForceReload] = useState(0);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -63,7 +60,9 @@ export default function HistoricoConsolidado() {
     buscarPedidosDoDia,
     buscarPedidosDoDiaComItens,
     buscarProdutosDoDia,
-    buscarPedidosDiaAdjacente
+    buscarPedidosDiaAdjacente,
+    isComprador,
+    isMaster
   } = useHistoricoConsolidado();
 
   const {
@@ -73,9 +72,9 @@ export default function HistoricoConsolidado() {
     buscarTexto
   } = useHistoricoOtimizado();
 
-  // CORREÇÃO: Inicialização sem filtros, sempre limpa
+  // CORREÇÃO: Inicialização sempre sem filtros
   useEffect(() => {
-    console.log('Inicializando página HistoricoConsolidado...');
+    console.log('[INIT] Inicializando página HistoricoConsolidado...');
     
     // SEMPRE limpar tudo na inicialização
     const filtrosLimpos = {
@@ -98,14 +97,14 @@ export default function HistoricoConsolidado() {
     // Buscar dados sem filtros
     buscarDadosConsolidados(filtrosLimpos).then(() => {
       setInicializado(true);
-      console.log('Dados iniciais carregados sem filtros');
+      console.log('[INIT] Dados iniciais carregados sem filtros');
     });
-  }, [forceReload]); // Dependência do forceReload para garantir reload limpo
+  }, [forceReload]);
 
   // Aplicar filtros nos dados otimizados quando os dados consolidados mudarem
   useEffect(() => {
     if (pedidosConsolidados.length > 0 && inicializado) {
-      console.log('Aplicando filtros nos dados consolidados:', pedidosConsolidados.length, 'pedidos');
+      console.log('[FILTER] Aplicando filtros nos dados consolidados:', pedidosConsolidados.length, 'pedidos');
       aplicarFiltros(filtrosAtivos, pedidosConsolidados);
     }
   }, [pedidosConsolidados, filtrosAtivos, aplicarFiltros, inicializado]);
@@ -156,30 +155,32 @@ export default function HistoricoConsolidado() {
   };
 
   const handleFiltroChange = (novosFiltros: typeof filtrosAtivos) => {
-    console.log('Alterando filtros:', novosFiltros);
+    console.log('[FILTER] Alterando filtros:', novosFiltros);
     setFiltrosAtivos(novosFiltros);
     buscarDadosConsolidados(novosFiltros);
   };
 
-  // CORREÇÃO: Função de reload que limpa tudo
+  // CORREÇÃO: Função de reload que limpa tudo completamente
   const handleLimparFiltros = () => {
-    console.log('Limpando filtros e recarregando dados...');
+    console.log('[RELOAD] Limpando filtros e recarregando dados...');
     setForceReload(prev => prev + 1); // Força reload completo
   };
 
   // CORREÇÃO: Função melhorada para lidar com clique em evento do calendário
   const handleEventClick = async (evento: EventoCalendario) => {
+    console.log('[EVENT] Clique no evento:', evento);
     setEventoSelecionado(evento);
     
     // Usar a data correta do evento para buscar pedidos
     const dataEvento = evento.resource.dataCompleta || evento.start.toISOString().split('T')[0];
     
     try {
+      console.log('[EVENT] Buscando pedidos com itens para:', dataEvento);
       const pedidosDoDia = await buscarPedidosDoDiaComItens(dataEvento);
       setPedidosDoDiaAtual(pedidosDoDia);
-      console.log(`Carregados ${pedidosDoDia.length} pedidos para ${dataEvento}:`, pedidosDoDia);
+      console.log(`[EVENT] Carregados ${pedidosDoDia.length} pedidos para ${dataEvento}:`, pedidosDoDia);
     } catch (error) {
-      console.error('Erro ao buscar pedidos do dia:', error);
+      console.error('[EVENT] Erro ao buscar pedidos do dia:', error);
       setPedidosDoDiaAtual(evento.resource.pedidos);
     }
   };
@@ -252,22 +253,17 @@ export default function HistoricoConsolidado() {
 
           {mostrarFiltrosAvancados && (
             <FadeInWrapper>
-              <Card>
-                <CardHeader><CardTitle>Filtros Avançados</CardTitle></CardHeader>
-                <CardContent>
-                  <FiltrosAvancados
-                    filtros={filtrosAtivos}
-                    compradores={compradores}
-                    onFiltrosChange={(novosFiltros) => {
-                      setFiltrosAtivos({ ...filtrosAtivos, ...novosFiltros });
-                    }}
-                    onBuscar={async () => {
-                      await buscarDadosConsolidados(filtrosAtivos);
-                    }}
-                    onLimpar={handleLimparFiltros}
-                  />
-                </CardContent>
-              </Card>
+              <FiltrosAvancados
+                filtros={filtrosAtivos}
+                compradores={compradores}
+                onFiltrosChange={handleFiltroChange}
+                onBuscar={async () => {
+                  await buscarDadosConsolidados(filtrosAtivos);
+                }}
+                onLimpar={handleLimparFiltros}
+                isComprador={isComprador}
+                isMaster={isMaster}
+              />
             </FadeInWrapper>
           )}
 

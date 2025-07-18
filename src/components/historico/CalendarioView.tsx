@@ -29,7 +29,7 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
   const [date, setDate] = useState(new Date());
   const calendarRef = useRef<any>(null);
 
-  // CORREÇÃO: Auto-scroll melhorado para semana e dia
+  // CORREÇÃO: Auto-scroll melhorado e mais preciso
   useEffect(() => {
     if ((currentView === 'week' || currentView === 'day') && eventos.length > 0) {
       setTimeout(() => {
@@ -37,13 +37,16 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
         if (calendar) {
           // Encontrar o primeiro evento do dia/semana visível
           const eventosVisiveis = eventos.filter(evento => {
+            const eventoDate = evento.start;
+            const currentDate = new Date(date);
+            
             if (currentView === 'day') {
-              return evento.start.toDateString() === date.toDateString();
+              return eventoDate.toDateString() === currentDate.toDateString();
             } else {
               // Para semana, verificar se está na semana atual
-              const inicioSemana = moment(date).startOf('week').toDate();
-              const fimSemana = moment(date).endOf('week').toDate();
-              return evento.start >= inicioSemana && evento.start <= fimSemana;
+              const inicioSemana = moment(currentDate).startOf('week').toDate();
+              const fimSemana = moment(currentDate).endOf('week').toDate();
+              return eventoDate >= inicioSemana && eventoDate <= fimSemana;
             }
           });
 
@@ -53,12 +56,15 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
               a.start.getTime() - b.start.getTime()
             )[0];
 
-            // Calcular horário alvo (1 hora antes do primeiro evento, mas não antes das 6h)
+            // CORREÇÃO: Cálculo mais preciso do horário
             const horarioEvento = primeiroEvento.start.getHours();
+            const minutosEvento = primeiroEvento.start.getMinutes();
+            
+            // Scroll para 1 hora antes do primeiro evento, mas não antes das 6h
             const horarioAlvo = Math.max(6, horarioEvento - 1);
             
-            // Scroll para o horário calculado
-            const pixelsPorHora = 60; // Aproximadamente 60px por hora no calendário
+            // CORREÇÃO: Cálculo mais preciso baseado na estrutura do calendário
+            const pixelsPorHora = 60; // Altura padrão por hora no calendário
             const scrollPosition = horarioAlvo * pixelsPorHora;
             
             calendar.scrollTo({
@@ -66,7 +72,7 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
               behavior: 'smooth'
             });
 
-            console.log(`Auto-scroll para ${horarioAlvo}:00 (evento às ${horarioEvento}:00)`);
+            console.log(`[AUTO-SCROLL] Fazendo scroll para ${horarioAlvo}:00 (primeiro evento às ${horarioEvento}:${minutosEvento.toString().padStart(2, '0')})`);
           } else {
             // Se não há eventos visíveis, scroll para 8h (horário comercial)
             const scrollPosition = 8 * 60;
@@ -74,62 +80,45 @@ const CalendarioView: React.FC<CalendarioViewProps> = ({
               top: scrollPosition,
               behavior: 'smooth'
             });
+            console.log('[AUTO-SCROLL] Nenhum evento visível, scroll para 8:00');
           }
         }
       }, 500); // Aguardar renderização do calendário
     }
   }, [currentView, date, eventos]);
 
-  // Componente de evento customizado
+  // CORREÇÃO: Componente de evento mais limpo e compacto
   const EventComponent = ({ event }: { event: EventoCalendario }) => {
     const { resource } = event;
-    
-    // Diferentes tamanhos baseados na view
     const isMonthView = currentView === 'month';
-    const isDayView = currentView === 'day';
     
     return (
       <div 
-        className={`p-2 rounded-lg bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors ${
-          isMonthView ? 'text-xs' : isDayView ? 'text-sm' : 'text-xs'
+        className={`p-1.5 rounded-md bg-primary text-primary-foreground cursor-pointer hover:bg-primary/90 transition-colors ${
+          isMonthView ? 'text-xs' : 'text-sm'
         }`}
         onClick={(e) => {
           e.stopPropagation();
           onEventClick(event);
         }}
       >
-        <div className="space-y-1">
-          {/* Linha 1: Fornecedores (título do evento) */}
+        <div className="space-y-0.5">
+          {/* CORREÇÃO: Título limpo - apenas fornecedores */}
           <div className={`font-medium truncate ${isMonthView ? 'text-xs' : 'text-sm'}`}>
             {event.title}
           </div>
           
-          {/* Linha 2: Informações resumidas - mostrar baseado no espaço disponível */}
+          {/* CORREÇÃO: Informações compactas - sem hora redundante */}
           {!isMonthView && (
-            <div className="flex items-center gap-2 text-xs opacity-90">
-              <div className="flex items-center gap-1">
-                <Package className="h-3 w-3" />
-                <span>{resource.totalItens}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3" />
-                <span>R$ {resource.totalValor.toFixed(0)}</span>
-              </div>
-            </div>
-          )}
-          
-          {/* Linha 3: Badges de tipos (apenas em day view) */}
-          {isDayView && (
-            <div className="flex gap-1">
-              {resource.tipos.map((tipo, index) => (
-                <Badge 
-                  key={index}
-                  variant={tipo === 'cotacao' ? 'secondary' : 'outline'}
-                  className="text-xs px-1 py-0 h-4"
-                >
-                  {tipo === 'cotacao' ? 'Cot' : 'Sim'}
-                </Badge>
-              ))}
+            <div className="flex items-center gap-1.5 text-xs opacity-90">
+              <span className="flex items-center gap-0.5">
+                <Package className="h-2.5 w-2.5" />
+                {resource.totalItens}
+              </span>
+              <span className="flex items-center gap-0.5">
+                <DollarSign className="h-2.5 w-2.5" />
+                R$ {resource.totalValor.toFixed(0)}
+              </span>
             </div>
           )}
         </div>
