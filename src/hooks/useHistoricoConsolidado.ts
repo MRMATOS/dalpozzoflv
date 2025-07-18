@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -91,7 +90,7 @@ export const useHistoricoConsolidado = () => {
     }
   };
 
-  const buscarDadosConsolidados = async (filtros: FiltrosHistorico) => {
+  const buscarDadosConsolidados = useCallback(async (filtros: FiltrosHistorico) => {
     setLoading(true);
     try {
       console.log('Buscando dados consolidados com filtros:', filtros);
@@ -125,7 +124,7 @@ export const useHistoricoConsolidado = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   const buscarPedidosCotacao = async (filtros: FiltrosHistorico): Promise<PedidoConsolidado[]> => {
     let query = supabase

@@ -37,7 +37,7 @@ export default function HistoricoConsolidado() {
     valorMax: undefined as number | undefined,
   });
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [dadosCarregados, setDadosCarregados] = useState(false);
+  const [inicializado, setInicializado] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -57,10 +57,10 @@ export default function HistoricoConsolidado() {
     buscarTexto
   } = useHistoricoOtimizado();
 
-  // Carregar dados iniciais
+  // Carregar dados iniciais apenas uma vez
   useEffect(() => {
-    if (!dadosCarregados) {
-      console.log('Carregando dados iniciais...');
+    if (!inicializado) {
+      console.log('Inicializando dados...');
       const hoje = new Date();
       const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
       
@@ -76,11 +76,11 @@ export default function HistoricoConsolidado() {
       
       setFiltrosAtivos(filtrosIniciais);
       buscarDadosConsolidados(filtrosIniciais).then(() => {
-        setDadosCarregados(true);
+        setInicializado(true);
         console.log('Dados iniciais carregados');
       });
     }
-  }, [dadosCarregados, buscarDadosConsolidados]);
+  }, [inicializado, buscarDadosConsolidados]);
 
   // Aplicar filtros nos dados otimizados quando os dados consolidados mudarem
   useEffect(() => {
