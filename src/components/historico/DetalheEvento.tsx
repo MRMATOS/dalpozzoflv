@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2, X } from 'lucide-react';
+import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2 } from 'lucide-react';
 import { EventoCalendario, PedidoConsolidado } from '@/hooks/useHistoricoConsolidado';
 import ResumoProdutosDia from './ResumoProdutosDia';
 
@@ -131,6 +130,12 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     }
   };
 
+  // Função para formatar data de forma consistente
+  const formatarDataBrasil = (dataStr: string) => {
+    const [ano, mes, dia] = dataStr.split('-');
+    return `${dia}/${mes}/${ano}`;
+  };
+
   // Calcular estatísticas do dia
   const totalValorDia = pedidosDoDia.reduce((sum, p) => sum + p.valorTotal, 0);
   const totalItensDia = pedidosDoDia.reduce((sum, p) => sum + p.totalItens, 0);
@@ -156,17 +161,17 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          {/* CORREÇÃO CRÍTICA: Layout com CSS Grid ao invés de Flexbox */}
-          <DialogTitle className="grid grid-cols-[2fr_3fr_auto] items-center gap-4 w-full">
-            {/* TÍTULO À ESQUERDA - Menos espaço */}
+          {/* CORREÇÃO CRÍTICA: Layout com CSS Grid 1fr auto 1fr para centralização perfeita */}
+          <DialogTitle className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full">
+            {/* TÍTULO À ESQUERDA */}
             <div className="flex items-center gap-2 min-w-0">
               <Calendar className="h-5 w-5 flex-shrink-0" />
               <span className="truncate">
-                Pedidos de {new Date(dataAtual + 'T12:00:00').toLocaleDateString('pt-BR')}
+                Pedidos de {formatarDataBrasil(dataAtual)}
               </span>
             </div>
             
-            {/* NAVEGAÇÃO CENTRALIZADA - Mais espaço */}
+            {/* NAVEGAÇÃO CENTRALIZADA - CORREÇÃO: Agora verdadeiramente centralizada */}
             <div className="flex justify-center">
               {onBuscarPedidosDiaAdjacente && (
                 <div className="flex items-center gap-2">
@@ -197,16 +202,8 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
               )}
             </div>
             
-            {/* BOTÃO FECHAR À DIREITA */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-              title="Fechar"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {/* ESPAÇO VAZIO À DIREITA PARA BALANCEAMENTO - CORREÇÃO: Removido botão X duplicado */}
+            <div></div>
           </DialogTitle>
         </DialogHeader>
 
