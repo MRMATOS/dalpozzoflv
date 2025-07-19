@@ -12,6 +12,9 @@ interface PedidoSimples {
   valor_unitario: number;
   valor_total_estimado: number;
   data_pedido: string;
+  data_prevista?: string;
+  data_recebimento?: string;
+  status_entrega?: string;
   criado_em: string;
   observacoes?: string;
 }
@@ -21,6 +24,8 @@ interface FiltrosPedido {
   produto?: string;
   dataInicio?: string;
   dataFim?: string;
+  dataPrevistaInicio?: string;
+  dataPrevistaFim?: string;
 }
 
 export const usePedidosSimples = () => {
@@ -51,6 +56,12 @@ export const usePedidosSimples = () => {
       }
       if (filtros.dataFim) {
         query = query.lte('data_pedido', filtros.dataFim);
+      }
+      if (filtros.dataPrevistaInicio) {
+        query = query.gte('data_prevista', filtros.dataPrevistaInicio);
+      }
+      if (filtros.dataPrevistaFim) {
+        query = query.lte('data_prevista', filtros.dataPrevistaFim);
       }
 
       const { data, error } = await query;
@@ -120,12 +131,61 @@ export const usePedidosSimples = () => {
     return data;
   };
 
+  const marcarComoRecebido = async (pedidoId: string) => {
+    if (!user?.id) throw new Error('Usuário não autenticado');
+
+    const { data, error } = await supabase
+      .from('pedidos_simples')
+      .update({ 
+        data_recebimento: new Date().toISOString() 
+      })
+      .eq('id', pedidoId)
+      .eq('user_id', user.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  };
+
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'pontual':
+        return { 
+          icon: '✅', 
+          label: 'Pontual', 
+          className: 'bg-green-100 text-green-800 border-green-200' 
+        };
+      case 'atrasado':
+        return { 
+          icon: '⚠️', 
+          label: 'Atrasado', 
+          className: 'bg-red-100 text-red-800 border-red-200' 
+        };
+      case 'adiantado':
+        return { 
+          icon: '⏱️', 
+          label: 'Adiantado', 
+          className: 'bg-blue-100 text-blue-800 border-blue-200' 
+        };
+      case 'pendente':
+      default:
+        return { 
+          icon: '⏳', 
+          label: 'Pendente', 
+          className: 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+        };
+    }
+  };
+
   return {
     pedidos,
     loading,
     buscarPedidos,
     criarPedido,
     excluirPedido,
-    excluirPedidosFornecedor
+    excluirPedidosFornecedor,
+    marcarComoRecebido,
+    getStatusConfig
   };
 };

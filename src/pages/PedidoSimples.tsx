@@ -28,7 +28,8 @@ import {
   Package,
   User,
   Calculator,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from "lucide-react";
 
 interface PedidoSimples {
@@ -41,6 +42,9 @@ interface PedidoSimples {
   valor_unitario: number;
   valor_total_estimado: number;
   data_pedido: string;
+  data_prevista?: string;
+  data_recebimento?: string;
+  status_entrega?: string;
   criado_em: string;
   observacoes?: string;
 }
@@ -58,7 +62,7 @@ const PedidoSimples = () => {
   const [unidade, setUnidade] = useState("Caixa");
   const [quantidade, setQuantidade] = useState("");
   const [valorUnitario, setValorUnitario] = useState("");
-  const [dataPedido, setDataPedido] = useState<Date>(new Date());
+  const [dataPrevista, setDataPrevista] = useState<Date>(new Date());
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
   
@@ -161,7 +165,8 @@ const PedidoSimples = () => {
           quantidade: parseFloat(quantidade),
           valor_unitario: parseFloat(valorUnitario),
           valor_total_estimado: valorTotal,
-          data_pedido: format(dataPedido, 'yyyy-MM-dd'),
+          data_pedido: format(new Date(), 'yyyy-MM-dd'), // Data atual como data do pedido
+          data_prevista: format(dataPrevista, 'yyyy-MM-dd'), // Data selecionada pelo usuário
           user_id: user?.id,
           criado_por: user?.id,
           observacoes
@@ -176,7 +181,7 @@ const PedidoSimples = () => {
       setQuantidade("");
       setValorUnitario("");
       setObservacoes("");
-      setDataPedido(new Date());
+      setDataPrevista(new Date());
       
       // Atualizar histórico se estiver na aba histórico
       if (loadingHistorico) {
@@ -312,6 +317,60 @@ const PedidoSimples = () => {
     } catch (error: any) {
       console.error('Erro ao excluir pedidos do fornecedor:', error);
       toast.error(error.message || 'Erro ao excluir pedidos do fornecedor');
+    }
+  };
+
+  // Função para marcar pedido como recebido
+  const marcarComoRecebido = async (pedidoId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('pedidos_simples')
+        .update({ 
+          data_recebimento: new Date().toISOString() 
+        })
+        .eq('id', pedidoId)
+        .eq('user_id', user?.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast.success("Pedido marcado como recebido!");
+      carregarHistorico();
+    } catch (error: any) {
+      console.error('Erro ao marcar como recebido:', error);
+      toast.error(error.message || 'Erro ao marcar como recebido');
+    }
+  };
+
+  // Função para obter configuração de status
+  const getStatusConfig = (status: string) => {
+    switch (status) {
+      case 'pontual':
+        return { 
+          icon: '✅', 
+          label: 'Pontual', 
+          className: 'bg-green-100 text-green-800 border-green-200' 
+        };
+      case 'atrasado':
+        return { 
+          icon: '⚠️', 
+          label: 'Atrasado', 
+          className: 'bg-red-100 text-red-800 border-red-200' 
+        };
+      case 'adiantado':
+        return { 
+          icon: '⏱️', 
+          label: 'Adiantado', 
+          className: 'bg-blue-100 text-blue-800 border-blue-200' 
+        };
+      case 'pendente':
+      default:
+        return { 
+          icon: '⏳', 
+          label: 'Pendente', 
+          className: 'bg-yellow-100 text-yellow-800 border-yellow-200' 
+        };
     }
   };
 
@@ -473,21 +532,21 @@ const PedidoSimples = () => {
                       />
                     </div>
 
-                    {/* Data do Pedido */}
+                    {/* Data Prevista */}
                     <div className="space-y-2">
-                      <Label>Data do Pedido *</Label>
+                      <Label>Data Prevista *</Label>
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal",
-                              !dataPedido && "text-muted-foreground"
+                              !dataPrevista && "text-muted-foreground"
                             )}
                           >
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dataPedido ? (
-                              format(dataPedido, "dd/MM", { locale: ptBR })
+                            {dataPrevista ? (
+                              format(dataPrevista, "dd/MM", { locale: ptBR })
                             ) : (
                               <span>Data</span>
                             )}
@@ -496,13 +555,15 @@ const PedidoSimples = () => {
                         <PopoverContent className="w-auto p-0" align="start">
                           <Calendar
                             mode="single"
-                            selected={dataPedido}
-                            onSelect={(date) => date && setDataPedido(date)}
+                            selected={dataPrevista}
+                            onSelect={(date) => date && setDataPrevista(date)}
                             initialFocus
                             className="pointer-events-auto"
+                            disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           />
                         </PopoverContent>
                       </Popover>
+                      <p className="text-xs text-gray-500">Data prevista para recebimento</p>
                     </div>
                   </div>
 
@@ -651,15 +712,26 @@ const PedidoSimples = () => {
                         </CardHeader>
                         <CardContent className="pt-0">
                           <div className="space-y-3">
-                            {pedidosFornecedor.map((pedido) => (
+                            {pedidosFornecedor.map((pedido) => {
+                              const statusConfig = getStatusConfig(pedido.status_entrega || 'pendente');
+                              
+                              return (
                               <div key={pedido.id} className="border rounded-lg p-3 bg-gray-50">
                                  <div className="flex items-start justify-between mb-3">
-                                   <div className="grid grid-cols-1 md:grid-cols-5 gap-3 flex-1">
+                                   <div className="grid grid-cols-1 md:grid-cols-6 gap-3 flex-1">
                                      <div>
-                                       <p className="text-xs text-gray-500">Data</p>
+                                       <p className="text-xs text-gray-500">📅 Data Pedido</p>
                                        <p className="text-sm font-medium">
                                          {format(new Date(pedido.data_pedido), 'dd/MM/yyyy')}
                                        </p>
+                                       {pedido.data_prevista && (
+                                         <>
+                                           <p className="text-xs text-gray-500 mt-1">📆 Data Prevista</p>
+                                           <p className="text-sm font-medium">
+                                             {format(new Date(pedido.data_prevista), 'dd/MM/yyyy')}
+                                           </p>
+                                         </>
+                                       )}
                                      </div>
                                      <div>
                                        <p className="text-xs text-gray-500">Produto</p>
@@ -684,19 +756,44 @@ const PedidoSimples = () => {
                                          R$ {pedido.valor_total_estimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                        </p>
                                      </div>
+                                     <div>
+                                       <p className="text-xs text-gray-500">Status</p>
+                                       <Badge className={`${statusConfig.className} text-xs`}>
+                                         <span className="mr-1">{statusConfig.icon}</span>
+                                         {statusConfig.label}
+                                       </Badge>
+                                       {pedido.data_recebimento && (
+                                         <p className="text-xs text-gray-500 mt-1">
+                                           Recebido: {format(new Date(pedido.data_recebimento), 'dd/MM/yyyy')}
+                                         </p>
+                                       )}
+                                     </div>
                                    </div>
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     onClick={() => {
-                                       if (confirm('Tem certeza que deseja excluir este pedido?')) {
-                                         excluirPedido(pedido.id);
-                                       }
-                                     }}
-                                     className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-3"
-                                   >
-                                     <Trash2 className="h-4 w-4" />
-                                   </Button>
+                                   <div className="flex gap-2 ml-3">
+                                     {!pedido.data_recebimento && (
+                                       <Button
+                                         variant="outline"
+                                         size="sm"
+                                         onClick={() => marcarComoRecebido(pedido.id)}
+                                         className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                       >
+                                         <CheckCircle2 className="h-4 w-4 mr-1" />
+                                         Recebido
+                                       </Button>
+                                     )}
+                                     <Button
+                                       variant="outline"
+                                       size="sm"
+                                       onClick={() => {
+                                         if (confirm('Tem certeza que deseja excluir este pedido?')) {
+                                           excluirPedido(pedido.id);
+                                         }
+                                       }}
+                                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                     >
+                                       <Trash2 className="h-4 w-4" />
+                                     </Button>
+                                   </div>
                                  </div>
                                 {pedido.observacoes && (
                                   <div className="mt-2 pt-2 border-t border-gray-200">
@@ -704,9 +801,10 @@ const PedidoSimples = () => {
                                     <p className="text-xs text-gray-700">{pedido.observacoes}</p>
                                   </div>
                                 )}
-                              </div>
-                            ))}
-                          </div>
+                               </div>
+                             );
+                             })}
+                           </div>
                         </CardContent>
                       </Card>
                     ))}

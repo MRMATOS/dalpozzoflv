@@ -652,6 +652,8 @@ export type Database = {
           criado_em: string
           criado_por: string | null
           data_pedido: string
+          data_prevista: string | null
+          data_recebimento: string | null
           fornecedor_id: string | null
           fornecedor_nome: string
           id: string
@@ -659,6 +661,7 @@ export type Database = {
           produto_id: string | null
           produto_nome: string
           quantidade: number
+          status_entrega: string | null
           tipo: string | null
           unidade: string
           user_id: string | null
@@ -669,6 +672,8 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           data_pedido: string
+          data_prevista?: string | null
+          data_recebimento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome: string
           id?: string
@@ -676,6 +681,7 @@ export type Database = {
           produto_id?: string | null
           produto_nome: string
           quantidade: number
+          status_entrega?: string | null
           tipo?: string | null
           unidade?: string
           user_id?: string | null
@@ -686,6 +692,8 @@ export type Database = {
           criado_em?: string
           criado_por?: string | null
           data_pedido?: string
+          data_prevista?: string | null
+          data_recebimento?: string | null
           fornecedor_id?: string | null
           fornecedor_nome?: string
           id?: string
@@ -693,6 +701,7 @@ export type Database = {
           produto_id?: string | null
           produto_nome?: string
           quantidade?: number
+          status_entrega?: string | null
           tipo?: string | null
           unidade?: string
           user_id?: string | null
@@ -1513,6 +1522,10 @@ export type Database = {
       aprovar_usuario: {
         Args: { user_uuid: string }
         Returns: boolean
+      }
+      calcular_status_entrega: {
+        Args: { data_prev: string; data_receb: string }
+        Returns: string
       }
       calcular_tara_pallets: {
         Args: { _recebimento_id: string; _pallets_utilizados: number[] }
