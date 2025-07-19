@@ -22,7 +22,12 @@ export interface PedidoConsolidado {
   totalItens: number;
   status?: string;
   observacoes?: string;
-  itens?: ItemPedido[]; // Opcional, carregado sob demanda
+  itens?: ItemPedido[];
+  // NOVO: Campos específicos para pedidos simples
+  data_pedido?: string;
+  data_prevista?: string; 
+  data_recebimento?: string;
+  status_entrega?: string;
 }
 
 export interface EventoCalendario {
@@ -453,10 +458,11 @@ export const useHistoricoConsolidado = () => {
     return pedidosComDetalhes;
   };
 
+  // CORREÇÃO CRÍTICA: Atualizar busca de pedidos simples para incluir novos campos
   const buscarPedidosSimples = async (filtros: FiltrosHistorico): Promise<PedidoConsolidado[]> => {
     let query = supabase
       .from('pedidos_simples')
-      .select('*');
+      .select('id, data_pedido, data_prevista, data_recebimento, status_entrega, produto_nome, fornecedor_nome, quantidade, valor_unitario, valor_total_estimado, unidade, tipo, observacoes, user_id, fornecedor_id, produto_id');
 
     // Aplicar filtros
     if (filtros.comprador === 'meus') {
@@ -468,14 +474,16 @@ export const useHistoricoConsolidado = () => {
     if (filtros.fornecedor) {
       query = query.ilike('fornecedor_nome', `%${filtros.fornecedor}%`);
     }
+    
+    // CORREÇÃO: Usar data_prevista para filtros de data (não data_pedido)
     if (filtros.dataInicio) {
-      query = query.gte('data_pedido', filtros.dataInicio);
+      query = query.gte('data_prevista', filtros.dataInicio);
     }
     if (filtros.dataFim) {
-      query = query.lte('data_pedido', filtros.dataFim);
+      query = query.lte('data_prevista', filtros.dataFim);
     }
 
-    const { data: pedidos, error } = await query.order('data_pedido', { ascending: false });
+    const { data: pedidos, error } = await query.order('data_prevista', { ascending: false });
 
     if (error) throw error;
 
@@ -497,19 +505,24 @@ export const useHistoricoConsolidado = () => {
     const pedidosComDetalhes = (pedidos || []).map(pedido => {
       const usuario = usuariosMap.get(pedido.user_id);
       
-      // CORREÇÃO CRÍTICA: Usar apenas data_pedido com horário padrão
-      const dataFormatada = `${pedido.data_pedido}T12:00:00`;
+      // CORREÇÃO CRÍTICA: Usar data_prevista como data principal para ordenação
+      const dataFormatada = `${pedido.data_prevista || pedido.data_pedido}T12:00:00`;
       
       return {
         id: pedido.id,
-        data: dataFormatada, // CORREÇÃO: Usar data_pedido com horário fixo
+        data: dataFormatada, // Data principal para ordenação (data_prevista)
         tipo: 'simples' as const,
         fornecedor: pedido.fornecedor_nome,
         comprador: usuario?.nome || 'Não identificado',
         usuario_loja: usuario?.loja || '',
         valorTotal: pedido.valor_total_estimado || 0,
-        totalItens: 1, // Pedidos simples têm 1 item
-        observacoes: pedido.observacoes
+        totalItens: 1,
+        observacoes: pedido.observacoes,
+        // NOVO: Campos específicos para pedidos simples
+        data_pedido: pedido.data_pedido,
+        data_prevista: pedido.data_prevista,
+        data_recebimento: pedido.data_recebimento,
+        status_entrega: pedido.status_entrega || 'pendente'
       };
     });
 

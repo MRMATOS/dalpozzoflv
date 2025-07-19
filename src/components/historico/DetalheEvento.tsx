@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2 } from 'lucide-react';
+import { Calendar, Package, User, DollarSign, ChevronLeft, ChevronRight, Package2, Clock } from 'lucide-react';
 import { EventoCalendario, PedidoConsolidado } from '@/hooks/useHistoricoConsolidado';
 import ResumoProdutosDia from './ResumoProdutosDia';
+import { formatarDataBrasil, formatarDataHoraBrasil, StatusBadge, calcularStatusVisual } from './PedidoUtils';
 
 interface DetalheEventoProps {
   evento: EventoCalendario | null;
@@ -161,9 +162,7 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          {/* CORREÇÃO CRÍTICA: Layout com CSS Grid 1fr auto 1fr para centralização perfeita */}
           <DialogTitle className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full">
-            {/* TÍTULO À ESQUERDA */}
             <div className="flex items-center gap-2 min-w-0">
               <Calendar className="h-5 w-5 flex-shrink-0" />
               <span className="truncate">
@@ -171,7 +170,6 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
               </span>
             </div>
             
-            {/* NAVEGAÇÃO CENTRALIZADA - CORREÇÃO: Agora verdadeiramente centralizada */}
             <div className="flex justify-center">
               {onBuscarPedidosDiaAdjacente && (
                 <div className="flex items-center gap-2">
@@ -202,7 +200,6 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
               )}
             </div>
             
-            {/* ESPAÇO VAZIO À DIREITA PARA BALANCEAMENTO - CORREÇÃO: Removido botão X duplicado */}
             <div></div>
           </DialogTitle>
         </DialogHeader>
@@ -275,17 +272,45 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
                               {pedidoAtual.tipo === 'cotacao' ? 'Cotação' : 'Simples'}
                             </Badge>
                             <span className="font-semibold">{pedidoAtual.fornecedor}</span>
+                            {pedidoAtual.tipo === 'simples' && pedidoAtual.status_entrega && (
+                              <StatusBadge status={pedidoAtual.status_entrega} />
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
                             <User className="h-4 w-4 inline mr-1" />
                             {pedidoAtual.comprador} - {pedidoAtual.usuario_loja}
                           </p>
-                          <p className="text-sm text-muted-foreground">
-                            {pedidoAtual.totalItens} itens • {new Date(pedidoAtual.data).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </p>
+                          
+                          {pedidoAtual.tipo === 'simples' ? (
+                            <div className="space-y-1">
+                              {pedidoAtual.data_pedido && (
+                                <p className="text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4 inline mr-1" />
+                                  Pedido em: {formatarDataBrasil(pedidoAtual.data_pedido)}
+                                </p>
+                              )}
+                              {pedidoAtual.data_prevista && (
+                                <p className="text-sm text-muted-foreground">
+                                  <Calendar className="h-4 w-4 inline mr-1" />
+                                  Previsto para: {formatarDataBrasil(pedidoAtual.data_prevista)}
+                                </p>
+                              )}
+                              {pedidoAtual.data_recebimento && (
+                                <p className="text-sm text-green-600">
+                                  <Package className="h-4 w-4 inline mr-1" />
+                                  Recebido em: {formatarDataHoraBrasil(pedidoAtual.data_recebimento)}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              {pedidoAtual.totalItens} itens • {new Date(pedidoAtual.data).toLocaleTimeString('pt-BR', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </p>
+                          )}
+                          
                           {pedidoAtual.observacoes && (
                             <p className="text-xs text-muted-foreground italic">
                               {pedidoAtual.observacoes}
@@ -375,13 +400,33 @@ const DetalheEvento: React.FC<DetalheEventoProps> = ({
                             {index === pedidoAtualIndex && (
                               <Badge variant="default" className="text-xs">Atual</Badge>
                             )}
+                            {pedido.tipo === 'simples' && pedido.status_entrega && (
+                              <StatusBadge status={pedido.status_entrega} className="text-xs" />
+                            )}
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {pedido.comprador} • {pedido.totalItens} itens • {new Date(pedido.data).toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </div>
+                          
+                          {pedido.tipo === 'simples' ? (
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              <div>
+                                {pedido.comprador} • {pedido.totalItens} itens
+                              </div>
+                              <div className="flex gap-3">
+                                {pedido.data_pedido && (
+                                  <span>Pedido: {formatarDataBrasil(pedido.data_pedido)}</span>
+                                )}
+                                {pedido.data_prevista && (
+                                  <span>Previsto: {formatarDataBrasil(pedido.data_prevista)}</span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">
+                              {pedido.comprador} • {pedido.totalItens} itens • {new Date(pedido.data).toLocaleTimeString('pt-BR', { 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                              })}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-green-600">

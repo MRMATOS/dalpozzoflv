@@ -3,7 +3,8 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Package2, Users, TrendingUp, Eye } from 'lucide-react';
+import { Package2, Users, TrendingUp, Eye, Calendar, Clock } from 'lucide-react';
+import { formatarDataBrasil, StatusBadge, calcularStatusVisual } from './PedidoUtils';
 
 interface ProdutoDia {
   produto_nome: string;
@@ -12,7 +13,11 @@ interface ProdutoDia {
   fornecedores: string[];
   preco_medio?: number;
   unidade?: string;
-  tipos?: string[]; // Adicionar tipos de pedido (cotacao/simples)
+  tipos?: string[];
+  // NOVO: Informações de data para pedidos simples
+  datas_previstas?: string[];
+  datas_pedido?: string[];
+  status_entregas?: string[];
 }
 
 interface ResumoProdutosDiaProps {
@@ -28,7 +33,6 @@ const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, l
   const dataFormatada = new Date(data).toLocaleDateString('pt-BR');
   const [filtroAtivo, setFiltroAtivo] = useState<FiltroTipo>('todos');
 
-  // FUNCIONALIDADE: Filtrar produtos por tipo
   const produtosFiltrados = useMemo(() => {
     if (filtroAtivo === 'todos') return produtos;
     
@@ -86,7 +90,6 @@ const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, l
             <Badge variant="secondary">{produtosFiltrados.length} produtos</Badge>
           </div>
           
-          {/* FUNCIONALIDADE: Filtros por tipo de pedido */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Filtrar:</span>
             <div className="flex gap-1">
@@ -120,83 +123,108 @@ const ResumoProdutosDia: React.FC<ResumoProdutosDiaProps> = ({ produtos, data, l
       </CardHeader>
       <CardContent>
         <div className="space-y-3 max-h-96 overflow-y-auto">
-          {produtosFiltrados.map((produto, index) => (
-            <div 
-              key={index}
-              className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-medium text-sm truncate">{produto.produto_nome}</h4>
-                  {produto.unidade && (
-                    <Badge variant="outline" className="text-xs">
-                      {produto.unidade}
-                    </Badge>
+          {produtosFiltrados.map((produto, index) => {
+            // NOVO: Determinar se é pedido simples para mostrar informações específicas
+            const temPedidoSimples = produto.tipos?.includes('simples');
+            const statusPredominante = produto.status_entregas?.[0];
+            
+            return (
+              <div 
+                key={index}
+                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="font-medium text-sm truncate">{produto.produto_nome}</h4>
+                    {produto.unidade && (
+                      <Badge variant="outline" className="text-xs">
+                        {produto.unidade}
+                      </Badge>
+                    )}
+                    {/* NOVO: Status badge para pedidos simples */}
+                    {temPedidoSimples && statusPredominante && (
+                      <StatusBadge status={statusPredominante} className="text-xs" />
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Package2 className="h-3 w-3" />
+                      <span>{produto.quantidade_total} {produto.unidade || 'un'}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>{produto.pedidos_count} pedido{produto.pedidos_count > 1 ? 's' : ''}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      <span>{produto.fornecedores.length} fornecedor{produto.fornecedores.length > 1 ? 'es' : ''}</span>
+                    </div>
+                  </div>
+                  
+                  {/* NOVO: Informações de data para pedidos simples */}
+                  {temPedidoSimples && produto.datas_previstas && produto.datas_previstas.length > 0 && (
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>Previsto: {formatarDataBrasil(produto.datas_previstas[0])}</span>
+                      </div>
+                      {produto.datas_pedido && produto.datas_pedido[0] && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>Pedido: {formatarDataBrasil(produto.datas_pedido[0])}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {produto.fornecedores.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {produto.fornecedores.slice(0, 2).map((fornecedor, idx) => (
+                        <div key={idx} className="flex items-center gap-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {fornecedor}
+                          </Badge>
+                          {onVerPedido && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onVerPedido(fornecedor);
+                              }}
+                              className="h-5 w-5 p-0 hover:bg-primary/20"
+                              title="Ver pedido deste fornecedor"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      {produto.fornecedores.length > 2 && (
+                        <Badge variant="secondary" className="text-xs">
+                          +{produto.fornecedores.length - 2} mais
+                        </Badge>
+                      )}
+                    </div>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Package2 className="h-3 w-3" />
-                    <span>{produto.quantidade_total} {produto.unidade || 'un'}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <TrendingUp className="h-3 w-3" />
-                    <span>{produto.pedidos_count} pedido{produto.pedidos_count > 1 ? 's' : ''}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
-                    <Users className="h-3 w-3" />
-                    <span>{produto.fornecedores.length} fornecedor{produto.fornecedores.length > 1 ? 'es' : ''}</span>
+                <div className="text-right">
+                  {produto.preco_medio && (
+                    <div className="text-sm font-semibold text-green-600">
+                      R$ {produto.preco_medio.toFixed(2)}
+                    </div>
+                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {produto.preco_medio ? 'preço médio' : ''}
                   </div>
                 </div>
-                
-                {produto.fornecedores.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {produto.fornecedores.slice(0, 2).map((fornecedor, idx) => (
-                      <div key={idx} className="flex items-center gap-1">
-                        <Badge variant="secondary" className="text-xs">
-                          {fornecedor}
-                        </Badge>
-                        {/* FUNCIONALIDADE: Botão Ver Pedido para cada fornecedor */}
-                        {onVerPedido && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onVerPedido(fornecedor);
-                            }}
-                            className="h-5 w-5 p-0 hover:bg-primary/20"
-                            title="Ver pedido deste fornecedor"
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    {produto.fornecedores.length > 2 && (
-                      <Badge variant="secondary" className="text-xs">
-                        +{produto.fornecedores.length - 2} mais
-                      </Badge>
-                    )}
-                  </div>
-                )}
               </div>
-              
-              <div className="text-right">
-                {produto.preco_medio && (
-                  <div className="text-sm font-semibold text-green-600">
-                    R$ {produto.preco_medio.toFixed(2)}
-                  </div>
-                )}
-                <div className="text-xs text-muted-foreground">
-                  {produto.preco_medio ? 'preço médio' : ''}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
