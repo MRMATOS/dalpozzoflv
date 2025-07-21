@@ -93,7 +93,10 @@ export const dicionarioProdutos = {
     'yame': ['batata yame']
   },
   'berinjela': {
-    // Sem variações - entradas genéricas vão para produto pai
+    'padrão': [
+      'berinjela', 'berinjela 10 kg', 'berinjela 20 kg', 'berinjela kg',
+      'beringela', 'berigela', 'berinjela comum', 'berinjela graúda'
+    ]
   },
   'beterraba': {
     'produtor': ['beterraba produtor'],
@@ -121,9 +124,12 @@ export const dicionarioProdutos = {
     'maço': ['cheiro verde', 'cheiro-verde', 'cheiro verde maço']
   },
   'chuchu': {
+    'padrão': [
+      'chuchu', 'chuchu 20 kg', 'chuchu 10 kg', 'chuchu kg',
+      'chu chu', 'xuchu', 'chuchu comum', 'chuchu graúdo'
+    ],
     'klaina': ['chuchu klaina'],
     'morretense': ['chuchu morretense']
-    // Removido '20kg' - é genérico, vai para produto pai
   },
   'coco': {
     'seco': ['coco seco', 'coco seco bahia', 'coco seco kg', 'coco seco 14 kg'],
@@ -269,9 +275,10 @@ export const dicionarioProdutos = {
   'pimenta': {
     'cambuci': ['cambuci', 'pimenta cambuci', 'pimeta cambuci'],
     'dedo-de-moça': [
-      'dedo-de-moça', 'pimenta dedo',
-      'pimenta dedo 10 kg', 'pimenta dedo moça',
-      'pimenta dedo-de-moça', 'pimenta dedo de moca'
+      'dedo-de-moça', 'dedo de moça', 'dedo-de-moca', 'dedo de moca',
+      'pimenta dedo', 'pimenta dedo-de-moça', 'pimenta dedo de moça',
+      'pimenta dedo-de-moca', 'pimenta dedo de moca',
+      'pimenta dedo 10 kg', 'pimenta dedo moça'
     ],
     'vermelha': ['pimenta vermelha']
   },

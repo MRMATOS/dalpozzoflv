@@ -10,9 +10,21 @@ import {
 
 interface MapeamentoProduto {
   alias: string;
+  aliasNormalizado: string;
   produto: string;
   tipo: string;
 }
+
+// Função para normalizar texto removendo acentos e caracteres especiais
+const normalizarTexto = (texto: string): string => {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-z0-9\s]/g, ' ') // Remove caracteres especiais (exceto espaços)
+    .replace(/\s+/g, ' ') // Múltiplos espaços -> um espaço
+    .trim();
+};
 
 // Cache otimizado para o dicionário com TTL
 let dicionarioOtimizado: MapeamentoProduto[] | null = null;
@@ -35,8 +47,10 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
   for (const [nomeProduto, tipos] of Object.entries(dicionarioProdutos)) {
     for (const [nomeTipo, aliases] of Object.entries(tipos)) {
       for (const alias of aliases) {
+        const aliasNormalizado = normalizarTexto(alias);
         listaMapeamentos.push({
           alias: alias.toLowerCase(),
+          aliasNormalizado,
           produto: nomeProduto,
           tipo: nomeTipo,
         });
@@ -44,9 +58,9 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
     }
   }
 
-  // Ordena por comprimento do alias, do maior para o menor.
+  // Ordena por comprimento do alias normalizado, do maior para o menor.
   // Isso garante que "tomate longa vida" seja encontrado antes de "tomate".
-  listaMapeamentos.sort((a, b) => b.alias.length - a.alias.length);
+  listaMapeamentos.sort((a, b) => b.aliasNormalizado.length - a.aliasNormalizado.length);
   
   dicionarioOtimizado = listaMapeamentos;
   dicionarioLoadTime = now;
@@ -150,12 +164,12 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     // Early exit se não há preço - otimização
     if (!precos) return;
     
-    const linhaNormalizada = linha.toLowerCase();
+    const linhaNormalizada = normalizarTexto(linha);
     let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
-    // Loop otimizado no dicionário - parar no primeiro match específico
+    // Loop otimizado no dicionário - buscar por alias normalizado
     for (const mapeamento of dicionario) {
-      if (linhaNormalizada.includes(mapeamento.alias)) {
+      if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
         produtoEncontrado = {
           produto: mapeamento.produto,
           tipo: mapeamento.tipo,
@@ -163,7 +177,7 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
         };
         
         // Se encontramos um match muito específico, parar busca
-        if (mapeamento.alias.length > linhaNormalizada.length * 0.6) {
+        if (mapeamento.aliasNormalizado.length > linhaNormalizada.length * 0.6) {
           break;
         }
       }
@@ -279,11 +293,11 @@ export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string
   linhas.forEach(linha => {
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
-    const linhaNormalizada = linha.toLowerCase();
+    const linhaNormalizada = normalizarTexto(linha);
     let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
     for (const mapeamento of dicionario) {
-      if (linhaNormalizada.includes(mapeamento.alias)) {
+      if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
         produtoEncontrado = {
           produto: mapeamento.produto,
           tipo: mapeamento.tipo,
