@@ -1,13 +1,10 @@
 export const dicionarioProdutos = {
   'abacate': {
-    'padrão': ['abacate'],
     'bola': ['bola', 'abacate bola', 'abacatekg bola'],
     'breda': ['breda', 'abacate breda', 'abacate kg breda'],
-    'fortuna': ['fortuna', 'abacate fortuna'],
-    '20kg': ['abacate 20', 'abacate 20kg', 'abacate 20 kg']
+    'fortuna': ['fortuna', 'abacate fortuna']
   },
   'abacaxi': {
-    'padrão': ['abacaxi'],
     'havaí': [
       'havaí', 'havai', 'hawai', 'abacaxi havai', 'abacaxi hawai',
       'abacaxi havaí', 'abacaxi havaí tp t 10', 'abacaxi hawai tipo 10',
@@ -31,16 +28,14 @@ export const dicionarioProdutos = {
     'seca': ['seca', 'abóbora seca']
   },
   'abobrinha': {
-    'padrão': [
-      'abobrinha', 'abobrinha padrão', 'abobrinha verde',
-      'abobrinha verde 20 kg'
-    ],
     'colombense': ['abobrinha colombense', 'abobrinha colombense 20 kg'],
     'klaina': ['abobrinha klaina', 'abobrinha klaina graúda'],
     'lv': ['abobrinha lv', 'abobrinha leve', 'abobrinha lev']
   },
   'acelga': {
-    'padrão': ['acelga', 'acelga maço', 'acelga unidade', 'acelga cx c 8', 'acelga padrão']
+    'maço': ['acelga maço'],
+    'unidade': ['acelga unidade'],
+    'caixa': ['acelga cx c 8']
   },
   'agrião': {
     'maço': ['agriao', 'agrião', 'agriao maco', 'agrião maço']
@@ -63,7 +58,6 @@ export const dicionarioProdutos = {
     'descascado': ['alho descascado', 'alho descascado 1kg']
   },
   'ameixa': {
-    'padrão': ['ameixa'],
     'importada': [
       'ameixa importada', 'ameixa imp', 'ameixa imp. kg calibre 65',
       'ameixa importada 9 kg calibre 60'
@@ -71,7 +65,7 @@ export const dicionarioProdutos = {
     'nacional': ['ameixa nacional', 'ameixa nacional g']
   },
   'atemoia': {
-    'padrão': ['atemoia', 'atemcia', 'atemola', 'atemoia kg', 'atemoia 10 kg']
+    // Sem variações - produto pai recebe todas as entradas genéricas
   },
   'banana': {
     'caturra': ['banana caturra', 'banana katurra', 'banana nanica'],
@@ -82,7 +76,6 @@ export const dicionarioProdutos = {
     'terra': ['banana terra']
   },
   'batata': {
-    'padrão': ['batata'],
     'asterix': ['batata asterix'],
     'doce': ['batata doce'],
     'doce branca': ['batata doce branca'],
@@ -100,16 +93,13 @@ export const dicionarioProdutos = {
     'yame': ['batata yame']
   },
   'berinjela': {
-    'padrão': ['berinjela', 'berinjela kg'],
-    '10kg': ['berinjela 10kg', 'berinjela 10 kg']
+    // Sem variações - entradas genéricas vão para produto pai
   },
-    'beterraba': {
-    'padrão': ['beterraba', 'beterraba m', 'beterraba box', 'beterraba padrão top'], // 'beterraba produtor' removido daqui
-    'produtor': ['beterraba produtor'], // NOVA VARIAÇÃO
+  'beterraba': {
+    'produtor': ['beterraba produtor'],
     'selecionada': ['beterraba selecionada']
   },
   'brócolis': {
-    'padrão': ['brócolis', 'brocolis'],
     'bandeja': ['brócolis bdj', 'brocolis bdj'],
     'caixa': ['brócolis 20 cx graudo', 'brócolis 45.00 20 cx graudo', 'brócolis 65.00']
   },
@@ -118,7 +108,6 @@ export const dicionarioProdutos = {
     'chocolate': ['caqui chocolate', 'chocolate', 'caqui choco']
   },
   'cebola': {
-    'padrão': ['cebola', 'cebola nacional', 'cebola nacional cx'],
     'roxa': [
       'cebola roxa', 'cebola roxa 20kg',
       'cebola roxa cx3 importada top',
@@ -126,20 +115,17 @@ export const dicionarioProdutos = {
     ]
   },
   'cenoura': {
-    'padrão': ['cenoura', 'cenoura boa kg', 'cenoura top', 'cenoura 20 kg'],
     'média': ['cenoura m', 'cenoura média', 'cenoura média kg']
   },
   'cheiro-verde': {
     'maço': ['cheiro verde', 'cheiro-verde', 'cheiro verde maço']
   },
   'chuchu': {
-    'padrão': ['chuchu', 'chuchu kg'],
     'klaina': ['chuchu klaina'],
-    'morretense': ['chuchu morretense'],
-    '20kg': ['chuchu 20kg', 'chuchu 20 kg']
+    'morretense': ['chuchu morretense']
+    // Removido '20kg' - é genérico, vai para produto pai
   },
   'coco': {
-    'padrão': ['coco'],
     'seco': ['coco seco', 'coco seco bahia', 'coco seco kg', 'coco seco 14 kg'],
     'verde': ['coco verde', 'coco verde unidade']
   },
@@ -151,29 +137,29 @@ export const dicionarioProdutos = {
     'maço': ['couve-flor maço', 'couve flor maço']
   },
   'escarola': {
-    'padrão': ['escarola', 'escarola maço', 'escarola cx c 18']
+    'maço': ['escarola maço'],
+    'caixa': ['escarola cx c 18']
   },
   'espinafre': {
-    'padrão': ['espinafre', 'espinafre maço', 'espinafre unidades']
+    'maço': ['espinafre maço'],
+    'unidades': ['espinafre unidades']
   },
   'físalis': {
-    'padrão': ['physalis', 'físalis']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'gengibre': {
-    'padrão': ['gengibre', 'gengibre novo top', 'gengibre placa', 'gengibre placa 12 kg']
+    'placa': ['gengibre placa', 'gengibre placa 12 kg']
   },
   'gilo': {
-    'padrão': ['gilo', 'jiló']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'goiaba': {
-    'padrão': ['goiaba'],
     'graúda': ['goiaba graúda', 'goiaba graúda 20kg']
   },
   'hortelã': {
     'maço': ['hortela', 'hortelã', 'hortela maco', 'hortelã maço', 'hortelã band']
   },
   'kiwi': {
-    'padrão': ['kiwi'],
     'importado': [
       'kiwi importado', 'kiwi imp', 'kiwi imp.t 20 10kg',
       'kiwi imp 9 kg graúdo', 'kiwi bdj 20x600 gr'
@@ -181,7 +167,6 @@ export const dicionarioProdutos = {
     'nacional': ['kiwi nacional']
   },
   'laranja': {
-    'padrão': ['laranja'],
     'bahia': ['laranja bahia', 'laranja bahia nacional', 'laranja bahia 20 kg'],
     'bahia importada': [
       'laranja bahia importada', 'laranja bahia imp',
@@ -195,13 +180,11 @@ export const dicionarioProdutos = {
     'valência importada': ['laranja valência importada', 'laranja imp valência']
   },
   'limão': {
-    'padrão': ['limão'],
     'galego': ['limão g', 'limão galego'],
     'graúdo': ['limão graúdo', 'limão graúdo cx com 20 kg'],
     'siciliano': ['limão siciliano', 'limão siciliano cx 15 kg']
   },
   'maçã': {
-    'padrão': ['maçã', 'maca'],
     'monica': ['maçã monica', 'maca monica'],
     'red': ['maçã red', 'maca red', 'maçã red elegido'],
     'gala': ['maçã gala', 'maca gala'],
@@ -211,7 +194,6 @@ export const dicionarioProdutos = {
     'pinki': ['maçã pinki', 'maca pinki']
   },
   'mamão': {
-    'padrão': ['mamão', 'mamao'],
     'formosa': [
       'mamão formosa', 'mamao formosa', 'mamão formosa kg', 'mamão formosa top',
       'mamao formosa 15 kg'
@@ -223,7 +205,6 @@ export const dicionarioProdutos = {
     'roça': ['mamão roça']
   },
   'manga': {
-    'padrão': ['manga'],
     'espada': ['manga espada'],
     'palmer': [
       'manga palmer', 'manga pálmer', 'manga palmer 20 kg',
@@ -234,19 +215,16 @@ export const dicionarioProdutos = {
       'manga tomy rio sul', 'manga tomy top vale bonito'
     ]
   },
-    'maracujá': {
-    'padrão': ['maracujá', 'maracuja', 'maracuja kg'],
-    'graúdo': ['maracujá graúdo', 'maracujá médio', 'maracujá médio/graúdo'], // Agora sem a variação plástica
+  'maracujá': {
+    'graúdo': ['maracujá graúdo', 'maracujá médio', 'maracujá médio/graúdo'],
     'papelão': ['maracujá papelão'],
     'plástica': ['maracujá plástica', 'maracujá plástica top'], // NOVA VARIAÇÃO
     'ceasa': ['maracujá ceasa']
   },
   'melancia': {
-    'padrão': ['melancia'],
     'baby': ['melancia baby', 'melancia baby cx .t 6']
   },
   'melão': {
-    'padrão': ['melão'],
     'amarelo': [
       'melão amarelo', 'melão amarelo graúdo',
       'melão amarelo graúdo top'
@@ -263,36 +241,32 @@ export const dicionarioProdutos = {
     'unidade': ['milho verde', 'milho verde c 3.', 'milho verde c 4.', 'milho verde top']
   },
   'mirtilo': {
-    'padrão': ['mirtilo']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'morango': {
-    'padrão': ['morango']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'nectarina': {
-    'padrão': ['nectarina', 'nectarina imp', 'nectarina importada', 'nectarina imp 8kg'],
+    'importada': ['nectarina imp', 'nectarina importada', 'nectarina imp 8kg']
   },
   'pepino': {
-    'padrão': ['pepino'],
     'salada': ['pepino salada', 'pepino salada top'],
     'japonês': ['pepino japonês', 'pepino japones', 'pepino japonês klaina', 'pepino japonês lev'],
     'conserva': ['pepino conserva'],
-    'alday': ['pepino alday'],
-    '20kg': ['pepino 20kg', 'pepino 20 kg']
+    'alday': ['pepino alday']
+    // Removido '20kg' - é genérico, vai para produto pai
   },
   'pêra': {
-    'padrão': ['pêra', 'pera'],
     'importada': ['pera imp', 'pêra importada'],
     'nacional': ['pera nacional'],
     'williams': ['pera williams', 'pera willian'],
     'danju': ['pera danju']
   },
   'pêssego': {
-    'padrão': ['pêssego', 'pessego'],
     'importado': ['pêssego importado', 'pessego importado'],
     'nacional': ['pêssego nacional', 'pêssego nacional g']
   },
   'pimenta': {
-    'padrão': ['pimenta'],
     'cambuci': ['cambuci', 'pimenta cambuci', 'pimeta cambuci'],
     'dedo-de-moça': [
       'dedo-de-moça', 'pimenta dedo',
@@ -316,10 +290,10 @@ export const dicionarioProdutos = {
     ]
   },
   'pitaya': {
-    'padrão': ['pitaya', 'pitaya 15 kg']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'quiabo': {
-    'padrão': ['quiabo', 'quiabo kg', 'quiabo 10 kg', 'quiabo 12.00kg', 'quiabo 14.00kg']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'rabanete': {
     'kg': ['rabanete padrão kg'],
@@ -330,10 +304,9 @@ export const dicionarioProdutos = {
     'verde': ['repolho verde', 'repolho verde 20kg', 'repolho verde kg', 'repolho verde top']
   },
   'tâmara': {
-    'padrão': ['tamara', 'tâmara', 'tamara c 25', 'tâmara 25 bdj de 200 gr']
+    // Sem variações - produto pai recebe entradas genéricas
   },
   'tangerina': {
-    'padrão': ['tangerina'],
     'murcote': ['morgote', 'murgote', 'murgote graúda', 'murcote', 'tangerina murcott'],
     'olé': ['olé', 'tangerina olé'],
     'ponkan cerro': ['ponkan cerro'],
@@ -342,7 +315,6 @@ export const dicionarioProdutos = {
     'mixirica': ['mixirica', 'mexerica']
   },
   'tomate': {
-    'padrão': ['tomate'],
     'cereja': [
       'tomate cereja', 'tomate cereja bdj',
       'tomate cereja cavali', 'tomate cereja cx',
@@ -355,7 +327,6 @@ export const dicionarioProdutos = {
     'saladete': ['tomate saladete', 'tomate saladete graúdo']
   },
   'uva': {
-    'padrão': ['uva'],
     'brasil': ['uva brasil'],
     'itália': ['uva itália', 'uva italia'],
     'rosa': ['uva rosa'],
@@ -371,9 +342,10 @@ export const dicionarioProdutos = {
     ]
   },
   'vagem': {
-    'padrão': ['vagem', 'vagem 10 kg', 'vagem branca']
+    'branca': ['vagem branca']
+    // Removido entradas genéricas - vão para produto pai
   },
   'verona': {
-    'padrão': ['verona', 'verona top cx 10kg']
+    // Sem variações - produto pai recebe entradas genéricas
   }
 };
