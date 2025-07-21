@@ -1,6 +1,13 @@
 
 import { dicionarioProdutos } from '@/utils/productExtraction/dicionarioProdutos';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
+import { 
+  buscarProdutoPai, 
+  buscarVariacao, 
+  isGenericType, 
+  logProductMapping,
+  clearProductCache 
+} from '@/utils/productExtraction/productUtils';
 
 interface MapeamentoProduto {
   alias: string;
@@ -53,12 +60,70 @@ const extrairDescricaoOriginal = (linhaOriginal: string): string => {
   return descricao;
 };
 
-export const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
+// Nova função para buscar produto pai ou variação específica no banco
+const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string): Promise<{
+  produto: any;
+  ehProdutoPai: boolean;
+} | null> => {
+  try {
+    // Primeiro, tentar buscar variação específica
+    if (nomeVariacao && !isGenericType(nomeVariacao)) {
+      const variacao = await buscarVariacao(nomeProduto, nomeVariacao);
+      if (variacao) {
+        logProductMapping('produto_variacao_encontrada', {
+          nomeProduto,
+          nomeVariacao,
+          produtoId: variacao.id,
+          origem: 'banco_variacao'
+        });
+        return { produto: variacao, ehProdutoPai: false };
+      }
+    }
+
+    // Se não encontrou variação ou é tipo genérico, buscar produto pai
+    const produtoPai = await buscarProdutoPai(nomeProduto);
+    if (produtoPai) {
+      logProductMapping('produto_pai_usado', {
+        nomeProduto,
+        nomeVariacao,
+        produtoId: produtoPai.id,
+        origem: 'banco_produto_pai',
+        motivo: isGenericType(nomeVariacao) ? 'tipo_generico' : 'variacao_nao_encontrada'
+      });
+      return { produto: produtoPai, ehProdutoPai: true };
+    }
+
+    logProductMapping('produto_nao_encontrado', {
+      nomeProduto,
+      nomeVariacao,
+      origem: 'banco_sem_resultado'
+    });
+    return null;
+  } catch (error) {
+    console.error('Erro ao buscar produto no banco:', error);
+    logProductMapping('erro_busca_banco', {
+      nomeProduto,
+      nomeVariacao,
+      erro: error instanceof Error ? error.message : String(error)
+    });
+    return null;
+  }
+};
+
+export const extrairProdutos = async (mensagem: string, nomeFornecedor: string): Promise<ProdutoExtraido[]> => {
   const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
   const produtosMap = new Map<string, ProdutoExtraido>(); // Mapa para controle de duplicatas
   const dicionario = getDicionarioOtimizado(); // Usa a versão otimizada
 
-  linhas.forEach(linha => {
+  // Log inicial da extração
+  logProductMapping('inicio_extracao', {
+    fornecedor: nomeFornecedor,
+    totalLinhas: linhas.length,
+    timestamp: new Date().toISOString()
+  });
+
+  // Processar cada linha de forma assíncrona, mas sequencial para manter ordem
+  for (const linha of linhas) {
     // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
@@ -124,18 +189,185 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
                             (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
 
       if (deveSubstituir) {
+        // NOVA LÓGICA FASE 3: Determinar se deve usar produto pai ou variação
+        let produtoFinalNome = produtoEncontrado.produto;
+        let tipoFinalProcessado = tipoFinal;
+        let produtoId: string | undefined;
+        let variacaoId: string | undefined;
+        let confianca = 0.8; // Confiança alta para dicionário
+        let origem: 'dicionario' | 'sinonimo' | 'banco' | 'manual' = 'dicionario';
+
+        // Se o tipo é genérico ou "padrão", usar produto pai
+        if (isGenericType(tipoFinal) || tipoFinal.toLowerCase() === 'padrão') {
+          logProductMapping('tipo_generico_detectado', {
+            produto: produtoEncontrado.produto,
+            tipo: tipoFinal,
+            alias: produtoEncontrado.alias
+          });
+          
+          // Tentar buscar produto pai no banco para obter ID
+          try {
+            const resultado = await buscarProdutoOuVariacao(produtoEncontrado.produto, tipoFinal);
+            if (resultado) {
+              produtoId = resultado.produto.id;
+              if (resultado.ehProdutoPai) {
+                tipoFinalProcessado = null; // Sem variação, é o produto pai
+                variacaoId = undefined;
+                origem = 'banco';
+                confianca = 0.9;
+              }
+            }
+          } catch (error) {
+            // Falha silenciosa, continua com dados do dicionário
+            console.warn('Erro ao buscar produto pai:', error);
+          }
+        } else {
+          // Tipo específico - tentar buscar variação no banco
+          try {
+            const resultado = await buscarProdutoOuVariacao(produtoEncontrado.produto, tipoFinal);
+            if (resultado) {
+              produtoId = resultado.produto.id;
+              if (resultado.ehProdutoPai) {
+                // Não existe essa variação específica, usar produto pai
+                tipoFinalProcessado = null;
+                variacaoId = undefined;
+                origem = 'banco';
+                confianca = 0.7; // Menor confiança pois não encontrou a variação exata
+              } else {
+                // Encontrou variação específica
+                variacaoId = resultado.produto.id;
+                produtoId = resultado.produto.produto_pai_id || resultado.produto.id;
+                origem = 'banco';
+                confianca = 0.95;
+              }
+            }
+          } catch (error) {
+            // Falha silenciosa, continua com dados do dicionário
+            console.warn('Erro ao buscar variação:', error);
+          }
+        }
+
         produtosMap.set(chaveItem, {
-          produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          produto: produtoFinalNome.charAt(0).toUpperCase() + produtoFinalNome.slice(1),
+          tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : null,
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
           aliasUsado: produtoEncontrado.alias,
-          origem: 'dicionario' as const
+          produtoId,
+          variacaoId,
+          confianca,
+          origem
+        });
+      }
+    }
+  }
+
+  // Log final da extração
+  logProductMapping('fim_extracao', {
+    fornecedor: nomeFornecedor,
+    totalProdutosExtraidos: produtosMap.size,
+    produtosComId: Array.from(produtosMap.values()).filter(p => p.produtoId).length,
+    produtosSemId: Array.from(produtosMap.values()).filter(p => !p.produtoId).length
+  });
+
+  return Array.from(produtosMap.values());
+};
+
+// Versão síncrona para compatibilidade (fallback)
+export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
+  const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
+  const produtosMap = new Map<string, ProdutoExtraido>();
+  const dicionario = getDicionarioOtimizado();
+
+  linhas.forEach(linha => {
+    const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
+    const precos = linha.match(regexPreco);
+    const linhaNormalizada = linha.toLowerCase();
+    let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
+
+    for (const mapeamento of dicionario) {
+      if (linhaNormalizada.includes(mapeamento.alias)) {
+        produtoEncontrado = {
+          produto: mapeamento.produto,
+          tipo: mapeamento.tipo,
+          alias: mapeamento.alias,
+        };
+        break; 
+      }
+    }
+
+    if (produtoEncontrado) {
+      const preco = precos && precos.length > 0 ? precos[precos.length - 1].replace(',', '.') : null;
+      let infoAdicional = linha;
+
+      if (precos) {
+        precos.forEach(p => {
+          infoAdicional = infoAdicional.replace(p, '');
+        });
+      }
+
+      const indexAlias = infoAdicional.toLowerCase().indexOf(produtoEncontrado.alias);
+      if (indexAlias !== -1) {
+        const antesAlias = infoAdicional.substring(0, indexAlias).trim();
+        const depoisAlias = infoAdicional.substring(indexAlias + produtoEncontrado.alias.length).trim();
+        infoAdicional = (antesAlias + ' ' + depoisAlias).trim();
+      }
+
+      infoAdicional = infoAdicional.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+
+      let tipoFinal = produtoEncontrado.tipo;
+      if (infoAdicional && infoAdicional.length > 1) {
+        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+      }
+
+      const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
+      const tipoFinalLowerCase = tipoFinal.toLowerCase();
+      if (tipoFinalLowerCase.includes(nomeProdutoLowerCase)) {
+        tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
+        tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
+        if (!tipoFinal || tipoFinal.length === 0) {
+          tipoFinal = 'padrão';
+        }
+      }
+
+      const chaveItem = `${produtoEncontrado.produto}_${tipoFinal}`;
+      const itemExistente = produtosMap.get(chaveItem);
+
+      const deveSubstituir = !itemExistente || 
+                            (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
+
+      if (deveSubstituir) {
+        produtosMap.set(chaveItem, {
+          produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
+          tipo: isGenericType(tipoFinal) ? null : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          preco: preco ? parseFloat(preco) : null,
+          fornecedor: nomeFornecedor,
+          linhaOriginal: linha,
+          aliasUsado: produtoEncontrado.alias,
+          origem: 'dicionario' as const,
+          confianca: 0.8
         });
       }
     }
   });
 
   return Array.from(produtosMap.values());
+};
+
+// Função de teste para verificar funcionamento
+export const testarMapeamentoProdutoPai = async (nomeProduto: string, nomeVariacao: string): Promise<any> => {
+  try {
+    const resultado = await buscarProdutoOuVariacao(nomeProduto, nomeVariacao);
+    return {
+      sucesso: true,
+      resultado,
+      isGeneric: isGenericType(nomeVariacao)
+    };
+  } catch (error) {
+    return {
+      sucesso: false,
+      erro: error instanceof Error ? error.message : String(error)
+    };
+  }
 };
