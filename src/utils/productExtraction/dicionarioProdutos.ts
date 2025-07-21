@@ -126,7 +126,7 @@ export const dicionarioProdutos = {
     ]
   },
   'cenoura': {
-    'padrão': ['cenoura', 'cenoura boa kg', 'cenoura top', 'cenoura 20 kg'],
+    'cenoura': ['cenoura', 'cenoura boa kg', 'cenoura top', 'cenoura 20 kg'],
     'média': ['cenoura m', 'cenoura média', 'cenoura média kg']
   },
   'cheiro-verde': {
