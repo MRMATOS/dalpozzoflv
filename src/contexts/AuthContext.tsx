@@ -144,13 +144,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Verificar sessão existente com timeout reduzido
+    // Verificar sessão existente com timeout otimizado
     const sessionTimeout = setTimeout(() => {
       if (mounted) {
         console.warn('Timeout no carregamento da sessão inicial');
         setLoading(false);
       }
-    }, 5000);
+    }, 15000); // Aumentado para 15 segundos para dar mais tempo
 
     // Carregar sessão inicial
     const initializeAuth = async () => {

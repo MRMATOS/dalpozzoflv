@@ -76,7 +76,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO (10s)
+  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO (30s)
   useEffect(() => {
     const timer = setTimeout(() => {
       if (dadosCarregados !== null && 
@@ -90,7 +90,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
           fornecedoresProcessados,
         });
       }
-    }, 10000); // Aumentado para 10 segundos
+    }, 30000); // Aumentado para 30 segundos para reduzir chamadas
 
     return () => clearTimeout(timer);
   }, [produtosExtraidos, tabelaComparativa]); // Dependências mínimas para evitar loops
@@ -133,7 +133,9 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     setIsProcessing(true);
     toast.info('Processando mensagem... Isso pode levar alguns segundos.');
 
-    const worker = new ExtractionWorker();
+    // Defer worker creation to prevent blocking
+    setTimeout(() => {
+      const worker = new ExtractionWorker();
 
     worker.onmessage = async (e: MessageEvent<{type: 'SUCCESS' | 'ERROR', payload: ProdutoExtraido[] | string}>) => {
       try {
@@ -178,10 +180,11 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
         worker.terminate();
     };
 
-    worker.postMessage({
-      mensagem: mensagemAtual,
-      nomeFornecedor: fornecedor.nome
-    });
+      worker.postMessage({
+        mensagem: mensagemAtual,
+        nomeFornecedor: fornecedor.nome
+      });
+    }, 100); // Defer por 100ms
 
   }, [fornecedorSelecionado, mensagemAtual, fornecedores, produtosExtraidos, isProcessing]);
   

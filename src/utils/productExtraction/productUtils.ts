@@ -20,7 +20,7 @@ interface CacheData {
 }
 
 let cache: CacheData | null = null;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+const CACHE_TTL = 30 * 60 * 1000; // 30 minutos - aumentado para reduzir reloads
 
 // Logging utilitário para rastreamento
 export const logProductMapping = (
