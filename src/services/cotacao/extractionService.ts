@@ -15,12 +15,19 @@ interface MapeamentoProduto {
   tipo: string;
 }
 
-// Cache para o dicionário otimizado
+// Cache otimizado para o dicionário com TTL
 let dicionarioOtimizado: MapeamentoProduto[] | null = null;
+let dicionarioLoadTime: number = 0;
+const DICIONARIO_CACHE_TTL = 60 * 60 * 1000; // 1 hora
+const extractionCache = new Map<string, ProdutoExtraido[]>();
+const EXTRACTION_CACHE_TTL = 10 * 60 * 1000; // 10 minutos
 
 // Função que cria e armazena em cache uma versão otimizada do dicionário
 const getDicionarioOtimizado = (): MapeamentoProduto[] => {
-  if (dicionarioOtimizado) {
+  const now = Date.now();
+  
+  // Cache ainda válido
+  if (dicionarioOtimizado && (now - dicionarioLoadTime) < DICIONARIO_CACHE_TTL) {
     return dicionarioOtimizado;
   }
 
@@ -43,7 +50,8 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
   listaMapeamentos.sort((a, b) => b.alias.length - a.alias.length);
   
   dicionarioOtimizado = listaMapeamentos;
-  console.log('Dicionário de produtos otimizado e cacheado.');
+  dicionarioLoadTime = now;
+  console.log(`Dicionário otimizado carregado: ${listaMapeamentos.length} entradas`);
   return dicionarioOtimizado;
 };
 
@@ -111,9 +119,22 @@ const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string
 };
 
 export const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
+  if (!mensagem?.trim()) {
+    console.warn('Mensagem vazia ou inválida');
+    return [];
+  }
+
+  // Cache key baseado na mensagem e fornecedor
+  const cacheKey = `${nomeFornecedor}:${mensagem.substring(0, 100)}`;
+  const cached = extractionCache.get(cacheKey);
+  if (cached) {
+    console.info('Usando resultado cacheado da extração');
+    return cached;
+  }
+
   const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
-  const produtosMap = new Map<string, ProdutoExtraido>(); // Mapa para controle de duplicatas
-  const dicionario = getDicionarioOtimizado(); // Usa a versão otimizada
+  const produtosMap = new Map<string, ProdutoExtraido>();
+  const dicionario = getDicionarioOtimizado();
 
   // Log inicial da extração
   logProductMapping('inicio_extracao', {
@@ -122,17 +143,22 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     timestamp: new Date().toISOString()
   });
 
+  // Otimização: processar apenas as primeiras 50 linhas para evitar travamento
+  const linhasLimitadas = linhas.slice(0, 50);
+  
   // Processar cada linha sequencialmente
-  linhas.forEach(linha => {
+  linhasLimitadas.forEach(linha => {
     // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
     
-    // Processar também linhas sem preço para capturar produtos
+    // Early exit se não há preço - otimização
+    if (!precos) return;
+    
     const linhaNormalizada = linha.toLowerCase();
     let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
-    // Loop único no dicionário otimizado. Muito mais rápido.
+    // Loop otimizado no dicionário - parar no primeiro match específico
     for (const mapeamento of dicionario) {
       if (linhaNormalizada.includes(mapeamento.alias)) {
         produtoEncontrado = {
@@ -140,8 +166,11 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
           tipo: mapeamento.tipo,
           alias: mapeamento.alias,
         };
-        // Como o dicionário está ordenado, o primeiro match é o mais específico.
-        break; 
+        
+        // Se encontramos um match muito específico, parar busca
+        if (mapeamento.alias.length > linhaNormalizada.length * 0.6) {
+          break;
+        }
       }
     }
 
@@ -230,15 +259,21 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     }
   });
 
+  const resultado = Array.from(produtosMap.values());
+  
+  // Cache do resultado
+  extractionCache.set(cacheKey, resultado);
+  setTimeout(() => extractionCache.delete(cacheKey), EXTRACTION_CACHE_TTL);
+
   // Log final da extração
   logProductMapping('fim_extracao', {
     fornecedor: nomeFornecedor,
     totalProdutosExtraidos: produtosMap.size,
-    produtosComId: Array.from(produtosMap.values()).filter(p => p.produtoId).length,
-    produtosSemId: Array.from(produtosMap.values()).filter(p => !p.produtoId).length
+    produtosComId: resultado.filter(p => p.produtoId).length,
+    produtosSemId: resultado.filter(p => !p.produtoId).length
   });
 
-  return Array.from(produtosMap.values());
+  return resultado;
 };
 
 // Versão síncrona para compatibilidade (fallback)

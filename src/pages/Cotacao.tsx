@@ -1,10 +1,11 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { CotacaoValidator, CotacaoMonitor } from '@/utils/cotacaoValidation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Calculator, Loader2, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useFornecedores } from '@/hooks/useFornecedores';
@@ -13,15 +14,17 @@ import { useEstoqueVariacoes } from '@/hooks/useEstoqueVariacoes';
 import { supabase } from '@/integrations/supabase/client';
 import { useCotacao } from '@/hooks/useCotacao';
 import FornecedorInput from '@/components/cotacao/FornecedorInput';
-import TabelaComparativa from '@/components/cotacao/TabelaComparativa';
 import CotacaoRestauradaMessage from '@/components/cotacao/CotacaoRestauradaMessage';
 import CotacaoHeader from '@/components/cotacao/CotacaoHeader';
 import ProdutosExtraidosDetails from '@/components/cotacao/ProdutosExtraidosDetails';
 import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
-import HistoricoPedidos from '@/components/cotacao/HistoricoPedidos';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
+
+// Lazy loading de componentes pesados para melhor performance
+const TabelaComparativa = lazy(() => import('@/components/cotacao/TabelaComparativa'));
+const HistoricoPedidos = lazy(() => import('@/components/cotacao/HistoricoPedidos'));
 
 const Cotacao = () => {
   const { profile } = useAuth();
@@ -238,23 +241,25 @@ const Cotacao = () => {
                 )}
 
                 {tabelaComparativa.length > 0 && (
-                  <TabelaComparativa
-                    tabela={tabelaComparativa}
-                    lojasComRequisicoes={lojasComRequisicoes}
-                    fornecedoresComProdutos={fornecedoresComProdutos}
-                    temDados={temDados}
-                    onCalcularPercentual={calcularPercentualSuprimento}
-                    onSalvarRascunho={handleSalvarRascunho}
-                    onRestaurar={handleRestaurarCotacao}
-                    onNova={handleNovaCotacao}
-                    onVerResumo={irParaResumo}
-                    onAdicionarProduto={handleAdicionarProduto}
-                    onObterEstoques={obterEstoquesDisplay}
-                    onQuantidadeChange={atualizarQuantidade}
-                    onUnidadeChange={atualizarUnidadePedido}
-                    onPrecoChange={atualizarPreco}
-                    onCalcularTotal={calcularTotalFornecedor}
-                  />
+                  <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                    <TabelaComparativa
+                      tabela={tabelaComparativa}
+                      lojasComRequisicoes={lojasComRequisicoes}
+                      fornecedoresComProdutos={fornecedoresComProdutos}
+                      temDados={temDados}
+                      onCalcularPercentual={calcularPercentualSuprimento}
+                      onSalvarRascunho={handleSalvarRascunho}
+                      onRestaurar={handleRestaurarCotacao}
+                      onNova={handleNovaCotacao}
+                      onVerResumo={irParaResumo}
+                      onAdicionarProduto={handleAdicionarProduto}
+                      onObterEstoques={obterEstoquesDisplay}
+                      onQuantidadeChange={atualizarQuantidade}
+                      onUnidadeChange={atualizarUnidadePedido}
+                      onPrecoChange={atualizarPreco}
+                      onCalcularTotal={calcularTotalFornecedor}
+                    />
+                  </Suspense>
                 )}
 
                 {/* Controles Manuais */}
@@ -294,7 +299,9 @@ const Cotacao = () => {
               </TabsContent>
 
               <TabsContent value="historico">
-                <HistoricoPedidos />
+                <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                  <HistoricoPedidos />
+                </Suspense>
               </TabsContent>
             </Tabs>
           </CardContent>
