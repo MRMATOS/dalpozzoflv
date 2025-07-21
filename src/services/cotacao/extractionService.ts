@@ -1,4 +1,3 @@
-
 import { dicionarioProdutos } from '@/utils/productExtraction/dicionarioProdutos';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
 import { 
@@ -143,11 +142,7 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     timestamp: new Date().toISOString()
   });
 
-  // Otimização: processar apenas as primeiras 50 linhas para evitar travamento
-  const linhasLimitadas = linhas.slice(0, 50);
-  
-  // Processar cada linha sequencialmente
-  linhasLimitadas.forEach(linha => {
+  linhas.forEach(linha => {
     // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
@@ -177,7 +172,6 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     if (produtoEncontrado) {
       const preco = precos && precos.length > 0 ? precos[precos.length - 1].replace(',', '.') : null;
       
-      // O restante da lógica permanece o mesmo
       let infoAdicional = linha;
 
       if (precos) {
