@@ -110,7 +110,7 @@ const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string
   }
 };
 
-export const extrairProdutos = async (mensagem: string, nomeFornecedor: string): Promise<ProdutoExtraido[]> => {
+export const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
   const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
   const produtosMap = new Map<string, ProdutoExtraido>(); // Mapa para controle de duplicatas
   const dicionario = getDicionarioOtimizado(); // Usa a versão otimizada
@@ -122,8 +122,8 @@ export const extrairProdutos = async (mensagem: string, nomeFornecedor: string):
     timestamp: new Date().toISOString()
   });
 
-  // Processar cada linha de forma assíncrona, mas sequencial para manter ordem
-  for (const linha of linhas) {
+  // Processar cada linha sequencialmente
+  linhas.forEach(linha => {
     // Regex para encontrar preços nos formatos: xx.xx, x.xx, xx,xx, x,xx, x,x, x.x
     const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
     const precos = linha.match(regexPreco);
@@ -205,46 +205,13 @@ export const extrairProdutos = async (mensagem: string, nomeFornecedor: string):
             alias: produtoEncontrado.alias
           });
           
-          // Tentar buscar produto pai no banco para obter ID
-          try {
-            const resultado = await buscarProdutoOuVariacao(produtoEncontrado.produto, tipoFinal);
-            if (resultado) {
-              produtoId = resultado.produto.id;
-              if (resultado.ehProdutoPai) {
-                tipoFinalProcessado = null; // Sem variação, é o produto pai
-                variacaoId = undefined;
-                origem = 'banco';
-                confianca = 0.9;
-              }
-            }
-          } catch (error) {
-            // Falha silenciosa, continua com dados do dicionário
-            console.warn('Erro ao buscar produto pai:', error);
-          }
+          // Para tipos genéricos, não precisamos buscar no banco agora - será feito sob demanda
+          tipoFinalProcessado = null; // Sem variação, é o produto pai
+          variacaoId = undefined;
+          confianca = 0.85; // Confiança boa para dicionário + regra de negócio
         } else {
-          // Tipo específico - tentar buscar variação no banco
-          try {
-            const resultado = await buscarProdutoOuVariacao(produtoEncontrado.produto, tipoFinal);
-            if (resultado) {
-              produtoId = resultado.produto.id;
-              if (resultado.ehProdutoPai) {
-                // Não existe essa variação específica, usar produto pai
-                tipoFinalProcessado = null;
-                variacaoId = undefined;
-                origem = 'banco';
-                confianca = 0.7; // Menor confiança pois não encontrou a variação exata
-              } else {
-                // Encontrou variação específica
-                variacaoId = resultado.produto.id;
-                produtoId = resultado.produto.produto_pai_id || resultado.produto.id;
-                origem = 'banco';
-                confianca = 0.95;
-              }
-            }
-          } catch (error) {
-            // Falha silenciosa, continua com dados do dicionário
-            console.warn('Erro ao buscar variação:', error);
-          }
+          // Tipo específico - manter como está, busca no banco será sob demanda
+          confianca = 0.8;
         }
 
         produtosMap.set(chaveItem, {
@@ -261,7 +228,7 @@ export const extrairProdutos = async (mensagem: string, nomeFornecedor: string):
         });
       }
     }
-  }
+  });
 
   // Log final da extração
   logProductMapping('fim_extracao', {
