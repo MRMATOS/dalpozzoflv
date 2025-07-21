@@ -125,8 +125,7 @@ export const dicionarioProdutos = {
       'cebola roxa importada'
     ]
   },
-  'cenoura': {
-    'cenoura': ['cenoura', 'cenoura boa kg', 'cenoura top', 'cenoura 20 kg'],
+  'cenoura': ['cenoura', 'cenoura boa kg', 'cenoura top', 'cenoura 20 kg']{
     'média': ['cenoura m', 'cenoura média', 'cenoura média kg']
   },
   'cheiro-verde': {
