@@ -226,7 +226,7 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
 
         produtosSemBanco.push({
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: isGenericType(tipoFinal) ? null : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          tipo: isGenericType(tipoFinal) ? 'padrão' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
@@ -529,7 +529,7 @@ export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string
       if (deveSubstituir) {
         produtosMap.set(chaveItem, {
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: isGenericType(tipoFinal) ? null : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          tipo: isGenericType(tipoFinal) ? 'padrão' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,

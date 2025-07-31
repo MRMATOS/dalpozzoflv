@@ -20,7 +20,7 @@ interface CacheData {
 }
 
 let cache: CacheData | null = null;
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutos - aumentado para reduzir reloads
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutos - reduzido para testar correções
 
 // Logging utilitário para rastreamento
 export const logProductMapping = (
@@ -79,8 +79,14 @@ const loadProductsToCache = async (): Promise<CacheData> => {
   produtos.forEach(produto => {
     if (!produto.produto_pai_id) {
       // É um produto pai
-      const chave = (produto.nome_base || produto.produto || '').toLowerCase();
+      const chave = (produto.nome_base || produto.produto || '').toLowerCase().trim();
       produtosPai.set(chave, produto);
+      
+      // Também adicionar sem acentos para busca mais robusta
+      const chaveSemAcento = chave.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (chaveSemAcento !== chave) {
+        produtosPai.set(chaveSemAcento, produto);
+      }
     } else {
       // É uma variação
       const chave = produto.produto_pai_id;
@@ -122,9 +128,13 @@ export const buscarProdutoPai = async (nomeProduto: string): Promise<ProdutoCach
     }
 
     const chaveNormalizada = nomeProduto.toLowerCase().trim();
+    const chaveSemAcento = chaveNormalizada.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
-    // Buscar produto pai diretamente
-    const produtoPai = cache.produtosPai.get(chaveNormalizada);
+    // Buscar produto pai diretamente - primeiro com acentos, depois sem
+    let produtoPai = cache.produtosPai.get(chaveNormalizada);
+    if (!produtoPai && chaveSemAcento !== chaveNormalizada) {
+      produtoPai = cache.produtosPai.get(chaveSemAcento);
+    }
     
     if (produtoPai) {
       logProductMapping('PRODUTO_PAI_ENCONTRADO', {
@@ -138,7 +148,10 @@ export const buscarProdutoPai = async (nomeProduto: string): Promise<ProdutoCach
 
     // Buscar por correspondência parcial no nome_base ou produto
     for (const [chave, produto] of cache.produtosPai.entries()) {
-      if (chave.includes(chaveNormalizada) || chaveNormalizada.includes(chave)) {
+      const chaveSemAcentoAtual = chave.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      
+      if (chave.includes(chaveNormalizada) || chaveNormalizada.includes(chave) ||
+          chaveSemAcentoAtual.includes(chaveSemAcento) || chaveSemAcento.includes(chaveSemAcentoAtual)) {
         logProductMapping('PRODUTO_PAI_ENCONTRADO_PARCIAL', {
           original: nomeProduto,
           produto: produto.produto,

@@ -28,6 +28,7 @@ export const dicionarioProdutos = {
     'seca': ['seca', 'abóbora seca']
   },
   'abobrinha': {
+    'padrão': ['abobrinha padrão', 'abobrinha', 'abobrinha kg', 'abobrinha comum'],
     'colombense': ['abobrinha colombense', 'abobrinha colombense 20 kg'],
     'klaina': ['abobrinha klaina', 'abobrinha klaina graúda'],
     'lv': ['abobrinha lv', 'abobrinha leve', 'abobrinha lev']
@@ -173,6 +174,7 @@ export const dicionarioProdutos = {
     'nacional': ['kiwi nacional']
   },
   'laranja': {
+    'padrão': ['laranja', 'laranja kg', 'laranja comum', 'laranja 20 kg'],
     'bahia': ['laranja bahia', 'laranja bahia nacional', 'laranja bahia 20 kg'],
     'bahia importada': [
       'laranja bahia importada', 'laranja bahia imp',
@@ -247,7 +249,7 @@ export const dicionarioProdutos = {
     'unidade': ['milho verde', 'milho verde c 3.', 'milho verde c 4.', 'milho verde top']
   },
   'mirtilo': {
-    // Sem variações - produto pai recebe entradas genéricas
+    'padrão': ['mirtilo', 'mirtilo kg', 'mirtilo comum']
   },
   'morango': {
     // Sem variações - produto pai recebe entradas genéricas
