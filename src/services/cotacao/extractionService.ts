@@ -131,6 +131,185 @@ const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string
   }
 };
 
+// Nova função assíncrona que integra automaticamente com banco de dados
+export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornecedor: string): Promise<ProdutoExtraido[]> => {
+  if (!mensagem?.trim()) {
+    console.warn('Mensagem vazia ou inválida');
+    return [];
+  }
+
+  // Cache key baseado na mensagem e fornecedor
+  const cacheKey = `${nomeFornecedor}:${mensagem.substring(0, 100)}`;
+  
+  const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
+  const produtosMap = new Map<string, ProdutoExtraido>();
+  const dicionario = getDicionarioOtimizado();
+
+  // Log inicial da extração
+  logProductMapping('inicio_extracao_integrada', {
+    fornecedor: nomeFornecedor,
+    totalLinhas: linhas.length,
+    timestamp: new Date().toISOString()
+  });
+
+  // Primeira passada: extrair produtos usando dicionário
+  const produtosSemBanco: ProdutoExtraido[] = [];
+  
+  linhas.forEach(linha => {
+    const regexPreco = /(\d{1,3}[.,]\d{1,2}|\d{1,3}[.,]\d{1})/g;
+    const precos = linha.match(regexPreco);
+    
+    if (!precos) return;
+    
+    const linhaNormalizada = normalizarTexto(linha);
+    let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
+
+    for (const mapeamento of dicionario) {
+      if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
+        produtoEncontrado = {
+          produto: mapeamento.produto,
+          tipo: mapeamento.tipo,
+          alias: mapeamento.alias,
+        };
+        
+        if (mapeamento.aliasNormalizado.length > linhaNormalizada.length * 0.6) {
+          break;
+        }
+      }
+    }
+
+    if (produtoEncontrado) {
+      const preco = precos && precos.length > 0 ? precos[precos.length - 1].replace(',', '.') : null;
+      
+      let infoAdicional = linha;
+      if (precos) {
+        precos.forEach(p => {
+          infoAdicional = infoAdicional.replace(p, '');
+        });
+      }
+
+      const indexAlias = infoAdicional.toLowerCase().indexOf(produtoEncontrado.alias);
+      if (indexAlias !== -1) {
+        const antesAlias = infoAdicional.substring(0, indexAlias).trim();
+        const depoisAlias = infoAdicional.substring(indexAlias + produtoEncontrado.alias.length).trim();
+        infoAdicional = (antesAlias + ' ' + depoisAlias).trim();
+      }
+
+      infoAdicional = infoAdicional.replace(/^[:\-\s]+/, '').replace(/[:\-\s]+$/, '').trim();
+
+      let tipoFinal = produtoEncontrado.tipo;
+      if (infoAdicional && infoAdicional.length > 1) {
+        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+      }
+
+      const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
+      const tipoFinalLowerCase = tipoFinal.toLowerCase();
+      if (tipoFinalLowerCase.includes(nomeProdutoLowerCase)) {
+        tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
+        tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
+        if (!tipoFinal || tipoFinal.length === 0) {
+          tipoFinal = 'padrão';
+        }
+      }
+
+      const chaveItem = `${produtoEncontrado.produto}_${tipoFinal}`;
+      const itemExistente = produtosSemBanco.find(p => `${p.produto}_${p.tipo || 'padrão'}` === chaveItem);
+
+      const deveSubstituir = !itemExistente || 
+                            (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
+
+      if (deveSubstituir) {
+        if (itemExistente) {
+          const index = produtosSemBanco.indexOf(itemExistente);
+          produtosSemBanco.splice(index, 1);
+        }
+
+        produtosSemBanco.push({
+          produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
+          tipo: isGenericType(tipoFinal) ? null : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          preco: preco ? parseFloat(preco) : null,
+          fornecedor: nomeFornecedor,
+          linhaOriginal: linha,
+          aliasUsado: produtoEncontrado.alias,
+          origem: 'dicionario',
+          confianca: 0.8
+        });
+      }
+    }
+  });
+
+  // Segunda passada: resolver IDs no banco de dados para cada produto
+  const produtosComBanco: ProdutoExtraido[] = [];
+  
+  for (const produto of produtosSemBanco) {
+    try {
+      const resultadoBanco = await buscarProdutoOuVariacao(produto.produto, produto.tipo || 'padrão');
+      
+      if (resultadoBanco) {
+        produtosComBanco.push({
+          ...produto,
+          produtoId: resultadoBanco.produto.id,
+          variacaoId: resultadoBanco.ehProdutoPai ? undefined : resultadoBanco.produto.id,
+          confianca: 0.95, // Alta confiança quando encontra no banco
+          origem: 'banco'
+        });
+        
+        logProductMapping('produto_integrado_sucesso', {
+          produto: produto.produto,
+          tipo: produto.tipo,
+          produtoId: resultadoBanco.produto.id,
+          ehProdutoPai: resultadoBanco.ehProdutoPai,
+          fornecedor: nomeFornecedor
+        });
+      } else {
+        // Não encontrou no banco, manter como estava
+        produtosComBanco.push({
+          ...produto,
+          confianca: 0.6 // Baixa confiança quando não encontra no banco
+        });
+        
+        logProductMapping('produto_nao_integrado', {
+          produto: produto.produto,
+          tipo: produto.tipo,
+          fornecedor: nomeFornecedor,
+          motivo: 'nao_encontrado_banco'
+        });
+      }
+    } catch (error) {
+      console.error(`Erro ao buscar produto ${produto.produto} no banco:`, error);
+      
+      // Erro na busca, manter como estava
+      produtosComBanco.push({
+        ...produto,
+        confianca: 0.5 // Muito baixa confiança em caso de erro
+      });
+      
+      logProductMapping('erro_integracao', {
+        produto: produto.produto,
+        tipo: produto.tipo,
+        fornecedor: nomeFornecedor,
+        erro: error instanceof Error ? error.message : String(error)
+      });
+    }
+  }
+
+  // Cache do resultado
+  extractionCache.set(cacheKey, produtosComBanco);
+  setTimeout(() => extractionCache.delete(cacheKey), EXTRACTION_CACHE_TTL);
+
+  // Log final da extração
+  logProductMapping('fim_extracao_integrada', {
+    fornecedor: nomeFornecedor,
+    totalProdutosExtraidos: produtosComBanco.length,
+    produtosComId: produtosComBanco.filter(p => p.produtoId).length,
+    produtosSemId: produtosComBanco.filter(p => !p.produtoId).length,
+    confiancaMedia: produtosComBanco.reduce((acc, p) => acc + (p.confianca || 0), 0) / produtosComBanco.length
+  });
+
+  return produtosComBanco;
+};
+
+// Função síncrona mantida para compatibilidade
 export const extrairProdutos = (mensagem: string, nomeFornecedor: string): ProdutoExtraido[] => {
   if (!mensagem?.trim()) {
     console.warn('Mensagem vazia ou inválida');

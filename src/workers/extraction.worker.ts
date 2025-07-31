@@ -1,5 +1,5 @@
 
-import { extrairProdutosAvancado } from '../services/cotacao/advancedExtractionService';
+import { extrairProdutosComIntegracao } from '../services/cotacao/extractionService';
 import { ProdutoExtraido } from '../utils/productExtraction/types';
 
 interface WorkerEventData {
@@ -12,8 +12,8 @@ self.onmessage = async (e: MessageEvent<WorkerEventData>) => {
   console.log('Worker: Recebida mensagem para processar com sistema avançado.');
 
   try {
-    const produtos = await extrairProdutosAvancado(mensagem, nomeFornecedor);
-    console.log(`Worker: ${produtos.length} produtos extraídos (incluindo não identificados).`);
+    const produtos = await extrairProdutosComIntegracao(mensagem, nomeFornecedor);
+    console.log(`Worker: ${produtos.length} produtos extraídos com integração automática ao banco.`);
     self.postMessage({ type: 'SUCCESS', payload: produtos });
   } catch (error) {
     console.error('Worker: Erro ao extrair produtos.', error);
