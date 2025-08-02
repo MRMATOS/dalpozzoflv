@@ -323,13 +323,22 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
       const resultadoBanco = await buscarProdutoOuVariacao(produto.produto, produto.tipo || 'padrão');
       
       if (resultadoBanco) {
-        produtosComBanco.push({
+        // Usar dados corretos do banco, especialmente para variações
+        const produtoFinal = {
           ...produto,
           produtoId: resultadoBanco.produto.id,
           variacaoId: resultadoBanco.ehProdutoPai ? undefined : resultadoBanco.produto.id,
           confianca: 0.95, // Alta confiança quando encontra no banco
-          origem: 'banco'
-        });
+          origem: 'banco' as const
+        };
+        
+        // Se é uma variação, usar o nome completo retornado do banco
+        if (!resultadoBanco.ehProdutoPai && resultadoBanco.produto.produto) {
+          produtoFinal.produto = resultadoBanco.produto.produto; // Nome completo: "Pimentão Amarelo"
+          produtoFinal.tipo = resultadoBanco.produto.nome_variacao || produto.tipo; // "Amarelo"
+        }
+        
+        produtosComBanco.push(produtoFinal);
         
         logProductMapping('produto_integrado_sucesso', {
           produto: produto.produto,
@@ -482,42 +491,23 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
                             (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
 
       if (deveSubstituir) {
-        // NOVA LÓGICA FASE 3: Determinar se deve usar produto pai ou variação
-        let produtoFinalNome = produtoEncontrado.produto;
+        // Lógica original simplificada para função síncrona
         let tipoFinalProcessado = tipoFinal;
-        let produtoId: string | undefined;
-        let variacaoId: string | undefined;
-        let confianca = 0.8; // Confiança alta para dicionário
-        let origem: 'dicionario' | 'sinonimo' | 'banco' | 'manual' = 'dicionario';
-
-        // Se o tipo é genérico ou "padrão", usar produto pai
+        
+        // Para tipos genéricos, usar "Padrão"
         if (isGenericType(tipoFinal) || tipoFinal.toLowerCase() === 'padrão') {
-          logProductMapping('tipo_generico_detectado', {
-            produto: produtoEncontrado.produto,
-            tipo: tipoFinal,
-            alias: produtoEncontrado.alias
-          });
-          
-          // Para tipos genéricos, usar "padrão" em vez de null
-          tipoFinalProcessado = 'padrão';
-          variacaoId = undefined;
-          confianca = 0.85; // Confiança boa para dicionário + regra de negócio
-        } else {
-          // Tipo específico - manter como está, busca no banco será sob demanda
-          confianca = 0.8;
+          tipoFinalProcessado = 'Padrão';
         }
 
         produtosMap.set(chaveItem, {
-          produto: produtoFinalNome.charAt(0).toUpperCase() + produtoFinalNome.slice(1),
+          produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
           tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : 'Padrão',
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
           aliasUsado: produtoEncontrado.alias,
-          produtoId,
-          variacaoId,
-          confianca,
-          origem
+          confianca: 0.8,
+          origem: 'dicionario'
         });
       }
     }
