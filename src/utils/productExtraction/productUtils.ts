@@ -176,7 +176,7 @@ export const buscarProdutoPai = async (nomeProduto: string): Promise<ProdutoCach
 };
 
 // Função para normalizar texto para matching
-const normalizarParaMatching = (texto: string): string => {
+export const normalizarParaMatching = (texto: string): string => {
   return texto
     .toLowerCase()
     .normalize('NFD')
@@ -187,7 +187,7 @@ const normalizarParaMatching = (texto: string): string => {
 };
 
 // Função para extrair tipo base de um tipo completo
-const extrairTipoBase = (tipoCompleto: string): string => {
+export const extrairTipoBase = (tipoCompleto: string): string => {
   const tipoNormalizado = normalizarParaMatching(tipoCompleto);
   
   // Lista de palavras que devem ser removidas para encontrar o tipo base

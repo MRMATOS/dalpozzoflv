@@ -48,35 +48,55 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-// Calcula similaridade percentual entre duas strings
+// Calcula similaridade percentual entre duas strings com algoritmo otimizado
 function calculateSimilarity(str1: string, str2: string): number {
   const normalized1 = normalizeText(str1);
   const normalized2 = normalizeText(str2);
   
-  // Exact match
+  // Exact match - máxima confiança
   if (normalized1 === normalized2) return 100;
   
-  // Contains match
+  // Palavras-chave importantes - alta confiança
   if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) {
-    return 85;
+    const shorterLength = Math.min(normalized1.length, normalized2.length);
+    const longerLength = Math.max(normalized1.length, normalized2.length);
+    
+    // Se uma string está contida na outra com diferença pequena, alta similaridade
+    if (longerLength - shorterLength <= 2) return 95;
+    
+    // Senão, boa similaridade baseada na proporção
+    return Math.max(80, 100 - ((longerLength - shorterLength) * 5));
   }
   
-  // Levenshtein distance
+  // Levenshtein distance com threshold otimizado
   const distance = levenshteinDistance(normalized1, normalized2);
   const maxLength = Math.max(normalized1.length, normalized2.length);
+  
+  // Se distância é muito grande, não vale a pena calcular
+  if (distance > maxLength * 0.4) return 0;
+  
   const similarity = ((maxLength - distance) / maxLength) * 100;
   
-  return Math.max(0, similarity);
+  // Bonus para palavras que começam igual (padrão comum em digitação)
+  let bonus = 0;
+  if (normalized1.substring(0, 3) === normalized2.substring(0, 3) && maxLength >= 4) {
+    bonus = 10;
+  }
+  
+  return Math.max(0, Math.min(100, similarity + bonus));
 }
 
-// Busca inteligente considerando erros de digitação
+// Busca inteligente considerando erros de digitação com threshold otimizado
 export function findSimilarProducts(
   searchTerm: string,
   dicionario: Record<string, Record<string, string[]>>,
-  minSimilarity: number = 70
+  minSimilarity: number = 85 // Increased threshold for better precision
 ): SimilarityMatch[] {
   const matches: SimilarityMatch[] = [];
   const normalizedSearch = normalizeText(searchTerm);
+  
+  // Early return se termo é muito curto
+  if (normalizedSearch.length < 2) return matches;
   
   for (const [produto, variacoes] of Object.entries(dicionario)) {
     for (const [tipo, sinonimos] of Object.entries(variacoes)) {
@@ -95,8 +115,13 @@ export function findSimilarProducts(
     }
   }
   
-  // Ordenar por confiança (maior primeiro)
-  return matches.sort((a, b) => b.confidence - a.confidence);
+  // Ordenar por confiança (maior primeiro) e depois por comprimento do original (menor primeiro)
+  return matches.sort((a, b) => {
+    if (Math.abs(a.confidence - b.confidence) < 1) {
+      return a.original.length - b.original.length; // Preferir matches mais curtos
+    }
+    return b.confidence - a.confidence;
+  });
 }
 
 // Busca contextual para detectar padrões específicos
@@ -171,7 +196,7 @@ class SearchCache {
 
 export const searchCache = new SearchCache();
 
-// Função principal de busca inteligente
+// Função principal de busca inteligente com priorização otimizada
 export function intelligentProductSearch(
   searchTerm: string,
   dicionario: Record<string, Record<string, string[]>>
@@ -181,7 +206,7 @@ export function intelligentProductSearch(
   let cached = searchCache.get(cacheKey);
   
   if (!cached) {
-    // Busca contextual primeiro
+    // Busca contextual primeiro (alta precisão)
     const contextual = contextualSearch(searchTerm);
     if (contextual.produto && contextual.tipo) {
       return {
@@ -192,10 +217,11 @@ export function intelligentProductSearch(
       };
     }
     
-    // Busca por similaridade
-    cached = findSimilarProducts(searchTerm, dicionario, 70);
+    // Busca por similaridade com threshold elevado para maior precisão
+    cached = findSimilarProducts(searchTerm, dicionario, 85);
     searchCache.set(cacheKey, cached);
   }
   
-  return cached.length > 0 ? cached[0] : null;
+  // Retornar apenas se a confiança for suficientemente alta
+  return cached.length > 0 && cached[0].confidence >= 85 ? cached[0] : null;
 }
