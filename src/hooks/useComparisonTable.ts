@@ -40,10 +40,27 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
     return descricao;
   }, []);
 
-  const criarTabelaComparativa = useCallback((produtos: ProdutoExtraido[]) => {
-    // Filtrar produtos válidos primeiro
-    const produtosValidos = produtos.filter(p => p && p.produto && p.fornecedor);
-    console.log('Criando tabela comparativa com produtos válidos:', produtosValidos);
+  // Função para validar se produto tem propriedades obrigatórias
+  const isValidProduct = useCallback((produto: any): produto is ProdutoExtraido => {
+    return produto && 
+           typeof produto === 'object' &&
+           typeof produto.produto === 'string' && 
+           produto.produto.trim() !== '' &&
+           typeof produto.fornecedor === 'string' && 
+           produto.fornecedor.trim() !== '' &&
+           typeof produto.tipo === 'string' &&
+           typeof produto.preco === 'number' &&
+           produto.preco > 0;
+  }, []);
+
+  const criarTabelaComparativa = useCallback((produtos: ProdutoExtraido[], tabelaAtual: ItemTabelaComparativa[]) => {
+    // Filtrar produtos válidos com verificação rigorosa
+    const produtosValidos = produtos.filter(isValidProduct);
+    console.log('Criando tabela comparativa com produtos válidos:', produtosValidos.length, 'de', produtos.length);
+    
+    if (produtosValidos.length === 0) {
+      return [];
+    }
     
     const fornecedoresList = [...new Set(produtosValidos.map(p => p.fornecedor))];
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
@@ -54,8 +71,8 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
         const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
         
         // Buscar dados existentes na tabela atual para preservar quantidades e unidades
-        const itemExistente = tabelaComparativa.find(item => 
-          item.produto === produto.produto && item.tipo === produto.tipo
+        const itemExistente = tabelaAtual.find(item => 
+          item && item.produto === produto.produto && item.tipo === produto.tipo
         );
         
         produtosAgrupados[chave] = {
@@ -70,9 +87,9 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
         fornecedoresList.forEach(f => {
           produtosAgrupados[chave].fornecedores[f] = null;
           // Preservar quantidades existentes ou inicializar com 0
-          produtosAgrupados[chave].quantidades[f] = itemExistente?.quantidades[f] || 0;
+          produtosAgrupados[chave].quantidades[f] = itemExistente?.quantidades?.[f] || 0;
           // Preservar unidades existentes ou usar padrão
-          produtosAgrupados[chave].unidadePedido[f] = itemExistente?.unidadePedido[f] || unidadePadrao;
+          produtosAgrupados[chave].unidadePedido[f] = itemExistente?.unidadePedido?.[f] || unidadePadrao;
           // Preservar descrições existentes ou inicializar vazio
           produtosAgrupados[chave].descricaoOriginal![f] = itemExistente?.descricaoOriginal?.[f] || '';
         });
@@ -85,21 +102,31 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
       }
     });
 
-    const tabela = Object.values(produtosAgrupados).sort((a, b) => 
+    return Object.values(produtosAgrupados).sort((a, b) => 
       a.produto.localeCompare(b.produto) || a.tipo.localeCompare(b.tipo)
     );
-    setTabelaComparativa(tabela);
-  }, [obterUnidadePadraoProduto, tabelaComparativa, extrairDescricaoOriginal]);
+  }, [obterUnidadePadraoProduto, extrairDescricaoOriginal, isValidProduct]);
 
   useEffect(() => {
-    console.log('useComparisonTable: produtos recebidos:', produtosExtraidos);
-    if (produtosExtraidos && Array.isArray(produtosExtraidos)) {
-      criarTabelaComparativa(produtosExtraidos);
-    } else {
-      console.warn('useComparisonTable: produtos inválidos recebidos:', produtosExtraidos);
+    console.log('useComparisonTable: produtos recebidos:', produtosExtraidos?.length || 0);
+    
+    if (!Array.isArray(produtosExtraidos)) {
+      console.warn('useComparisonTable: produtos não é um array:', produtosExtraidos);
       setTabelaComparativa([]);
+      return;
     }
-  }, [produtosExtraidos, criarTabelaComparativa]);
+
+    const novaTabela = criarTabelaComparativa(produtosExtraidos, tabelaComparativa);
+    
+    // Só atualizar se houve mudança real
+    const tabelaAtualString = JSON.stringify(tabelaComparativa);
+    const novaTabelaString = JSON.stringify(novaTabela);
+    
+    if (tabelaAtualString !== novaTabelaString) {
+      console.log('useComparisonTable: atualizando tabela');
+      setTabelaComparativa(novaTabela);
+    }
+  }, [produtosExtraidos]); // Remover criarTabelaComparativa das dependências
 
   const atualizarQuantidade = (produtoIndex: number, fornecedor: string, quantidade: string) => {
     const novaTabela = [...tabelaComparativa];

@@ -48,23 +48,25 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
   useEffect(() => {
     console.log('useCotacao: dados carregados:', dadosCarregados, 'isLoading:', isLoadingCotacao);
     if (dadosCarregados !== null && !isLoadingCotacao) {
+      // Filtros ainda mais rigorosos para evitar objetos vazios
       const produtosParaCarregar = Array.isArray(dadosCarregados.produtosExtraidos) 
-        ? dadosCarregados.produtosExtraidos.filter(p => p && p.produto) 
-        : [];
-      const tabelaParaCarregar = Array.isArray(dadosCarregados.tabelaComparativa) 
-        ? dadosCarregados.tabelaComparativa.filter(t => t && t.produto) 
+        ? dadosCarregados.produtosExtraidos.filter(p => p && 
+            typeof p === 'object' &&
+            typeof p.produto === 'string' && 
+            p.produto.trim() !== '' &&
+            typeof p.fornecedor === 'string' && 
+            p.fornecedor.trim() !== ''
+          ) 
         : [];
       
-      console.log('useCotacao: carregando produtos filtrados:', produtosParaCarregar);
-      console.log('useCotacao: carregando tabela filtrada:', tabelaParaCarregar);
+      console.log('useCotacao: carregando produtos filtrados:', produtosParaCarregar.length);
       
       setProdutosExtraidos(produtosParaCarregar);
-      setTabelaComparativa(tabelaParaCarregar);
       
       const fornecedoresUnicos = new Set(produtosParaCarregar.map(p => p.fornecedor));
       setFornecedoresProcessados(fornecedoresUnicos);
     }
-  }, [dadosCarregados, isLoadingCotacao, setTabelaComparativa]);
+  }, [dadosCarregados, isLoadingCotacao]); // Remover setTabelaComparativa das dependências
 
   // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
@@ -84,24 +86,23 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO (30s)
+  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO
   useEffect(() => {
+    // Só auto-salvar se não estiver carregando e tiver produtos válidos
+    if (dadosCarregados === null || isLoadingCotacao || syncStatus.isSyncing) return;
+    if (produtosExtraidos.length === 0) return;
+
     const timer = setTimeout(() => {
-      if (dadosCarregados !== null && 
-          !isLoadingCotacao && 
-          !syncStatus.isSyncing && 
-          produtosExtraidos.length > 0) {
-        
-        salvarCotacao({
-          produtosExtraidos,
-          tabelaComparativa,
-          fornecedoresProcessados,
-        });
-      }
-    }, 30000); // Aumentado para 30 segundos para reduzir chamadas
+      console.log('Auto-salvando cotação...');
+      salvarCotacao({
+        produtosExtraidos,
+        tabelaComparativa,
+        fornecedoresProcessados,
+      });
+    }, 5000); // Reduzido para 5 segundos
 
     return () => clearTimeout(timer);
-  }, [produtosExtraidos, tabelaComparativa]); // Dependências mínimas para evitar loops
+  }, [produtosExtraidos.length, tabelaComparativa.length]); // Usar apenas length para evitar loops
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
     try {
