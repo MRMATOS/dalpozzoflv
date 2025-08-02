@@ -111,7 +111,8 @@ const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string
           nomeVariacao,
           produtoId: variacao.id,
           nomeVariacaoBanco: variacao.nome_variacao,
-          nomeProdutoBanco: variacao.produto,
+          nomeProdutoBanco: variacao.produto, // Agora já vem com nome completo "Produto Pai + Variação"
+          produtoCompleto: variacao.produto, // Redundante mas garante que nunca seja null
           origem: 'banco_variacao_especifica',
           success: true
         });
@@ -141,16 +142,23 @@ const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string
     
     const produtoPai = await buscarProdutoPai(nomeProduto);
     if (produtoPai) {
+      // Garantir que produto pai sempre tenha nome válido
+      const nomeCompleto = produtoPai.produto || produtoPai.nome_base || 'Produto sem nome';
+      const produtoPaiCompleto = {
+        ...produtoPai,
+        produto: nomeCompleto
+      };
+      
       logProductMapping('PRODUTO_PAI_ENCONTRADO_BANCO', {
         nomeProduto,
         nomeVariacao,
         produtoId: produtoPai.id,
-        nomeProdutoBanco: produtoPai.produto || produtoPai.nome_base,
+        nomeProdutoBanco: nomeCompleto,
         origem: 'banco_produto_pai',
         motivo: isGenericType(nomeVariacao || '') ? 'tipo_generico' : 'variacao_nao_encontrada',
         success: true
       });
-      return { produto: produtoPai, ehProdutoPai: true };
+      return { produto: produtoPaiCompleto, ehProdutoPai: true };
     }
 
     // Nenhum resultado encontrado

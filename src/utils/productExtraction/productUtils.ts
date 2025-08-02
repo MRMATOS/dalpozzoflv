@@ -270,15 +270,21 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
     for (const variacao of variacoesDoPai) {
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto === tipoBase) {
+        // Construir nome completo: produto pai + variação
+        const variacaoCompleta = {
+          ...variacao,
+          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+        };
+        
         logProductMapping('VARIACAO_ENCONTRADA_TIPO_BASE', {
           original: `${nomeProduto} ${nomeVariacao}`,
-          produto: variacao.produto,
+          produto: variacaoCompleta.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
           source: 'exato_tipo_base',
           confidence: 0.95
         });
-        return variacao;
+        return variacaoCompleta;
       }
     }
 
@@ -286,15 +292,21 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
     for (const variacao of variacoesDoPai) {
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto === nomeVariacaoNormalizado) {
+        // Construir nome completo: produto pai + variação
+        const variacaoCompleta = {
+          ...variacao,
+          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+        };
+        
         logProductMapping('VARIACAO_ENCONTRADA_EXATA', {
           original: `${nomeProduto} ${nomeVariacao}`,
-          produto: variacao.produto,
+          produto: variacaoCompleta.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
           source: 'exato_completo',
           confidence: 1.0
         });
-        return variacao;
+        return variacaoCompleta;
       }
     }
 
@@ -302,15 +314,21 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
     for (const variacao of variacoesDoPai) {
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto.includes(tipoBase) || tipoBase.includes(nomeVariacaoProduto)) {
+        // Construir nome completo: produto pai + variação
+        const variacaoCompleta = {
+          ...variacao,
+          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+        };
+        
         logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_TIPO_BASE', {
           original: `${nomeProduto} ${nomeVariacao}`,
-          produto: variacao.produto,
+          produto: variacaoCompleta.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
           source: 'parcial_tipo_base',
           confidence: 0.8
         });
-        return variacao;
+        return variacaoCompleta;
       }
     }
 
@@ -319,15 +337,21 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto.includes(nomeVariacaoNormalizado) || 
           nomeVariacaoNormalizado.includes(nomeVariacaoProduto)) {
+        // Construir nome completo: produto pai + variação
+        const variacaoCompleta = {
+          ...variacao,
+          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+        };
+        
         logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_COMPLETA', {
           original: `${nomeProduto} ${nomeVariacao}`,
-          produto: variacao.produto,
+          produto: variacaoCompleta.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
           source: 'parcial_completo',
           confidence: 0.7
         });
-        return variacao;
+        return variacaoCompleta;
       }
     }
 
