@@ -45,9 +45,9 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
     produtos.forEach(produto => {
-      // Verificação defensiva para dados válidos
-      const produtoNome = produto.produto || 'Produto não identificado';
-      const produtoTipo = produto.tipo || 'Padrão';
+      // Verificação defensiva para dados válidos - NUNCA permitir null
+      const produtoNome = produto.produto && produto.produto.trim() !== '' ? produto.produto : 'Produto não identificado';
+      const produtoTipo = produto.tipo && produto.tipo.trim() !== '' ? produto.tipo : 'Padrão';
       
       const chave = `${produtoNome}_${produtoTipo}`;
       if (!produtosAgrupados[chave]) {

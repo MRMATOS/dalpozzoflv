@@ -14,6 +14,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      aprendizado_extracao: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          fornecedor: string
+          id: string
+          produto_correto_id: string | null
+          termo_original: string
+          updated_at: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          fornecedor: string
+          id?: string
+          produto_correto_id?: string | null
+          termo_original: string
+          updated_at?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          fornecedor?: string
+          id?: string
+          produto_correto_id?: string | null
+          termo_original?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aprendizado_extracao_produto_correto_id_fkey"
+            columns: ["produto_correto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprendizado_extracao_produto_correto_id_fkey"
+            columns: ["produto_correto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aprendizado_extracao_produto_correto_id_fkey"
+            columns: ["produto_correto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos_com_pai"
+            referencedColumns: ["produto_pai_id_ref"]
+          },
+        ]
+      }
       areas_exposicao: {
         Row: {
           ativo: boolean | null

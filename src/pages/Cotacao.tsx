@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
+import '../utils/clearProductCache'; // Força limpeza do cache ao carregar a página
 import { useAuth } from '@/contexts/AuthContext';
 import { CotacaoValidator, CotacaoMonitor } from '@/utils/cotacaoValidation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

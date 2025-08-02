@@ -271,10 +271,16 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto === tipoBase) {
         // Construir nome completo: produto pai + variação
-        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
+        const nomePai = produtoPai.nome_base || produtoPai.produto || 'Produto';
+        const nomeVariacao = variacao.nome_variacao || '';
+        const nomeCompleto = `${nomePai} ${nomeVariacao}`.trim();
+        
         const variacaoCompleta = {
           ...variacao,
-          produto: nomeCompleto
+          produto: nomeCompleto, // Nome completo para exibição: "Pimentão Amarelo"
+          nome_base: nomePai,    // Nome do pai: "Pimentão" 
+          nome_variacao: nomeVariacao, // Nome da variação: "Amarelo"
+          produto_pai_id: produtoPai.id
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_TIPO_BASE', {
@@ -341,10 +347,16 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       if (nomeVariacaoProduto.includes(nomeVariacaoNormalizado) || 
           nomeVariacaoNormalizado.includes(nomeVariacaoProduto)) {
         // Construir nome completo: produto pai + variação
-        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
+        const nomePai = produtoPai.nome_base || produtoPai.produto || 'Produto';
+        const nomeVariacao = variacao.nome_variacao || '';
+        const nomeCompleto = `${nomePai} ${nomeVariacao}`.trim();
+        
         const variacaoCompleta = {
           ...variacao,
-          produto: nomeCompleto
+          produto: nomeCompleto, // Nome completo: "Pimentão Amarelo"
+          nome_base: nomePai,    // Nome do pai: "Pimentão"
+          nome_variacao: nomeVariacao, // Nome da variação: "Amarelo"
+          produto_pai_id: produtoPai.id
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_COMPLETA', {

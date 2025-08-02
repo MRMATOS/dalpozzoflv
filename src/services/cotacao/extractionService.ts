@@ -332,10 +332,22 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
           origem: 'banco' as const
         };
         
-        // Se é uma variação, usar o nome completo retornado do banco
-        if (!resultadoBanco.ehProdutoPai && resultadoBanco.produto.produto) {
-          produtoFinal.produto = resultadoBanco.produto.produto; // Nome completo: "Pimentão Amarelo"
-          produtoFinal.tipo = resultadoBanco.produto.nome_variacao || produto.tipo; // "Amarelo"
+        // Se é uma variação, usar o nome completo e dados corretos
+        if (!resultadoBanco.ehProdutoPai) {
+          // Para variações, usar nome completo construído ou do banco
+          const nomeCompleto = resultadoBanco.produto.produto || 
+                              `${resultadoBanco.produto.nome_base || 'Produto'} ${resultadoBanco.produto.nome_variacao || ''}`.trim();
+          
+          produtoFinal.produto = nomeCompleto; // Nome completo: "Pimentão Amarelo"
+          produtoFinal.tipo = resultadoBanco.produto.nome_variacao || 'Padrão'; // "Amarelo"
+          
+          logProductMapping('VARIACAO_BANCO_ENCONTRADA', {
+            produtoOriginal: produto.produto,
+            tipoOriginal: produto.tipo,
+            produtoFinal: produtoFinal.produto,
+            tipoFinal: produtoFinal.tipo,
+            produtoId: resultadoBanco.produto.id
+          });
         }
         
         produtosComBanco.push(produtoFinal);
