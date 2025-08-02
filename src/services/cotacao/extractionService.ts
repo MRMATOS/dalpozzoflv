@@ -360,7 +360,7 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
                               `${resultadoBanco.produto.nome_base || 'Produto'} ${resultadoBanco.produto.nome_variacao || ''}`.trim();
           
           produtoFinal.produto = nomeCompleto; // Nome completo: "Pimentão Amarelo"
-          produtoFinal.tipo = resultadoBanco.produto.nome_variacao || 'Padrão'; // "Amarelo"
+          produtoFinal.tipo = resultadoBanco.produto.nome_variacao || ''; // "Amarelo" ou vazio para produto pai
           
           logProductMapping('VARIACAO_BANCO_ENCONTRADA', {
             produtoOriginal: produto.produto,
