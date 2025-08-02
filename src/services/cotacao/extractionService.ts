@@ -7,6 +7,7 @@ import {
   logProductMapping,
   clearProductCache 
 } from '@/utils/productExtraction/productUtils';
+import { intelligentProductSearch, contextualSearch } from '@/utils/productExtraction/advancedSearch';
 
 interface MapeamentoProduto {
   alias: string;
@@ -164,17 +165,42 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
     const linhaNormalizada = normalizarTexto(linha);
     let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
-    for (const mapeamento of dicionario) {
-      if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
-        produtoEncontrado = {
-          produto: mapeamento.produto,
-          tipo: mapeamento.tipo,
-          alias: mapeamento.alias,
-        };
-        
-        if (mapeamento.aliasNormalizado.length > linhaNormalizada.length * 0.6) {
-          break;
+    // 1. Busca contextual primeiro (mais rápida e precisa)
+    const contextualResult = contextualSearch(linha);
+    if (contextualResult.produto && contextualResult.tipo) {
+      produtoEncontrado = {
+        produto: contextualResult.produto,
+        tipo: contextualResult.tipo,
+        alias: linha
+      };
+    }
+    
+    // 2. Busca exata no dicionário (método atual)
+    if (!produtoEncontrado) {
+      for (const mapeamento of dicionario) {
+        if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
+          produtoEncontrado = {
+            produto: mapeamento.produto,
+            tipo: mapeamento.tipo,
+            alias: mapeamento.alias,
+          };
+          
+          if (mapeamento.aliasNormalizado.length > linhaNormalizada.length * 0.6) {
+            break;
+          }
         }
+      }
+    }
+    
+    // 3. Busca inteligente com tolerância a erros (fallback)
+    if (!produtoEncontrado) {
+      const intelligentResult = intelligentProductSearch(linha, dicionarioProdutos);
+      if (intelligentResult && intelligentResult.confidence >= 75) {
+        produtoEncontrado = {
+          produto: intelligentResult.produto,
+          tipo: intelligentResult.tipo,
+          alias: intelligentResult.original
+        };
       }
     }
 
