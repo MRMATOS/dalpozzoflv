@@ -271,9 +271,10 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto === tipoBase) {
         // Construir nome completo: produto pai + variação
+        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
         const variacaoCompleta = {
           ...variacao,
-          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+          produto: nomeCompleto
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_TIPO_BASE', {
@@ -293,9 +294,10 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto === nomeVariacaoNormalizado) {
         // Construir nome completo: produto pai + variação
+        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
         const variacaoCompleta = {
           ...variacao,
-          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+          produto: nomeCompleto
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_EXATA', {
@@ -315,9 +317,10 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
       if (nomeVariacaoProduto.includes(tipoBase) || tipoBase.includes(nomeVariacaoProduto)) {
         // Construir nome completo: produto pai + variação
+        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
         const variacaoCompleta = {
           ...variacao,
-          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+          produto: nomeCompleto
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_TIPO_BASE', {
@@ -338,9 +341,10 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
       if (nomeVariacaoProduto.includes(nomeVariacaoNormalizado) || 
           nomeVariacaoNormalizado.includes(nomeVariacaoProduto)) {
         // Construir nome completo: produto pai + variação
+        const nomeCompleto = `${produtoPai.nome_base || produtoPai.produto || 'Produto'} ${variacao.nome_variacao || ''}`.trim();
         const variacaoCompleta = {
           ...variacao,
-          produto: `${produtoPai.nome_base || produtoPai.produto} ${variacao.nome_variacao}`.trim()
+          produto: nomeCompleto
         };
         
         logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_COMPLETA', {
