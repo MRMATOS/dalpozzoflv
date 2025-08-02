@@ -306,12 +306,12 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
         tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
         tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
         if (!tipoFinal || tipoFinal.length === 0) {
-          tipoFinal = 'padrão';
+          tipoFinal = ''; // Não adicionar "padrão" - associar ao produto pai
         }
       }
 
       const chaveItem = `${produtoEncontrado.produto}_${tipoFinal}`;
-      const itemExistente = produtosSemBanco.find(p => `${p.produto}_${p.tipo || 'padrão'}` === chaveItem);
+      const itemExistente = produtosSemBanco.find(p => `${p.produto}_${p.tipo || ''}` === chaveItem);
 
       const deveSubstituir = !itemExistente || 
                             (preco !== null && (itemExistente.preco === null || itemExistente.preco === 0));
@@ -324,7 +324,7 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
 
         produtosSemBanco.push({
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: isGenericType(tipoFinal) ? 'padrão' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          tipo: (isGenericType(tipoFinal) || !tipoFinal) ? '' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
@@ -341,7 +341,7 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
   
   for (const produto of produtosSemBanco) {
     try {
-      const resultadoBanco = await buscarProdutoOuVariacao(produto.produto, produto.tipo || 'padrão');
+      const resultadoBanco = await buscarProdutoOuVariacao(produto.produto, produto.tipo || '');
       
       if (resultadoBanco) {
         // Usar dados corretos do banco, especialmente para variações
@@ -512,7 +512,7 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
         tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
         tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
         if (!tipoFinal || tipoFinal.length === 0) {
-          tipoFinal = 'padrão';
+          tipoFinal = ''; // Não adicionar "padrão" - associar ao produto pai
         }
       }
 
@@ -527,14 +527,14 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
         // Lógica original simplificada para função síncrona
         let tipoFinalProcessado = tipoFinal;
         
-        // Para tipos genéricos, usar "Padrão"
+        // Para tipos genéricos ou vazios, não adicionar "Padrão"
         if (isGenericType(tipoFinal) || tipoFinal.toLowerCase() === 'padrão') {
-          tipoFinalProcessado = 'Padrão';
+          tipoFinalProcessado = '';
         }
 
         produtosMap.set(chaveItem, {
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : 'Padrão',
+          tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : '',
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
@@ -616,7 +616,7 @@ export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string
         tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
         tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
         if (!tipoFinal || tipoFinal.length === 0) {
-          tipoFinal = 'padrão';
+          tipoFinal = ''; // Não adicionar "padrão" - associar ao produto pai
         }
       }
 
@@ -629,7 +629,7 @@ export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string
       if (deveSubstituir) {
         produtosMap.set(chaveItem, {
           produto: produtoEncontrado.produto.charAt(0).toUpperCase() + produtoEncontrado.produto.slice(1),
-          tipo: isGenericType(tipoFinal) ? 'padrão' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
+          tipo: (isGenericType(tipoFinal) || !tipoFinal) ? '' : tipoFinal.charAt(0).toUpperCase() + tipoFinal.slice(1),
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
