@@ -41,10 +41,14 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
   }, []);
 
   const criarTabelaComparativa = useCallback((produtos: ProdutoExtraido[]) => {
-    const fornecedoresList = [...new Set(produtos.map(p => p.fornecedor))];
+    // Filtrar produtos válidos primeiro
+    const produtosValidos = produtos.filter(p => p && p.produto && p.fornecedor);
+    console.log('Criando tabela comparativa com produtos válidos:', produtosValidos);
+    
+    const fornecedoresList = [...new Set(produtosValidos.map(p => p.fornecedor))];
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
-    produtos.forEach(produto => {
+    produtosValidos.forEach(produto => {
       const chave = `${produto.produto}_${produto.tipo}`;
       if (!produtosAgrupados[chave]) {
         const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
@@ -88,8 +92,12 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
   }, [obterUnidadePadraoProduto, tabelaComparativa, extrairDescricaoOriginal]);
 
   useEffect(() => {
-    if (produtosExtraidos) {
+    console.log('useComparisonTable: produtos recebidos:', produtosExtraidos);
+    if (produtosExtraidos && Array.isArray(produtosExtraidos)) {
       criarTabelaComparativa(produtosExtraidos);
+    } else {
+      console.warn('useComparisonTable: produtos inválidos recebidos:', produtosExtraidos);
+      setTabelaComparativa([]);
     }
   }, [produtosExtraidos, criarTabelaComparativa]);
 

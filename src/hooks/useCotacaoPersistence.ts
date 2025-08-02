@@ -89,9 +89,15 @@ export const useCotacaoPersistence = () => {
           }
           
           const dadosRestaurados = {
-            produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
-            tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+            produtosExtraidos: Array.isArray(data.produtos_extraidos) 
+              ? (data.produtos_extraidos as unknown as ProdutoExtraido[]).filter(p => p && p.produto) 
+              : [],
+            tabelaComparativa: Array.isArray(data.tabela_comparativa) 
+              ? (data.tabela_comparativa as unknown as ItemTabelaComparativa[]).filter(t => t && t.produto) 
+              : [],
           };
+          
+          console.log('Dados restaurados filtrados:', dadosRestaurados);
           
           setDadosCarregados(dadosRestaurados);
         } else {
@@ -299,10 +305,17 @@ export const useCotacaoPersistence = () => {
         
         setCotacaoRestaurada(new Date(data.data));
         
-        return {
-          produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
-          tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
+        const dadosParaRetornar = {
+          produtosExtraidos: Array.isArray(data.produtos_extraidos) 
+            ? (data.produtos_extraidos as unknown as ProdutoExtraido[]).filter(p => p && p.produto) 
+            : [],
+          tabelaComparativa: Array.isArray(data.tabela_comparativa) 
+            ? (data.tabela_comparativa as unknown as ItemTabelaComparativa[]).filter(t => t && t.produto) 
+            : [],
         };
+        
+        console.log('Dados para retornar filtrados:', dadosParaRetornar);
+        return dadosParaRetornar;
       }
 
       toast.info('Nenhuma cotação encontrada');

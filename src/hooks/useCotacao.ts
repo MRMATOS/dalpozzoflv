@@ -46,9 +46,17 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Carregar dados automaticamente apenas UMA vez
   useEffect(() => {
+    console.log('useCotacao: dados carregados:', dadosCarregados, 'isLoading:', isLoadingCotacao);
     if (dadosCarregados !== null && !isLoadingCotacao) {
-      const produtosParaCarregar = dadosCarregados.produtosExtraidos || [];
-      const tabelaParaCarregar = dadosCarregados.tabelaComparativa || [];
+      const produtosParaCarregar = Array.isArray(dadosCarregados.produtosExtraidos) 
+        ? dadosCarregados.produtosExtraidos.filter(p => p && p.produto) 
+        : [];
+      const tabelaParaCarregar = Array.isArray(dadosCarregados.tabelaComparativa) 
+        ? dadosCarregados.tabelaComparativa.filter(t => t && t.produto) 
+        : [];
+      
+      console.log('useCotacao: carregando produtos filtrados:', produtosParaCarregar);
+      console.log('useCotacao: carregando tabela filtrada:', tabelaParaCarregar);
       
       setProdutosExtraidos(produtosParaCarregar);
       setTabelaComparativa(tabelaParaCarregar);
@@ -56,7 +64,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       const fornecedoresUnicos = new Set(produtosParaCarregar.map(p => p.fornecedor));
       setFornecedoresProcessados(fornecedoresUnicos);
     }
-  }, [dadosCarregados, isLoadingCotacao]); // Removido setTabelaComparativa das dependências
+  }, [dadosCarregados, isLoadingCotacao, setTabelaComparativa]);
 
   // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {

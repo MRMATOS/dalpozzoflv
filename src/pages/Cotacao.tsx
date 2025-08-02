@@ -84,6 +84,17 @@ const Cotacao = () => {
     textosPorFornecedor
   } = useCotacao({ fornecedores, produtosDB, requisicoes });
 
+  // Log de debug para identificar problemas
+  useEffect(() => {
+    console.log('=== DEBUG COTACAO ===');
+    console.log('produtosExtraidos:', produtosExtraidos);
+    console.log('tabelaComparativa:', tabelaComparativa);
+    console.log('Verificação de null em produtosExtraidos:', 
+      produtosExtraidos?.filter(p => !p || !p.produto));
+    console.log('Verificação de null em tabelaComparativa:', 
+      tabelaComparativa?.filter(t => !t || !t.produto));
+  }, [produtosExtraidos, tabelaComparativa]);
+
   // Validação de proteção
   useEffect(() => {
     const hookObject = {
