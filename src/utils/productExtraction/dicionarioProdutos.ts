@@ -36,6 +36,9 @@ export const dicionarioProdutos = {
   'acelga': {
     'padrão': ['acelga', 'acelga kg', 'acelga comum', 'acelga verde']
   },
+  'selga': {
+    'padrão': ['selga', 'selga kg', 'selga comum', 'selga verde']
+  },
   'agrião': {
     'padrão': ['agrião', 'agrião kg', 'agrião comum', 'agrião maço']
   },
@@ -60,6 +63,7 @@ export const dicionarioProdutos = {
       'alho poró mç com12t'
     ],
     'descascado': ['alho descascado', 'alho descascado 1kg'],
+    'encortado': ['alho encortado', 'alho encortado kg'],
     'comum': ['alho', 'alho kg', 'alho comum']
   },
   'ameixa': {
@@ -74,7 +78,7 @@ export const dicionarioProdutos = {
   },
   'banana': {
     'prata': ['banana prata', 'banana prata kg', 'banana prata 20 kg'],
-    'nanica': ['banana nanica', 'banana katurra', 'banana caturra', 'banana nanica kg'],
+    'nanica': ['banana nanica', 'banana katurra', 'banana caturra', 'banana nanica kg', 'banana caturra kg'],
     'maçã': ['banana maçã', 'banana maca', 'banana maça kg'],
     'da terra': ['banana da terra', 'banana terra', 'banana da terra kg'],
     'ouro': ['banana ouro', 'banana ouro kg'],
@@ -122,10 +126,13 @@ export const dicionarioProdutos = {
       'cebola roxa', 'cebola roxa 20kg',
       'cebola roxa cx3 importada top',
       'cebola roxa importada'
-    ]
+    ],
+    'padrão': ['cebola', 'cebola comum', 'cebola kg', 'cebola 20kg', 'cebola nacional']
   },
   'cenoura': {
-    'média': ['cenoura m', 'cenoura média', 'cenoura média kg']
+    'média': ['cenoura m', 'cenoura média', 'cenoura média kg'],
+    'padrão': ['cenoura', 'cenoura comum', 'cenoura kg', 'cenoura 20kg', 'cenoura nacional', 'cenoura graúda'],
+    'baby': ['cenoura baby', 'cenoura mini']
   },
   'cheiro-verde': {
     'maço': ['cheiro verde', 'cheiro-verde', 'cheiro verde maço']
@@ -188,9 +195,11 @@ export const dicionarioProdutos = {
     ],
     'fabi': ['laranja fabi'],
     'lima': ['laranja lima', 'laranja lima 20 kg'],
-    'pera': ['laranja pera'],
+    'pera': ['laranja pera', 'laranja pera kg'],
     'pera rio': ['laranja pera rio', 'laranja pera rio ceasa', 'laranja pera rio 20 kg'],
     'pera roça': ['laranja pera roça'],
+    'seleta': ['laranja seleta', 'laranja seleta kg'],
+    'valência': ['laranja valência', 'laranja valencia', 'laranja valência nacional'],
     'valência importada': ['laranja valência importada', 'laranja imp valência']
   },
   'limão': {
@@ -239,13 +248,14 @@ export const dicionarioProdutos = {
     'baby': ['melancia baby', 'melancia baby cx .t 6']
   },
   'melão': {
+    'padrão': ['melão', 'melão kg', 'melão comum'],
     'amarelo': [
       'melão amarelo', 'melão amarelo graúdo',
       'melão amarelo graúdo top'
     ],
     'cepi': ['melão cepi', 'melão cepi cx t6'],
     'gaia': ['melão gaia'],
-    'melancia': ['melão melancia'], // CORRIGIDO
+    'melancia': ['melão melancia'], 
     'rei': ['melão rei', 'melão rei t 6'],
     'sapo': ['melão sapo', 'melão sapo bom', 'melão sapo graúdo'],
     'solto': ['melão solto']
