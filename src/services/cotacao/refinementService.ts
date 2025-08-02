@@ -1,9 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
 // import { findBestDatabaseMatch, type DatabaseSimilarityMatch } from '@/utils/productExtraction/databaseSimilarity';
 import { normalizarParaMatching } from '@/utils/productExtraction/productUtils';
+import { calcularSimilaridadeCorrigida, testarValidacaoSemantica } from '@/utils/productExtraction/improvedSimilarity';
 
-// ⚠️ ROLLBACK CONTROLADO - FASE 1
+// ⚠️ ROLLBACK CONTROLADO - FASE 1 + FASE 2
 // Sistema de similaridade inteligente temporariamente desabilitado
+// Função de similaridade CORRIGIDA implementada
 const INTELLIGENT_SIMILARITY_ENABLED = false;
 const DEBUG_ASSOCIATIONS = true;
 
@@ -51,57 +53,10 @@ const carregarProdutosBanco = async (): Promise<ProdutoBanco[]> => {
   }
 };
 
-// Calcula similaridade entre duas strings usando algoritmo otimizado
+// ⚠️ FUNÇÃO DE SIMILARIDADE ANTIGA SUBSTITUÍDA
+// Agora usa a função corrigida com validações rigorosas
 const calcularSimilaridade = (str1: string, str2: string): number => {
-  const normalized1 = normalizarParaMatching(str1);
-  const normalized2 = normalizarParaMatching(str2);
-  
-  if (normalized1 === normalized2) return 1.0;
-  if (normalized1.length === 0 || normalized2.length === 0) return 0.0;
-  
-  // Verifica inclusão de substring com score melhorado
-  if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) {
-    const minLen = Math.min(normalized1.length, normalized2.length);
-    const maxLen = Math.max(normalized1.length, normalized2.length);
-    return Math.max(0.85, 1.0 - ((maxLen - minLen) * 0.03));
-  }
-  
-  // Levenshtein otimizado
-  const maxLength = Math.max(normalized1.length, normalized2.length);
-  
-  // Early return para strings muito diferentes
-  if (Math.abs(normalized1.length - normalized2.length) > maxLength * 0.5) {
-    return 0.0;
-  }
-  
-  const matrix = Array(normalized2.length + 1).fill(null).map(() => Array(normalized1.length + 1).fill(null));
-  
-  for (let i = 0; i <= normalized1.length; i++) matrix[0][i] = i;
-  for (let j = 0; j <= normalized2.length; j++) matrix[j][0] = j;
-  
-  for (let j = 1; j <= normalized2.length; j++) {
-    for (let i = 1; i <= normalized1.length; i++) {
-      if (normalized1[i - 1] === normalized2[j - 1]) {
-        matrix[j][i] = matrix[j - 1][i - 1];
-      } else {
-        matrix[j][i] = Math.min(
-          matrix[j - 1][i - 1] + 1, // substitution
-          matrix[j][i - 1] + 1,     // insertion
-          matrix[j - 1][i] + 1      // deletion
-        );
-      }
-    }
-  }
-  
-  const distance = matrix[normalized2.length][normalized1.length];
-  let similarity = 1 - (distance / maxLength);
-  
-  // Bonus para início similar (padrão comum em erros de digitação)
-  if (normalized1.substring(0, 3) === normalized2.substring(0, 3) && maxLength >= 4) {
-    similarity += 0.05;
-  }
-  
-  return Math.max(0, Math.min(1, similarity));
+  return calcularSimilaridadeCorrigida(str1, str2);
 };
 
 // Extrai termos relevantes da linha para matching
@@ -164,41 +119,49 @@ export const refinarIdentificacaoProduto = async (
       tipoNorm
     });
     
-    // Busca EXATA primeiro (maior threshold)
+    // Busca EXATA primeiro (threshold máximo)
     const produtosExatos = produtos.filter(p => {
       const nomeBaseNorm = normalizarNome(p.nome_base || p.produto || '');
       const similarity = calcularSimilaridade(nomeBaseNorm, produtoBaseNorm);
       
+      // ⚠️ VALIDAÇÃO SEMÂNTICA ANTES DE ACEITAR
+      const validacao = testarValidacaoSemantica(produtoBase, p.nome_base || p.produto || '');
+      
       logAssociation('COMPARACAO_EXATA', {
         produtoTeste: p.nome_base || p.produto,
         produtoBase,
-        nomeBaseNorm,
-        produtoBaseNorm,
         similarity,
-        aceito: similarity > 0.95
+        validacao,
+        aceito: similarity > 0.95 && !validacao.blacklisted && validacao.semanticallySimilar
       });
       
-      return similarity > 0.95; // Threshold ALTO para matches exatos
+      // Aceitar apenas se passou em TODAS as validações
+      return similarity > 0.95 && !validacao.blacklisted && validacao.semanticallySimilar;
     });
     
     let produtosBase = produtosExatos;
     
-    // Se não encontrou matches exatos, buscar similares (threshold médio)
+    // Se não encontrou matches exatos, buscar similares (threshold alto + validação)
     if (produtosBase.length === 0) {
-      console.log(`⚠️ [Refinamento] Nenhum match exato, buscando similares...`);
+      console.log(`⚠️ [Refinamento] Nenhum match exato validado, buscando similares...`);
       
       produtosBase = produtos.filter(p => {
         const nomeBaseNorm = normalizarNome(p.nome_base || p.produto || '');
         const similarity = calcularSimilaridade(nomeBaseNorm, produtoBaseNorm);
         
+        // ⚠️ VALIDAÇÃO SEMÂNTICA OBRIGATÓRIA
+        const validacao = testarValidacaoSemantica(produtoBase, p.nome_base || p.produto || '');
+        
         logAssociation('COMPARACAO_SIMILAR', {
           produtoTeste: p.nome_base || p.produto,
           produtoBase,
           similarity,
-          aceito: similarity > 0.85
+          validacao,
+          aceito: similarity > 0.85 && !validacao.blacklisted && validacao.semanticallySimilar
         });
         
-        return similarity > 0.85; // Threshold MÉDIO para similares
+        // Aceitar apenas se passou em TODAS as validações
+        return similarity > 0.85 && !validacao.blacklisted && validacao.semanticallySimilar;
       });
     }
     
@@ -215,59 +178,47 @@ export const refinarIdentificacaoProduto = async (
     
     console.log(`📋 [Refinamento] ${produtosBase.length} produtos candidatos encontrados`);
     
-    // Busca variação específica com validação semântica
+    // Busca variação específica com validação semântica RIGOROSA
     let melhorMatch: { produto: ProdutoBanco; score: number } | null = null;
     
     for (const produto of produtosBase) {
       if (!produto.nome_variacao) continue;
       
       const variacaoNorm = normalizarNome(produto.nome_variacao);
-      let score = calcularSimilaridade(variacaoNorm, tipoNorm);
+      const similarity = calcularSimilaridade(variacaoNorm, tipoNorm);
+      
+      // ⚠️ VALIDAÇÃO SEMÂNTICA PARA VARIAÇÕES
+      const validacaoVariacao = testarValidacaoSemantica(tipoIdentificado, produto.nome_variacao);
       
       logAssociation('TESTE_VARIACAO', {
         produtoBase: produto.nome_base || produto.produto,
         variacao: produto.nome_variacao,
         tipoIdentificado,
-        variacaoNorm,
-        tipoNorm,
-        scoreInicial: score
+        similarity,
+        validacao: validacaoVariacao
       });
       
-      // Validação semântica básica - prevenir associações absurdas
-      const produtoLower = (produto.nome_base || produto.produto || '').toLowerCase();
-      const produtoBaseLower = produtoBase.toLowerCase();
-      
-      // Se os produtos são muito diferentes semanticamente, penalizar score
-      if (!produtoLower.includes(produtoBaseLower.substring(0, 3)) && 
-          !produtoBaseLower.includes(produtoLower.substring(0, 3))) {
-        score *= 0.5; // Penalidade severa para produtos semanticamente diferentes
-        
-        logAssociation('PENALIDADE_SEMANTICA', {
-          produtoBase,
-          produtoTeste: produto.nome_base || produto.produto,
-          scorePenalizado: score,
-          motivo: 'produtos_semanticamente_diferentes'
+      // Aplicar validação semântica rigorosa
+      if (validacaoVariacao.blacklisted || !validacaoVariacao.semanticallySimilar) {
+        logAssociation('VARIACAO_REJEITADA_SEMANTICA', {
+          variacao: produto.nome_variacao,
+          tipoIdentificado,
+          motivo: validacaoVariacao.blacklisted ? 'blacklisted' : 'categoria_incompativel',
+          categoriaVariacao: validacaoVariacao.categoria1,
+          categoriaTipo: validacaoVariacao.categoria2
         });
+        continue; // Pular esta variação
       }
       
-      // Bonus por termos encontrados (mais conservador)
-      let bonusTermos = 0;
-      for (const termo of termosLinha) {
-        if (variacaoNorm.includes(normalizarParaMatching(termo))) {
-          bonusTermos += 0.02; // Reduzido de 0.05 para 0.02
-        }
-      }
-      score += bonusTermos;
-      
-      // Threshold MUITO ALTO para aceitar variações
-      if (score > Math.max(melhorMatch?.score || 0, 0.9)) { // Aumentado de 0.7 para 0.9
-        melhorMatch = { produto, score: Math.min(score, 1.0) };
+      // Apenas aceitar scores muito altos (0.9+) para variações
+      if (similarity > Math.max(melhorMatch?.score || 0, 0.9)) {
+        melhorMatch = { produto, score: similarity };
         
         logAssociation('NOVA_MELHOR_VARIACAO', {
           produto: produto.nome_base || produto.produto,
           variacao: produto.nome_variacao,
-          score,
-          bonusTermos
+          score: similarity,
+          validacaoSemantica: validacaoVariacao
         });
       }
     }
