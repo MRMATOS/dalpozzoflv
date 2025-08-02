@@ -2,7 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { buscarProdutoPai, normalizarParaMatching } from './productUtils';
 
-interface DatabaseSimilarityMatch {
+export interface DatabaseSimilarityMatch {
   id: string;
   produto: string;
   nome_base?: string;
