@@ -145,7 +145,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
           const produtos = payload as ProdutoExtraido[];
           if (produtos.length > 0) {
             // Aplicar aprendizado básico (sem sistema pesado)
-            const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
+            const novosExtraidos = [...(produtosExtraidos || []).filter(p => p && p.fornecedor !== fornecedor.nome), ...produtos];
             setProdutosExtraidos(novosExtraidos);
             setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
             
@@ -201,7 +201,11 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Função para editar produto extraído
   const editarProdutoExtraido = useCallback((produtoEditado: ProdutoExtraido) => {
-    const novosExtraidos = produtosExtraidos.map(produto => {
+    if (!produtoEditado || !produtoEditado.produto) {
+      console.error('Produto inválido para edição:', produtoEditado);
+      return;
+    }
+    const novosExtraidos = (produtosExtraidos || []).map(produto => {
       // Usar ID único se disponível, senão usar combinação de campos
       const mesmoItem = produtoEditado.id 
         ? produto.id === produtoEditado.id
@@ -220,8 +224,12 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Função para deletar produto extraído
   const deletarProdutoExtraido = useCallback((produto: ProdutoExtraido) => {
-    const novosExtraidos = produtosExtraidos.filter(p => 
-      !(p.fornecedor === produto.fornecedor && 
+    if (!produto || !produto.produto || !produto.fornecedor) {
+      console.error('Produto inválido para exclusão:', produto);
+      return;
+    }
+    const novosExtraidos = (produtosExtraidos || []).filter(p => 
+      p && !(p.fornecedor === produto.fornecedor && 
         p.produto === produto.produto && 
         p.tipo === produto.tipo)
     );
@@ -250,8 +258,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     };
 
     // Verificar se produto já existe para este fornecedor
-    const produtoExistente = produtosExtraidos.find(p => 
-      p.fornecedor === fornecedor && 
+    const produtoExistente = (produtosExtraidos || []).find(p => 
+      p && p.fornecedor === fornecedor && 
       p.produto === produto && 
       p.tipo === tipo
     );
@@ -261,7 +269,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       editarProdutoExtraido(novoProduto);
     } else {
       // Adicionar novo produto
-      const novosExtraidos = [...produtosExtraidos, novoProduto];
+      const novosExtraidos = [...(produtosExtraidos || []), novoProduto];
       setProdutosExtraidos(novosExtraidos);
       
       // Marcar fornecedor como processado se ainda não estiver

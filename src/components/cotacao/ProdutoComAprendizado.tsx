@@ -17,6 +17,11 @@ const ProdutoComAprendizado: React.FC<ProdutoComAprendizadoProps> = ({
   onFeedback,
   onEdit
 }) => {
+  // Validação de entrada
+  if (!produto || !produto.produto) {
+    console.warn('ProdutoComAprendizado: produto inválido recebido:', produto);
+    return null;
+  }
   const getCorAprendizado = () => {
     if (produto.origem === 'manual') return 'border-blue-200 bg-blue-50';
     if (produto.origem === 'banco') return 'border-green-200 bg-green-50';

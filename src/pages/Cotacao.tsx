@@ -22,6 +22,7 @@ import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
 import { useCotacaoShortcuts } from '@/hooks/useKeyboardShortcuts';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Lazy loading de componentes pesados para melhor performance
 const TabelaComparativa = lazy(() => import('@/components/cotacao/TabelaComparativa'));
@@ -104,8 +105,8 @@ const Cotacao = () => {
     }
   }, [produtosExtraidos, processarMensagem]);
 
-  const fornecedoresComProdutos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
-  const temDados = produtosExtraidos.length > 0 || tabelaComparativa.length > 0;
+  const fornecedoresComProdutos = [...new Set((produtosExtraidos || []).filter(p => p && p.fornecedor).map(p => p.fornecedor))];
+  const temDados = (produtosExtraidos || []).length > 0 || (tabelaComparativa || []).length > 0;
 
   const obterEstoquesDisplay = useMemo(() => {
     const cache = new Map<string, React.ReactNode>();
@@ -123,7 +124,8 @@ const Cotacao = () => {
   }, [obterEstoquesDisplayInteligente]);
 
   const calcularTotalFornecedor = (fornecedor: string) => {
-    return tabelaComparativa.reduce((total, item) => {
+    return (tabelaComparativa || []).reduce((total, item) => {
+      if (!item || !item.fornecedores || !item.quantidades) return total;
       const preco = item.fornecedores[fornecedor];
       const quantidade = item.quantidades[fornecedor] || 0;
       return total + (preco !== null ? preco : 0) * quantidade;
@@ -131,8 +133,8 @@ const Cotacao = () => {
   };
 
   const irParaResumo = () => {
-    const temProdutosComQuantidade = tabelaComparativa.some(item => 
-      Object.values(item.quantidades || {}).some(quantidade => quantidade > 0)
+    const temProdutosComQuantidade = (tabelaComparativa || []).some(item => 
+      item && item.quantidades && Object.values(item.quantidades).some(quantidade => quantidade > 0)
     );
     if (!temProdutosComQuantidade) {
       toast.error('Defina as quantidades dos produtos antes de gerar o resumo');
@@ -142,7 +144,7 @@ const Cotacao = () => {
   };
 
   const handleAdicionarProduto = () => {
-    if (fornecedoresComProdutos.length === 0) {
+    if (!fornecedoresComProdutos || fornecedoresComProdutos.length === 0) {
       toast.error('Processe pelo menos um fornecedor antes de adicionar produtos');
       return;
     }
@@ -199,16 +201,17 @@ const Cotacao = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <CotacaoHeader 
-        profile={profile} 
-        syncStatus={syncStatus}
-        formatLastSyncTime={formatLastSyncTime}
-        onRetrySync={retrySync}
-        onRestaurarCotacao={handleRestaurarCotacao}
-      />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <CotacaoHeader 
+          profile={profile} 
+          syncStatus={syncStatus}
+          formatLastSyncTime={formatLastSyncTime}
+          onRetrySync={retrySync}
+          onRestaurarCotacao={handleRestaurarCotacao}
+        />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-3">
@@ -251,7 +254,7 @@ const Cotacao = () => {
                   />
                 )}
 
-                {tabelaComparativa.length > 0 && (
+                {(tabelaComparativa || []).length > 0 && (
                   <Suspense fallback={<Skeleton className="h-64 w-full" />}>
                     <TabelaComparativa
                       tabela={tabelaComparativa}
@@ -324,8 +327,9 @@ const Cotacao = () => {
           fornecedoresDisponiveis={fornecedoresComProdutos}
           onProdutoAdicionado={handleProdutoAdicionado}
         />
-      </main>
-    </div>
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 };
 
