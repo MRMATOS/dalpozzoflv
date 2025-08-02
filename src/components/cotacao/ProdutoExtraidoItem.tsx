@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Edit3, AlertTriangle, CheckCircle, HelpCircle } from 'lucide-react';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
+import IndicadorConfianca from './IndicadorConfianca';
 
 interface ProdutoExtraidoItemProps {
   produto: ProdutoExtraido;
@@ -63,12 +64,12 @@ const ProdutoExtraidoItem: React.FC<ProdutoExtraidoItemProps> = ({ produto, onEd
             
             <div className="flex items-center gap-2 text-xs">
               <span className="text-muted-foreground">Confiança:</span>
-              <Badge 
-                variant={getBadgeVariant(produto.confianca || 0)}
-                className="text-xs"
-              >
-                {Math.round((produto.confianca || 0) * 100)}%
-              </Badge>
+              <IndicadorConfianca 
+                confianca={produto.confianca}
+                origem={produto.origem}
+                size="sm"
+                showLabel={true}
+              />
             </div>
           </div>
         </div>

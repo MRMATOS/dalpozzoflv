@@ -21,6 +21,7 @@ import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
+import { useCotacaoShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 // Lazy loading de componentes pesados para melhor performance
 const TabelaComparativa = lazy(() => import('@/components/cotacao/TabelaComparativa'));
@@ -168,6 +169,16 @@ const Cotacao = () => {
     // Opcional: recarregar estatísticas ou mostrar notificação
     toast.success('Feedback registrado! O sistema vai melhorar com sua ajuda.');
   };
+
+  // Atalhos de teclado
+  useCotacaoShortcuts({
+    onSalvarRascunho: handleSalvarRascunho,
+    onRestaurarCotacao: handleRestaurarCotacao,
+    onNovaCotacao: handleNovaCotacao,
+    onAdicionarProduto: handleAdicionarProduto,
+    onVerResumo: irParaResumo,
+    onProcessarMensagem: processarMensagem
+  });
 
   if (isLoading) {
     return (

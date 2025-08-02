@@ -1,92 +1,71 @@
 import { useEffect, useCallback } from 'react';
 
 interface KeyboardShortcuts {
-  onFilterQuick?: (index: number) => void;
-  onExport?: () => void;
-  onSearch?: () => void;
-  onNavigateCalendar?: (direction: 'prev' | 'next') => void;
-  onEscape?: () => void;
+  [key: string]: () => void;
 }
 
-export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts) => {
+export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts, enabled: boolean = true) => {
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    if (!enabled) return;
+
     // Ignorar se o usuário estiver digitando em um input
-    if (event.target instanceof HTMLInputElement || 
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement) {
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
       return;
     }
 
-    // Ctrl + números 1-4 para filtros rápidos
-    if (event.ctrlKey && !event.shiftKey && !event.altKey) {
-      const number = parseInt(event.key);
-      if (number >= 1 && number <= 4 && shortcuts.onFilterQuick) {
-        event.preventDefault();
-        shortcuts.onFilterQuick(number - 1);
-        return;
-      }
+    // Construir a string da combinação de teclas
+    const keyCombo = [
+      event.ctrlKey && 'ctrl',
+      event.altKey && 'alt', 
+      event.shiftKey && 'shift',
+      event.key.toLowerCase()
+    ].filter(Boolean).join('+');
 
-      // Ctrl + E para exportar
-      if (event.key.toLowerCase() === 'e' && shortcuts.onExport) {
-        event.preventDefault();
-        shortcuts.onExport();
-        return;
-      }
-
-      // Ctrl + F para buscar
-      if (event.key.toLowerCase() === 'f' && shortcuts.onSearch) {
-        event.preventDefault();
-        shortcuts.onSearch();
-        return;
-      }
-
-      // Ctrl + setas para navegar calendário
-      if (event.key === 'ArrowLeft' && shortcuts.onNavigateCalendar) {
-        event.preventDefault();
-        shortcuts.onNavigateCalendar('prev');
-        return;
-      }
-
-      if (event.key === 'ArrowRight' && shortcuts.onNavigateCalendar) {
-        event.preventDefault();
-        shortcuts.onNavigateCalendar('next');
-        return;
-      }
-    }
-
-    // Esc para fechar modais
-    if (event.key === 'Escape' && shortcuts.onEscape) {
+    // Verificar se existe um atalho para esta combinação
+    if (shortcuts[keyCombo]) {
       event.preventDefault();
-      shortcuts.onEscape();
+      shortcuts[keyCombo]();
     }
-  }, [shortcuts]);
+  }, [shortcuts, enabled]);
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
-    return () => {
-      document.removeEventListener('keydown', handleKeyPress);
-    };
-  }, [handleKeyPress]);
+    if (enabled) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [handleKeyPress, enabled]);
 };
 
-// Hook específico para componentes que precisam de atalhos simples
-export const useSimpleShortcuts = () => {
-  const shortcuts = {
-    filtroRapido: (callback: (index: number) => void) => 
-      useKeyboardShortcuts({ onFilterQuick: callback }),
-    
-    exportar: (callback: () => void) => 
-      useKeyboardShortcuts({ onExport: callback }),
-    
-    buscar: (callback: () => void) => 
-      useKeyboardShortcuts({ onSearch: callback }),
-    
-    navegarCalendario: (callback: (direction: 'prev' | 'next') => void) => 
-      useKeyboardShortcuts({ onNavigateCalendar: callback }),
-    
-    escape: (callback: () => void) => 
-      useKeyboardShortcuts({ onEscape: callback })
+// Hook específico para cotação
+export const useCotacaoShortcuts = (actions: {
+  onSalvarRascunho?: () => void;
+  onRestaurarCotacao?: () => void;
+  onNovaCotacao?: () => void;
+  onAdicionarProduto?: () => void;
+  onVerResumo?: () => void;
+  onProcessarMensagem?: () => void;
+}) => {
+  const shortcuts: KeyboardShortcuts = {
+    'ctrl+s': () => actions.onSalvarRascunho?.(),
+    'ctrl+r': () => actions.onRestaurarCotacao?.(),
+    'ctrl+n': () => actions.onNovaCotacao?.(),
+    'ctrl+plus': () => actions.onAdicionarProduto?.(),
+    'ctrl+enter': () => actions.onVerResumo?.(),
+    'f2': () => actions.onProcessarMensagem?.(),
   };
 
-  return shortcuts;
+  useKeyboardShortcuts(shortcuts, true);
+
+  // Retornar ajuda para exibir ao usuário
+  return {
+    shortcuts: [
+      { key: 'Ctrl + S', description: 'Salvar rascunho' },
+      { key: 'Ctrl + R', description: 'Restaurar cotação' },
+      { key: 'Ctrl + N', description: 'Nova cotação' },
+      { key: 'Ctrl + +', description: 'Adicionar produto' },
+      { key: 'Ctrl + Enter', description: 'Ver resumo' },
+      { key: 'F2', description: 'Processar mensagem' }
+    ]
+  };
 };
