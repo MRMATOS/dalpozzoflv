@@ -1,322 +1,185 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
-import { 
-  Brain, 
-  TrendingUp, 
-  AlertCircle, 
-  CheckCircle, 
-  Users, 
-  Package,
-  RefreshCw,
-  Download,
-  Upload
-} from 'lucide-react';
 import { AprendizadoService } from '@/services/cotacao/aprendizadoService';
-import { toast } from 'sonner';
-import QualityIndicator from './QualityIndicator';
+import { Brain, TrendingUp, Target, Lightbulb, BarChart3, CheckCircle } from 'lucide-react';
 
-interface DashboardStats {
-  totalAprendizados: number;
-  feedbackPositivo: number;
-  feedbackNegativo: number;
-  padroesFornecedores: number;
-  fornecedoresTreinados: number;
-  melhoriaMedia: number;
-}
-
-interface ProdutoProblematico {
-  termo: string;
-  fornecedor: string;
-  tentativas: number;
-  ultimaTentativa: string;
+interface EstatisticasAprendizado {
+  total_registros: number;
+  feedback_positivo: number;
+  feedback_negativo: number;
+  padroes_identificados: number;
+  fornecedores_treinados: number;
 }
 
 const AprendizadoDashboard: React.FC = () => {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [produtosProblematicos, setProdutosProblematicos] = useState<ProdutoProblematico[]>([]);
+  const [stats, setStats] = useState<EstatisticasAprendizado | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const carregarDados = async () => {
+  useEffect(() => {
+    carregarEstatisticas();
+  }, []);
+
+  const carregarEstatisticas = async () => {
     try {
-      setRefreshing(true);
-      
-      // Carregar estatísticas do aprendizado
       const estatisticas = await AprendizadoService.obterEstatisticas();
-      
-      setStats({
-        totalAprendizados: estatisticas.total_registros,
-        feedbackPositivo: estatisticas.feedback_positivo,
-        feedbackNegativo: estatisticas.feedback_negativo,
-        padroesFornecedores: estatisticas.padroes_identificados,
-        fornecedoresTreinados: estatisticas.fornecedores_treinados,
-        melhoriaMedia: 0 // Calcular baseado nos dados
-      });
-
-      // Simular produtos problemáticos (implementar busca real se necessário)
-      setProdutosProblematicos([
-        {
-          termo: "cenoura especial",
-          fornecedor: "Fornecedor A",
-          tentativas: 5,
-          ultimaTentativa: "2024-08-02"
-        },
-        {
-          termo: "batata tipo 1",
-          fornecedor: "Fornecedor B", 
-          tentativas: 3,
-          ultimaTentativa: "2024-08-01"
-        }
-      ]);
-
+      setStats(estatisticas);
     } catch (error) {
-      console.error('Erro ao carregar dados do dashboard:', error);
-      toast.error('Erro ao carregar dados do aprendizado');
+      console.error('Erro ao carregar estatísticas:', error);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    carregarDados();
-  }, []);
-
-  const handleExportarAprendizados = () => {
-    // Implementar exportação
-    toast.info('Funcionalidade de exportação em desenvolvimento');
+  const calcularTaxaSucesso = () => {
+    if (!stats || stats.total_registros === 0) return 0;
+    return Math.round((stats.feedback_positivo / stats.total_registros) * 100);
   };
 
-  const handleImportarAprendizados = () => {
-    // Implementar importação
-    toast.info('Funcionalidade de importação em desenvolvimento');
+  const getNivelAprendizado = () => {
+    const taxa = calcularTaxaSucesso();
+    if (taxa >= 80) return { nivel: 'Avançado', cor: 'text-green-600 bg-green-100' };
+    if (taxa >= 60) return { nivel: 'Intermediário', cor: 'text-blue-600 bg-blue-100' };
+    if (taxa >= 40) return { nivel: 'Básico', cor: 'text-yellow-600 bg-yellow-100' };
+    return { nivel: 'Inicial', cor: 'text-red-600 bg-red-100' };
   };
 
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-8 text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-          <p>Carregando dados do aprendizado...</p>
+        <CardContent className="p-6">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-20 bg-gray-200 rounded"></div>
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (!stats) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <AlertCircle className="h-8 w-8 mx-auto mb-4 text-red-500" />
-          <p>Erro ao carregar dados do aprendizado</p>
-          <Button onClick={carregarDados} className="mt-4">
-            Tentar Novamente
-          </Button>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!stats) return null;
 
-  const taxaSucesso = stats.totalAprendizados > 0 
-    ? (stats.feedbackPositivo / stats.totalAprendizados) * 100 
-    : 0;
-
-  const qualityMetrics = {
-    totalExtractions: stats.totalAprendizados,
-    successRate: taxaSucesso,
-    averageConfidence: 0.75, // Calcular baseado nos dados reais
-    improvedProducts: stats.padroesFornecedores,
-    supplierAccuracy: {
-      'Fornecedor A': 85,
-      'Fornecedor B': 78,
-      'Fornecedor C': 92
-    }
-  };
+  const nivelAprendizado = getNivelAprendizado();
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Brain className="h-6 w-6 text-purple-600" />
-          <h2 className="text-2xl font-bold">Sistema de Aprendizado</h2>
+    <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-blue-50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-purple-700">
+          <Brain className="w-5 h-5" />
+          Sistema de Aprendizado Automático
+        </CardTitle>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        {/* Status Geral */}
+        <div className="flex items-center justify-between p-4 bg-white rounded-lg border">
+          <div>
+            <div className="text-sm text-muted-foreground">Nível do Sistema</div>
+            <Badge className={nivelAprendizado.cor}>
+              {nivelAprendizado.nivel}
+            </Badge>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-purple-600">
+              {calcularTaxaSucesso()}%
+            </div>
+            <div className="text-sm text-muted-foreground">Taxa de sucesso</div>
+          </div>
         </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={carregarDados}
-            disabled={refreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Atualizar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportarAprendizados}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Exportar
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleImportarAprendizados}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Importar
-          </Button>
+
+        {/* Progresso */}
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Progresso do Aprendizado</span>
+            <span>{calcularTaxaSucesso()}%</span>
+          </div>
+          <Progress value={calcularTaxaSucesso()} className="h-2" />
         </div>
-      </div>
 
-      {/* Estatísticas Gerais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.totalAprendizados}</p>
-                <p className="text-sm text-gray-600">Total de Registros</p>
-              </div>
+        {/* Estatísticas */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <TrendingUp className="w-6 h-6 text-green-600 mx-auto mb-1" />
+            <div className="text-lg font-bold text-green-600">
+              {stats.feedback_positivo}
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-xs text-muted-foreground">Feedbacks Positivos</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <TrendingUp className="h-8 w-8 text-blue-500" />
-              <div>
-                <p className="text-2xl font-bold">{taxaSucesso.toFixed(1)}%</p>
-                <p className="text-sm text-gray-600">Taxa de Sucesso</p>
-              </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <Target className="w-6 h-6 text-blue-600 mx-auto mb-1" />
+            <div className="text-lg font-bold text-blue-600">
+              {stats.padroes_identificados}
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-xs text-muted-foreground">Padrões Identificados</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Package className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.padroesFornecedores}</p>
-                <p className="text-sm text-gray-600">Padrões Identificados</p>
-              </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <CheckCircle className="w-6 h-6 text-purple-600 mx-auto mb-1" />
+            <div className="text-lg font-bold text-purple-600">
+              {stats.fornecedores_treinados}
             </div>
-          </CardContent>
-        </Card>
+            <div className="text-xs text-muted-foreground">Fornecedores Treinados</div>
+          </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Users className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.fornecedoresTreinados}</p>
-                <p className="text-sm text-gray-600">Fornecedores Treinados</p>
-              </div>
+          <div className="text-center p-3 bg-white rounded-lg border">
+            <BarChart3 className="w-6 h-6 text-orange-600 mx-auto mb-1" />
+            <div className="text-lg font-bold text-orange-600">
+              {stats.total_registros}
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="text-xs text-muted-foreground">Total de Registros</div>
+          </div>
+        </div>
 
-      {/* Tabs com detalhes */}
-      <Tabs defaultValue="qualidade" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="qualidade">Qualidade</TabsTrigger>
-          <TabsTrigger value="problemas">Produtos Problemáticos</TabsTrigger>
-          <TabsTrigger value="evolucao">Evolução</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="qualidade" className="space-y-4">
-          <QualityIndicator metrics={qualityMetrics} />
+        {/* Ações Sugeridas */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Lightbulb className="w-4 h-4 text-yellow-600" />
+            Dicas para Melhorar o Aprendizado
+          </div>
           
-          {/* Feedback Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Distribuição de Feedback</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Feedback Positivo</span>
-                  <div className="flex items-center gap-2">
-                    <Progress value={(stats.feedbackPositivo / stats.totalAprendizados) * 100} className="w-24 h-2" />
-                    <Badge variant="default">{stats.feedbackPositivo}</Badge>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Feedback Negativo</span>
-                  <div className="flex items-center gap-2">
-                    <Progress value={(stats.feedbackNegativo / stats.totalAprendizados) * 100} className="w-24 h-2" />
-                    <Badge variant="destructive">{stats.feedbackNegativo}</Badge>
-                  </div>
-                </div>
+          <div className="space-y-2 text-sm">
+            {stats.total_registros < 10 && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                💡 Forneça mais feedback sobre as extrações para melhorar a precisão do sistema.
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="problemas" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-red-500" />
-                Produtos com Dificuldade de Identificação
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {produtosProblematicos.length > 0 ? (
-                <div className="space-y-3">
-                  {produtosProblematicos.map((produto, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                      <div>
-                        <p className="font-medium">{produto.termo}</p>
-                        <p className="text-sm text-gray-600">{produto.fornecedor}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant="destructive">{produto.tentativas} tentativas</Badge>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Última: {produto.ultimaTentativa}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum produto problemático identificado</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="evolucao" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Evolução do Sistema</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-gray-500">
-                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Gráficos de evolução em desenvolvimento</p>
-                <p className="text-sm mt-2">
-                  Em breve: gráficos de melhoria ao longo do tempo
-                </p>
+            )}
+            
+            {calcularTaxaSucesso() < 70 && stats.feedback_negativo > 3 && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                🎯 Corrija produtos extraídos incorretamente usando o botão de edição para treinar o sistema.
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+            )}
+            
+            {stats.fornecedores_treinados < 3 && (
+              <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                🏢 Processe mensagens de mais fornecedores para expandir a base de conhecimento.
+              </div>
+            )}
+            
+            {calcularTaxaSucesso() >= 80 && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                ✅ Excelente! O sistema está aprendendo bem. Continue fornecendo feedback para manter a qualidade.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Ação */}
+        <div className="flex justify-center pt-2">
+          <Button 
+            onClick={carregarEstatisticas}
+            variant="outline" 
+            size="sm"
+            className="text-purple-600 border-purple-200 hover:bg-purple-50"
+          >
+            Atualizar Estatísticas
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

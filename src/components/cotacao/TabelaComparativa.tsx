@@ -57,13 +57,10 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
   } = props;
 
   const produtosFiltrados = useMemo(() => {
-    // Filtrar items nulos/inválidos primeiro
-    const tabelaValida = (tabela || []).filter(item => item && item.produto && item.tipo);
-    
     const termoBusca = normalizarTexto(buscaProduto);
-    if (!termoBusca) return tabelaValida;
+    if (!termoBusca) return tabela;
     
-    return tabelaValida.filter(item => {
+    return tabela.filter(item => {
       // Buscar no produto e tipo
       const produtoNormalizado = normalizarTexto(item.produto);
       const tipoNormalizado = normalizarTexto(item.tipo);
@@ -130,14 +127,9 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
             
             <tbody className="bg-white">
               {produtosFiltrados.map((item, index) => {
-                if (!item || !item.produto || !item.fornecedores) {
-                  console.warn('Item de tabela inválido:', item);
-                  return null;
-                }
-                
                 const precos = fornecedoresComProdutos.map(f => item.fornecedores[f]).filter(p => p !== null) as number[];
                 const menorPreco = precos.length > 0 ? Math.min(...precos) : null;
-                const produtoIndexOriginal = (tabela || []).findIndex(p => p && p.produto === item.produto && p.tipo === item.tipo);
+                const produtoIndexOriginal = tabela.findIndex(p => p.produto === item.produto && p.tipo === item.tipo);
 
                 return (
                   <tr key={`${item.produto}-${item.tipo}`} className="border-b last:border-b-0 hover:bg-gray-50">
@@ -179,16 +171,13 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                       />
                     </td>
                     {fornecedoresComProdutos.map(fornecedor => {
-                      const preco = item.fornecedores?.[fornecedor] ?? null;
-                      const quantidade = item.quantidades?.[fornecedor] ?? 0;
-                      const unidadePedido = item.unidadePedido?.[fornecedor] ?? 'Caixa';
-                      
+                      const preco = item.fornecedores[fornecedor];
                       return (
                         <FornecedorCell
                           key={fornecedor}
                           preco={preco}
-                          quantidade={quantidade}
-                          unidadePedido={unidadePedido}
+                          quantidade={item.quantidades[fornecedor] || 0}
+                          unidadePedido={item.unidadePedido[fornecedor] || 'Caixa'}
                           isMelhorPreco={preco === menorPreco && preco !== null}
                           opcoesUnidade={unidadesDisponiveis}
                           onQuantidadeChange={(value) => onQuantidadeChange(produtoIndexOriginal, fornecedor, value)}
@@ -199,7 +188,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                     })}
                   </tr>
                 );
-              }).filter(Boolean)}
+              })}
             </tbody>
             
             <tfoot className="sticky bottom-0 bg-gray-100 border-t-2 z-10">

@@ -30,9 +30,7 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
   const [produtoFeedback, setProdutoFeedback] = useState<ProdutoExtraido | null>(null);
   const [textoFeedback, setTextoFeedback] = useState('');
 
-  // Filtrar produtos válidos antes de processar
-  const produtosValidos = (produtosExtraidos || []).filter(p => p && p.fornecedor && p.produto);
-  const fornecedoresUnicos = [...new Set(produtosValidos.map(p => p.fornecedor))];
+  const fornecedoresUnicos = [...new Set(produtosExtraidos.map(p => p.fornecedor))];
   
   const handleEditarProduto = (produto: ProdutoExtraido) => {
     setProdutoEditando(produto);
@@ -58,7 +56,7 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
     setTextoFeedback('');
   };
   
-  if (!produtosExtraidos || produtosExtraidos.length === 0 || produtosValidos.length === 0) {
+  if (produtosExtraidos.length === 0) {
     return null;
   }
 
@@ -73,7 +71,7 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
                 <Info className="w-4 h-4 text-blue-600" />
               </div>
               <span className="text-lg font-semibold text-gray-700">
-                Produtos Extraídos ({produtosValidos.length})
+                Produtos Extraídos ({produtosExtraidos.length})
               </span>
               <Badge variant="secondary">{fornecedoresUnicos.length} fornecedores</Badge>
             </div>
@@ -89,7 +87,7 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
         <CollapsibleContent className="data-[state=open]:animate-slide-down data-[state=closed]:animate-slide-up">
           <div className="bg-gray-50 p-4 rounded-lg">
             {fornecedoresUnicos.map(fornecedor => {
-              const produtosPorFornecedor = produtosValidos.filter(p => p && p.fornecedor === fornecedor);
+              const produtosPorFornecedor = produtosExtraidos.filter(p => p.fornecedor === fornecedor);
               
               return (
                 <div key={fornecedor} className="mb-6 last:mb-0">
@@ -99,21 +97,15 @@ const ProdutosExtraidosDetails: React.FC<ProdutosExtraidosDetailsProps> = ({
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {produtosPorFornecedor.map((produto, index) => {
-                      if (!produto || !produto.produto) {
-                        console.warn('Produto inválido encontrado:', produto);
-                        return null;
-                      }
-                      return (
-                        <ProdutoComAprendizado
-                          key={`${produto.produto}-${produto.tipo}-${index}`}
-                          produto={produto}
-                          textoOriginal={textoOriginalPorFornecedor[fornecedor] || produto.linhaOriginal || ''}
-                          onFeedback={handleFeedback}
-                          onEdit={handleEditarProduto}
-                        />
-                      );
-                    }).filter(Boolean)}
+                    {produtosPorFornecedor.map((produto, index) => (
+                      <ProdutoComAprendizado
+                        key={`${produto.produto}-${produto.tipo}-${index}`}
+                        produto={produto}
+                        textoOriginal={textoOriginalPorFornecedor[fornecedor] || produto.linhaOriginal}
+                        onFeedback={handleFeedback}
+                        onEdit={handleEditarProduto}
+                      />
+                    ))}
                   </div>
                 </div>
               );

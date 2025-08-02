@@ -8,7 +8,6 @@ import {
   clearProductCache 
 } from '@/utils/productExtraction/productUtils';
 import { intelligentProductSearch, contextualSearch } from '@/utils/productExtraction/advancedSearch';
-import { enriquecerProdutosExtraidos, recuperarAprendizados } from './databaseIntegration';
 
 interface MapeamentoProduto {
   alias: string;

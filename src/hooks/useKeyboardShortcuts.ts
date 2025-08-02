@@ -1,71 +1,92 @@
 import { useEffect, useCallback } from 'react';
 
 interface KeyboardShortcuts {
-  [key: string]: () => void;
+  onFilterQuick?: (index: number) => void;
+  onExport?: () => void;
+  onSearch?: () => void;
+  onNavigateCalendar?: (direction: 'prev' | 'next') => void;
+  onEscape?: () => void;
 }
 
-export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts, enabled: boolean = true) => {
+export const useKeyboardShortcuts = (shortcuts: KeyboardShortcuts) => {
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    if (!enabled) return;
-
     // Ignorar se o usuário estiver digitando em um input
-    const target = event.target as HTMLElement;
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.contentEditable === 'true') {
+    if (event.target instanceof HTMLInputElement || 
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLSelectElement) {
       return;
     }
 
-    // Construir a string da combinação de teclas
-    const keyCombo = [
-      event.ctrlKey && 'ctrl',
-      event.altKey && 'alt', 
-      event.shiftKey && 'shift',
-      event.key.toLowerCase()
-    ].filter(Boolean).join('+');
+    // Ctrl + números 1-4 para filtros rápidos
+    if (event.ctrlKey && !event.shiftKey && !event.altKey) {
+      const number = parseInt(event.key);
+      if (number >= 1 && number <= 4 && shortcuts.onFilterQuick) {
+        event.preventDefault();
+        shortcuts.onFilterQuick(number - 1);
+        return;
+      }
 
-    // Verificar se existe um atalho para esta combinação
-    if (shortcuts[keyCombo]) {
-      event.preventDefault();
-      shortcuts[keyCombo]();
+      // Ctrl + E para exportar
+      if (event.key.toLowerCase() === 'e' && shortcuts.onExport) {
+        event.preventDefault();
+        shortcuts.onExport();
+        return;
+      }
+
+      // Ctrl + F para buscar
+      if (event.key.toLowerCase() === 'f' && shortcuts.onSearch) {
+        event.preventDefault();
+        shortcuts.onSearch();
+        return;
+      }
+
+      // Ctrl + setas para navegar calendário
+      if (event.key === 'ArrowLeft' && shortcuts.onNavigateCalendar) {
+        event.preventDefault();
+        shortcuts.onNavigateCalendar('prev');
+        return;
+      }
+
+      if (event.key === 'ArrowRight' && shortcuts.onNavigateCalendar) {
+        event.preventDefault();
+        shortcuts.onNavigateCalendar('next');
+        return;
+      }
     }
-  }, [shortcuts, enabled]);
+
+    // Esc para fechar modais
+    if (event.key === 'Escape' && shortcuts.onEscape) {
+      event.preventDefault();
+      shortcuts.onEscape();
+    }
+  }, [shortcuts]);
 
   useEffect(() => {
-    if (enabled) {
-      document.addEventListener('keydown', handleKeyPress);
-      return () => document.removeEventListener('keydown', handleKeyPress);
-    }
-  }, [handleKeyPress, enabled]);
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [handleKeyPress]);
 };
 
-// Hook específico para cotação
-export const useCotacaoShortcuts = (actions: {
-  onSalvarRascunho?: () => void;
-  onRestaurarCotacao?: () => void;
-  onNovaCotacao?: () => void;
-  onAdicionarProduto?: () => void;
-  onVerResumo?: () => void;
-  onProcessarMensagem?: () => void;
-}) => {
-  const shortcuts: KeyboardShortcuts = {
-    'ctrl+s': () => actions.onSalvarRascunho?.(),
-    'ctrl+r': () => actions.onRestaurarCotacao?.(),
-    'ctrl+n': () => actions.onNovaCotacao?.(),
-    'ctrl+plus': () => actions.onAdicionarProduto?.(),
-    'ctrl+enter': () => actions.onVerResumo?.(),
-    'f2': () => actions.onProcessarMensagem?.(),
+// Hook específico para componentes que precisam de atalhos simples
+export const useSimpleShortcuts = () => {
+  const shortcuts = {
+    filtroRapido: (callback: (index: number) => void) => 
+      useKeyboardShortcuts({ onFilterQuick: callback }),
+    
+    exportar: (callback: () => void) => 
+      useKeyboardShortcuts({ onExport: callback }),
+    
+    buscar: (callback: () => void) => 
+      useKeyboardShortcuts({ onSearch: callback }),
+    
+    navegarCalendario: (callback: (direction: 'prev' | 'next') => void) => 
+      useKeyboardShortcuts({ onNavigateCalendar: callback }),
+    
+    escape: (callback: () => void) => 
+      useKeyboardShortcuts({ onEscape: callback })
   };
 
-  useKeyboardShortcuts(shortcuts, true);
-
-  // Retornar ajuda para exibir ao usuário
-  return {
-    shortcuts: [
-      { key: 'Ctrl + S', description: 'Salvar rascunho' },
-      { key: 'Ctrl + R', description: 'Restaurar cotação' },
-      { key: 'Ctrl + N', description: 'Nova cotação' },
-      { key: 'Ctrl + +', description: 'Adicionar produto' },
-      { key: 'Ctrl + Enter', description: 'Ver resumo' },
-      { key: 'F2', description: 'Processar mensagem' }
-    ]
-  };
+  return shortcuts;
 };

@@ -88,36 +88,10 @@ export const useCotacaoPersistence = () => {
             setCotacaoSalva(true);
           }
           
-          // Filtros rigorosos para garantir dados válidos
-          const produtosFiltrados = Array.isArray(data.produtos_extraidos) 
-            ? (data.produtos_extraidos as unknown as ProdutoExtraido[])
-                .filter(p => p && 
-                  typeof p === 'object' &&
-                  typeof p.produto === 'string' && 
-                  p.produto.trim() !== '' &&
-                  typeof p.fornecedor === 'string' && 
-                  p.fornecedor.trim() !== '' &&
-                  typeof p.preco === 'number' &&
-                  p.preco > 0
-                )
-            : [];
-          
-          const tabelaFiltrada = Array.isArray(data.tabela_comparativa) 
-            ? (data.tabela_comparativa as unknown as ItemTabelaComparativa[])
-                .filter(t => t && 
-                  typeof t === 'object' &&
-                  typeof t.produto === 'string' && 
-                  t.produto.trim() !== '' &&
-                  typeof t.tipo === 'string'
-                )
-            : [];
-
           const dadosRestaurados = {
-            produtosExtraidos: produtosFiltrados,
-            tabelaComparativa: tabelaFiltrada,
+            produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+            tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
           };
-          
-          console.log('Dados restaurados filtrados:', dadosRestaurados);
           
           setDadosCarregados(dadosRestaurados);
         } else {
@@ -325,37 +299,10 @@ export const useCotacaoPersistence = () => {
         
         setCotacaoRestaurada(new Date(data.data));
         
-        // Filtros rigorosos para garantir dados válidos na restauração
-        const produtosFiltrados = Array.isArray(data.produtos_extraidos) 
-          ? (data.produtos_extraidos as unknown as ProdutoExtraido[])
-              .filter(p => p && 
-                typeof p === 'object' &&
-                typeof p.produto === 'string' && 
-                p.produto.trim() !== '' &&
-                typeof p.fornecedor === 'string' && 
-                p.fornecedor.trim() !== '' &&
-                typeof p.preco === 'number' &&
-                p.preco > 0
-              )
-          : [];
-        
-        const tabelaFiltrada = Array.isArray(data.tabela_comparativa) 
-          ? (data.tabela_comparativa as unknown as ItemTabelaComparativa[])
-              .filter(t => t && 
-                typeof t === 'object' &&
-                typeof t.produto === 'string' && 
-                t.produto.trim() !== '' &&
-                typeof t.tipo === 'string'
-              )
-          : [];
-
-        const dadosParaRetornar = {
-          produtosExtraidos: produtosFiltrados,
-          tabelaComparativa: tabelaFiltrada,
+        return {
+          produtosExtraidos: (data.produtos_extraidos as unknown as ProdutoExtraido[]) || [],
+          tabelaComparativa: (data.tabela_comparativa as unknown as ItemTabelaComparativa[]) || [],
         };
-        
-        console.log('Dados para retornar filtrados:', dadosParaRetornar);
-        return dadosParaRetornar;
       }
 
       toast.info('Nenhuma cotação encontrada');

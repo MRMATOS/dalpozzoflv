@@ -46,27 +46,17 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Carregar dados automaticamente apenas UMA vez
   useEffect(() => {
-    console.log('useCotacao: dados carregados:', dadosCarregados, 'isLoading:', isLoadingCotacao);
     if (dadosCarregados !== null && !isLoadingCotacao) {
-      // Filtros ainda mais rigorosos para evitar objetos vazios
-      const produtosParaCarregar = Array.isArray(dadosCarregados.produtosExtraidos) 
-        ? dadosCarregados.produtosExtraidos.filter(p => p && 
-            typeof p === 'object' &&
-            typeof p.produto === 'string' && 
-            p.produto.trim() !== '' &&
-            typeof p.fornecedor === 'string' && 
-            p.fornecedor.trim() !== ''
-          ) 
-        : [];
-      
-      console.log('useCotacao: carregando produtos filtrados:', produtosParaCarregar.length);
+      const produtosParaCarregar = dadosCarregados.produtosExtraidos || [];
+      const tabelaParaCarregar = dadosCarregados.tabelaComparativa || [];
       
       setProdutosExtraidos(produtosParaCarregar);
+      setTabelaComparativa(tabelaParaCarregar);
       
       const fornecedoresUnicos = new Set(produtosParaCarregar.map(p => p.fornecedor));
       setFornecedoresProcessados(fornecedoresUnicos);
     }
-  }, [dadosCarregados, isLoadingCotacao]); // Remover setTabelaComparativa das dependências
+  }, [dadosCarregados, isLoadingCotacao]); // Removido setTabelaComparativa das dependências
 
   // Função para remover produtos de um fornecedor
   const removerProdutosFornecedor = useCallback((nomeFornecedor: string) => {
@@ -86,23 +76,24 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     }
   }, [produtosExtraidos, fornecedoresProcessados]);
 
-  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO
+  // Auto-salvar quando há mudanças significativas - COM DEBOUNCE OTIMIZADO (30s)
   useEffect(() => {
-    // Só auto-salvar se não estiver carregando e tiver produtos válidos
-    if (dadosCarregados === null || isLoadingCotacao || syncStatus.isSyncing) return;
-    if (produtosExtraidos.length === 0) return;
-
     const timer = setTimeout(() => {
-      console.log('Auto-salvando cotação...');
-      salvarCotacao({
-        produtosExtraidos,
-        tabelaComparativa,
-        fornecedoresProcessados,
-      });
-    }, 5000); // Reduzido para 5 segundos
+      if (dadosCarregados !== null && 
+          !isLoadingCotacao && 
+          !syncStatus.isSyncing && 
+          produtosExtraidos.length > 0) {
+        
+        salvarCotacao({
+          produtosExtraidos,
+          tabelaComparativa,
+          fornecedoresProcessados,
+        });
+      }
+    }, 30000); // Aumentado para 30 segundos para reduzir chamadas
 
     return () => clearTimeout(timer);
-  }, [produtosExtraidos.length, tabelaComparativa.length]); // Usar apenas length para evitar loops
+  }, [produtosExtraidos, tabelaComparativa]); // Dependências mínimas para evitar loops
 
   const selecionarFornecedor = useCallback((fornecedorId: string) => {
     try {
@@ -154,7 +145,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
           const produtos = payload as ProdutoExtraido[];
           if (produtos.length > 0) {
             // Aplicar aprendizado básico (sem sistema pesado)
-            const novosExtraidos = [...(produtosExtraidos || []).filter(p => p && p.fornecedor !== fornecedor.nome), ...produtos];
+            const novosExtraidos = [...produtosExtraidos.filter(p => p.fornecedor !== fornecedor.nome), ...produtos];
             setProdutosExtraidos(novosExtraidos);
             setFornecedoresProcessados(prev => new Set(prev).add(fornecedor.nome));
             
@@ -210,11 +201,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Função para editar produto extraído
   const editarProdutoExtraido = useCallback((produtoEditado: ProdutoExtraido) => {
-    if (!produtoEditado || !produtoEditado.produto) {
-      console.error('Produto inválido para edição:', produtoEditado);
-      return;
-    }
-    const novosExtraidos = (produtosExtraidos || []).map(produto => {
+    const novosExtraidos = produtosExtraidos.map(produto => {
       // Usar ID único se disponível, senão usar combinação de campos
       const mesmoItem = produtoEditado.id 
         ? produto.id === produtoEditado.id
@@ -233,12 +220,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
 
   // Função para deletar produto extraído
   const deletarProdutoExtraido = useCallback((produto: ProdutoExtraido) => {
-    if (!produto || !produto.produto || !produto.fornecedor) {
-      console.error('Produto inválido para exclusão:', produto);
-      return;
-    }
-    const novosExtraidos = (produtosExtraidos || []).filter(p => 
-      p && !(p.fornecedor === produto.fornecedor && 
+    const novosExtraidos = produtosExtraidos.filter(p => 
+      !(p.fornecedor === produto.fornecedor && 
         p.produto === produto.produto && 
         p.tipo === produto.tipo)
     );
@@ -267,8 +250,8 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
     };
 
     // Verificar se produto já existe para este fornecedor
-    const produtoExistente = (produtosExtraidos || []).find(p => 
-      p && p.fornecedor === fornecedor && 
+    const produtoExistente = produtosExtraidos.find(p => 
+      p.fornecedor === fornecedor && 
       p.produto === produto && 
       p.tipo === tipo
     );
@@ -278,7 +261,7 @@ export const useCotacao = ({ fornecedores, produtosDB, requisicoes }: UseCotacao
       editarProdutoExtraido(novoProduto);
     } else {
       // Adicionar novo produto
-      const novosExtraidos = [...(produtosExtraidos || []), novoProduto];
+      const novosExtraidos = [...produtosExtraidos, novoProduto];
       setProdutosExtraidos(novosExtraidos);
       
       // Marcar fornecedor como processado se ainda não estiver

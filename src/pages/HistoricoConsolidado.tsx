@@ -124,13 +124,13 @@ export default function HistoricoConsolidado() {
 
   // Configurar atalhos de teclado
   useKeyboardShortcuts({
-    '1': () => aplicarFiltroRapido('hoje'),
-    '2': () => aplicarFiltroRapido('semana'), 
-    '3': () => aplicarFiltroRapido('mes'),
-    '4': () => aplicarFiltroRapido('trimestre'),
-    'ctrl+e': () => setMostrarExportacao(true),
-    'ctrl+f': () => searchInputRef.current?.focus(),
-    'escape': () => {
+    onFilterQuick: (index) => {
+      const periodos = ['hoje', 'semana', 'mes', 'trimestre'];
+      if (periodos[index]) aplicarFiltroRapido(periodos[index]);
+    },
+    onExport: () => setMostrarExportacao(true),
+    onSearch: () => searchInputRef.current?.focus(),
+    onEscape: () => {
       setEventoSelecionado(null);
       setMostrarFiltrosAvancados(false);
       setMostrarExportacao(false);

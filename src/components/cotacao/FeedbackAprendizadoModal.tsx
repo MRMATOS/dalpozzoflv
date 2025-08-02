@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { ProdutoExtraido } from '@/utils/productExtraction/types';
-import { Check, X, AlertCircle, Star } from 'lucide-react';
-import { toast } from 'sonner';
 import { AprendizadoService } from '@/services/cotacao/aprendizadoService';
+import { useToast } from '@/hooks/use-toast';
+import { Star, ThumbsUp, ThumbsDown, Brain, Target } from 'lucide-react';
 
 interface FeedbackAprendizadoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  produto: ProdutoExtraido;
+  produto: ProdutoExtraido | null;
   textoOriginal: string;
   onFeedbackEnviado: () => void;
 }
@@ -25,219 +23,185 @@ const FeedbackAprendizadoModal: React.FC<FeedbackAprendizadoModalProps> = ({
   textoOriginal,
   onFeedbackEnviado
 }) => {
-  const [produtoCorrigido, setProdutoCorrigido] = useState(produto.produto);
-  const [tipoCorrigido, setTipoCorrigido] = useState(produto.tipo);
-  const [precoCorrigido, setPrecoCorrigido] = useState(produto.preco?.toString() || '');
-  const [qualidade, setQualidade] = useState([3]);
+  const [avaliacao, setAvaliacao] = useState<number>(0);
   const [aprovado, setAprovado] = useState<boolean | null>(null);
+  const [comentarios, setComentarios] = useState('');
   const [enviando, setEnviando] = useState(false);
+  
+  const { toast } = useToast();
 
-  const handleSubmit = async () => {
-    if (aprovado === null) {
-      toast.error('Por favor, indique se aprova ou rejeita a extração');
+  const handleEnviarFeedback = async () => {
+    if (!produto || avaliacao === 0 || aprovado === null) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Avalie a extração e marque se foi correta.",
+        variant: "destructive"
+      });
       return;
     }
 
     setEnviando(true);
+    
     try {
-      const feedback = {
-        produto_corrigido: produtoCorrigido !== produto.produto ? produtoCorrigido : undefined,
-        tipo_corrigido: tipoCorrigido !== produto.tipo ? tipoCorrigido : undefined,
-        preco_corrigido: precoCorrigido !== produto.preco?.toString() ? parseFloat(precoCorrigido) || null : undefined,
-        qualidade: qualidade[0],
-        aprovado
-      };
+      const sucesso = await AprendizadoService.registrarFeedback(
+        produto,
+        textoOriginal,
+        {
+          qualidade: avaliacao,
+          aprovado: aprovado
+        }
+      );
 
-      const sucesso = await AprendizadoService.registrarFeedback(produto, textoOriginal, feedback);
-      
       if (sucesso) {
-        toast.success('Feedback registrado! O sistema vai melhorar com sua ajuda.');
+        toast({
+          title: "Feedback registrado!",
+          description: "Obrigado! Seu feedback ajudará a melhorar o sistema.",
+        });
         onFeedbackEnviado();
+        handleReset();
         onClose();
       } else {
-        toast.error('Erro ao registrar feedback. Tente novamente.');
+        throw new Error('Erro ao registrar feedback');
       }
     } catch (error) {
-      console.error('Erro ao enviar feedback:', error);
-      toast.error('Erro ao enviar feedback');
+      toast({
+        title: "Erro",
+        description: "Não foi possível registrar o feedback.",
+        variant: "destructive"
+      });
     } finally {
       setEnviando(false);
     }
   };
 
-  const getQualidadeLabel = (valor: number) => {
-    const labels = {
-      1: 'Muito Ruim',
-      2: 'Ruim', 
-      3: 'Regular',
-      4: 'Bom',
-      5: 'Excelente'
-    };
-    return labels[valor as keyof typeof labels];
+  const handleReset = () => {
+    setAvaliacao(0);
+    setAprovado(null);
+    setComentarios('');
   };
 
-  const getConfiancaColor = (confianca?: number) => {
-    if (!confianca) return 'secondary';
-    if (confianca >= 0.8) return 'default';
-    if (confianca >= 0.6) return 'secondary';
-    return 'destructive';
+  const renderEstrelas = () => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <button
+        key={i}
+        onClick={() => setAvaliacao(i + 1)}
+        className={`text-2xl transition-colors ${
+          i < avaliacao ? 'text-yellow-400' : 'text-gray-300 hover:text-yellow-200'
+        }`}
+      >
+        <Star className={`w-6 h-6 ${i < avaliacao ? 'fill-current' : ''}`} />
+      </button>
+    ));
   };
+
+  const getAvaliacaoTexto = () => {
+    switch (avaliacao) {
+      case 1: return 'Muito ruim';
+      case 2: return 'Ruim';
+      case 3: return 'Regular';
+      case 4: return 'Bom';
+      case 5: return 'Excelente';
+      default: return 'Não avaliado';
+    }
+  };
+
+  if (!produto) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500" />
-            Feedback de Extração
+            <Brain className="w-5 h-5 text-purple-600" />
+            Feedback de Aprendizado
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Texto Original */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Texto Original do Fornecedor</Label>
-            <div className="p-3 bg-gray-50 rounded-md border text-sm">
-              {textoOriginal || 'Texto não disponível'}
+          {/* Produto Extraído */}
+          <div className="p-4 bg-muted rounded-lg">
+            <div className="text-sm text-muted-foreground mb-2">Produto extraído:</div>
+            <div className="font-medium">{produto.produto}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline">{produto.tipo}</Badge>
+              {produto.preco !== null && (
+                <Badge variant="secondary">R$ {produto.preco.toFixed(2)}</Badge>
+              )}
+            </div>
+            <div className="text-xs text-muted-foreground mt-2">
+              Fornecedor: {produto.fornecedor}
             </div>
           </div>
 
-          {/* Extração Atual vs Correção */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Coluna Esquerda - Extraído */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4 text-blue-500" />
-                Extraído pelo Sistema
-              </h3>
-              
-              <div className="space-y-3 p-4 bg-blue-50 rounded-lg border">
-                <div>
-                  <Label className="text-xs text-gray-600">Produto</Label>
-                  <div className="font-medium">{produto.produto}</div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-gray-600">Tipo</Label>
-                  <div className="font-medium">{produto.tipo}</div>
-                </div>
-                
-                <div>
-                  <Label className="text-xs text-gray-600">Preço</Label>
-                  <div className="font-medium">
-                    {produto.preco ? `R$ ${produto.preco.toFixed(2)}` : 'Não informado'}
-                  </div>
-                </div>
-
-                <div>
-                  <Label className="text-xs text-gray-600">Confiança</Label>
-                  <Badge variant={getConfiancaColor(produto.confianca)} className="text-xs">
-                    {produto.confianca ? `${(produto.confianca * 100).toFixed(0)}%` : 'N/A'}
-                  </Badge>
-                </div>
-              </div>
+          {/* Avaliação da Qualidade */}
+          <div>
+            <label className="text-sm font-medium mb-3 block">
+              Avalie a qualidade da extração:
+            </label>
+            <div className="flex items-center gap-1 mb-2">
+              {renderEstrelas()}
             </div>
-
-            {/* Coluna Direita - Correção */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-gray-900 flex items-center gap-2">
-                <Check className="h-4 w-4 text-green-500" />
-                Correção (se necessário)
-              </h3>
-              
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="produto-corrigido">Produto</Label>
-                  <Input
-                    id="produto-corrigido"
-                    value={produtoCorrigido}
-                    onChange={(e) => setProdutoCorrigido(e.target.value)}
-                    placeholder="Nome correto do produto"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="tipo-corrigido">Tipo</Label>
-                  <Input
-                    id="tipo-corrigido"
-                    value={tipoCorrigido}
-                    onChange={(e) => setTipoCorrigido(e.target.value)}
-                    placeholder="Tipo correto do produto"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="preco-corrigido">Preço</Label>
-                  <Input
-                    id="preco-corrigido"
-                    type="number"
-                    step="0.01"
-                    value={precoCorrigido}
-                    onChange={(e) => setPrecoCorrigido(e.target.value)}
-                    placeholder="Preço correto"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Avaliação de Qualidade */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">
-              Qualidade da Extração: {getQualidadeLabel(qualidade[0])}
-            </Label>
-            <div className="px-2">
-              <Slider
-                value={qualidade}
-                onValueChange={setQualidade}
-                max={5}
-                min={1}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Muito Ruim</span>
-                <span>Regular</span>
-                <span>Excelente</span>
-              </div>
+            <div className="text-sm text-muted-foreground">
+              {getAvaliacaoTexto()}
             </div>
           </div>
 
           {/* Aprovação */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Aprovação da Extração</Label>
+          <div>
+            <label className="text-sm font-medium mb-3 block">
+              A extração foi correta?
+            </label>
             <div className="flex gap-3">
               <Button
-                variant={aprovado === true ? 'default' : 'outline'}
+                variant={aprovado === true ? "default" : "outline"}
                 onClick={() => setAprovado(true)}
-                className="flex-1 flex items-center gap-2"
+                className="flex items-center gap-2 flex-1"
               >
-                <Check className="h-4 w-4" />
-                Aprovar
+                <ThumbsUp className="w-4 h-4" />
+                Sim, correta
               </Button>
               <Button
-                variant={aprovado === false ? 'destructive' : 'outline'}
+                variant={aprovado === false ? "destructive" : "outline"}
                 onClick={() => setAprovado(false)}
-                className="flex-1 flex items-center gap-2"
+                className="flex items-center gap-2 flex-1"
               >
-                <X className="h-4 w-4" />
-                Rejeitar
+                <ThumbsDown className="w-4 h-4" />
+                Não, incorreta
               </Button>
             </div>
           </div>
 
-          {/* Ações */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          {/* Comentários opcionais */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Comentários (opcional):
+            </label>
+            <Textarea
+              placeholder="Observações sobre a extração..."
+              value={comentarios}
+              onChange={(e) => setComentarios(e.target.value)}
+              rows={3}
+            />
+          </div>
+
+          {/* Botões de ação */}
+          <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={onClose}>
               Cancelar
             </Button>
             <Button 
-              onClick={handleSubmit} 
-              disabled={enviando || aprovado === null}
-              className="min-w-[120px]"
+              onClick={handleEnviarFeedback} 
+              disabled={enviando || avaliacao === 0 || aprovado === null}
+              className="flex items-center gap-2"
             >
+              <Target className="w-4 h-4" />
               {enviando ? 'Enviando...' : 'Enviar Feedback'}
             </Button>
+          </div>
+
+          {/* Nota sobre aprendizado */}
+          <div className="text-xs text-muted-foreground p-3 bg-blue-50 rounded border border-blue-200">
+            💡 Seu feedback ajuda o sistema a aprender e melhorar automaticamente as próximas extrações para este fornecedor.
           </div>
         </div>
       </DialogContent>
