@@ -45,18 +45,22 @@ export const useComparisonTable = ({ produtosExtraidos, produtosDB }: UseCompari
     const produtosAgrupados: { [chave: string]: ItemTabelaComparativa } = {};
 
     produtos.forEach(produto => {
-      const chave = `${produto.produto}_${produto.tipo}`;
+      // Verificação defensiva para dados válidos
+      const produtoNome = produto.produto || 'Produto não identificado';
+      const produtoTipo = produto.tipo || 'Padrão';
+      
+      const chave = `${produtoNome}_${produtoTipo}`;
       if (!produtosAgrupados[chave]) {
-        const unidadePadrao = obterUnidadePadraoProduto(produto.produto, produto.tipo);
+        const unidadePadrao = obterUnidadePadraoProduto(produtoNome, produtoTipo);
         
         // Buscar dados existentes na tabela atual para preservar quantidades e unidades
         const itemExistente = tabelaComparativa.find(item => 
-          item.produto === produto.produto && item.tipo === produto.tipo
+          item.produto === produtoNome && item.tipo === produtoTipo
         );
         
         produtosAgrupados[chave] = {
-          produto: produto.produto,
-          tipo: produto.tipo,
+          produto: produtoNome,
+          tipo: produtoTipo,
           fornecedores: {},
           quantidades: {},
           unidadePedido: {},

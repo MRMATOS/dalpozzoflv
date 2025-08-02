@@ -498,8 +498,8 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
             alias: produtoEncontrado.alias
           });
           
-          // Para tipos genéricos, não precisamos buscar no banco agora - será feito sob demanda
-          tipoFinalProcessado = null; // Sem variação, é o produto pai
+          // Para tipos genéricos, usar "padrão" em vez de null
+          tipoFinalProcessado = 'padrão';
           variacaoId = undefined;
           confianca = 0.85; // Confiança boa para dicionário + regra de negócio
         } else {
@@ -509,7 +509,7 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
 
         produtosMap.set(chaveItem, {
           produto: produtoFinalNome.charAt(0).toUpperCase() + produtoFinalNome.slice(1),
-          tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : null,
+          tipo: tipoFinalProcessado ? tipoFinalProcessado.charAt(0).toUpperCase() + tipoFinalProcessado.slice(1) : 'Padrão',
           preco: preco ? parseFloat(preco) : null,
           fornecedor: nomeFornecedor,
           linhaOriginal: linha,
