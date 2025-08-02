@@ -9,6 +9,12 @@ import {
 } from '@/utils/productExtraction/productUtils';
 import { intelligentProductSearch, contextualSearch } from '@/utils/productExtraction/advancedSearch';
 
+// ⚠️ ROLLBACK CONTROLADO - FASE 1
+// Sistema de similaridade inteligente e busca avançada temporariamente limitados
+const ADVANCED_SEARCH_ENABLED = false;
+const INTELLIGENT_SEARCH_ENABLED = false;
+const DEBUG_EXTRACTION = true;
+
 interface MapeamentoProduto {
   alias: string;
   aliasNormalizado: string;
@@ -216,17 +222,23 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
     const linhaNormalizada = normalizarTexto(linha);
     let produtoEncontrado: { produto: string; tipo: string; alias: string; } | null = null;
 
-    // 1. Busca contextual primeiro (mais rápida e precisa)
-    const contextualResult = contextualSearch(linha);
-    if (contextualResult.produto && contextualResult.tipo) {
-      produtoEncontrado = {
-        produto: contextualResult.produto,
-        tipo: contextualResult.tipo,
-        alias: linha
-      };
+    // 1. Busca contextual (CONTROLADA)
+    if (ADVANCED_SEARCH_ENABLED) {
+      const contextualResult = contextualSearch(linha);
+      if (contextualResult.produto && contextualResult.tipo) {
+        produtoEncontrado = {
+          produto: contextualResult.produto,
+          tipo: contextualResult.tipo,
+          alias: linha
+        };
+        
+        if (DEBUG_EXTRACTION) {
+          console.log(`🔍 [DEBUG-EXTRACT] Contextual encontrado: ${contextualResult.produto} - ${contextualResult.tipo}`);
+        }
+      }
     }
     
-    // 2. Busca exata no dicionário (método atual)
+    // 2. Busca EXATA no dicionário (método tradicional e confiável)
     if (!produtoEncontrado) {
       for (const mapeamento of dicionario) {
         if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
@@ -236,6 +248,11 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
             alias: mapeamento.alias,
           };
           
+          if (DEBUG_EXTRACTION) {
+            console.log(`🔍 [DEBUG-EXTRACT] Dicionário encontrado: ${mapeamento.produto} - ${mapeamento.tipo} via alias "${mapeamento.alias}"`);
+          }
+          
+          // Para matches muito específicos, parar busca
           if (mapeamento.aliasNormalizado.length > linhaNormalizada.length * 0.6) {
             break;
           }
@@ -243,15 +260,19 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
       }
     }
     
-    // 3. Busca inteligente com tolerância a erros (fallback)
-    if (!produtoEncontrado) {
+    // 3. Busca inteligente (DESABILITADA temporariamente)
+    if (!produtoEncontrado && INTELLIGENT_SEARCH_ENABLED) {
       const intelligentResult = intelligentProductSearch(linha, dicionarioProdutos);
-      if (intelligentResult && intelligentResult.confidence >= 75) {
+      if (intelligentResult && intelligentResult.confidence >= 85) { // Threshold mais alto
         produtoEncontrado = {
           produto: intelligentResult.produto,
           tipo: intelligentResult.tipo,
           alias: intelligentResult.original
         };
+        
+        if (DEBUG_EXTRACTION) {
+          console.log(`🔍 [DEBUG-EXTRACT] Inteligente encontrado: ${intelligentResult.produto} - ${intelligentResult.tipo} (conf: ${intelligentResult.confidence}%)`);
+        }
       }
     }
 

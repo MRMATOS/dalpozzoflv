@@ -1,6 +1,11 @@
 import { supabase } from '@/integrations/supabase/client';
-import { findBestDatabaseMatch, type DatabaseSimilarityMatch } from '@/utils/productExtraction/databaseSimilarity';
+// import { findBestDatabaseMatch, type DatabaseSimilarityMatch } from '@/utils/productExtraction/databaseSimilarity';
 import { normalizarParaMatching } from '@/utils/productExtraction/productUtils';
+
+// ⚠️ ROLLBACK CONTROLADO - FASE 1
+// Sistema de similaridade inteligente temporariamente desabilitado
+const INTELLIGENT_SIMILARITY_ENABLED = false;
+const DEBUG_ASSOCIATIONS = true;
 
 interface ProdutoBanco {
   id: string;
@@ -117,114 +122,100 @@ const normalizarNome = (nome: string): string => {
   return normalizarParaMatching(nome);
 };
 
-// Refina identificação do produto consultando o banco com busca inteligente
+// Função auxiliar para logging de associações
+const logAssociation = (step: string, data: any) => {
+  if (DEBUG_ASSOCIATIONS) {
+    console.log(`🔍 [DEBUG-ASSOC] ${step}:`, data);
+  }
+};
+
+// Refina identificação do produto usando busca tradicional controlada
 export const refinarIdentificacaoProduto = async (
   produtoBase: string, 
   tipoIdentificado: string, 
   linhaOriginal: string
 ): Promise<RefinementResult | null> => {
   try {
-    console.log(`🔄 [Refinamento] Iniciando busca inteligente para: "${produtoBase}" tipo: "${tipoIdentificado}"`);
+    logAssociation('INICIO_REFINAMENTO', {
+      produtoBase,
+      tipoIdentificado,
+      linhaOriginal,
+      sistemaInteligente: INTELLIGENT_SIMILARITY_ENABLED
+    });
+    
+    console.log(`🔄 [Refinamento] Iniciando busca tradicional para: "${produtoBase}" tipo: "${tipoIdentificado}"`);
     console.log(`📝 [Refinamento] Linha original: "${linhaOriginal}"`);
     
-    // ETAPA 1: Busca inteligente no banco usando novo sistema de similaridade
-    const bestDatabaseMatch = await findBestDatabaseMatch(produtoBase);
-    
-    if (bestDatabaseMatch && bestDatabaseMatch.similarity >= 85) {
-      console.log(`✅ [Refinamento] Match inteligente encontrado: "${bestDatabaseMatch.produto}" (${bestDatabaseMatch.similarity.toFixed(1)}%)`);
-      
-      // Se encontrou um produto pai, buscar variação específica
-      if (bestDatabaseMatch.produto_pai_id || bestDatabaseMatch.nome_variacao) {
-        console.log(`🔍 [Refinamento] Refinando variação para: "${tipoIdentificado}"`);
-        
-        // Buscar outras variações do mesmo produto pai
-        const { data: variacoes, error } = await supabase
-          .from('produtos')
-          .select('id, produto, nome_base, nome_variacao')
-          .eq('ativo', true)
-          .eq('produto_pai_id', bestDatabaseMatch.produto_pai_id || bestDatabaseMatch.id);
-        
-        if (!error && variacoes && variacoes.length > 0) {
-          console.log(`📋 [Refinamento] ${variacoes.length} variações encontradas`);
-          
-          // Encontrar melhor variação usando algoritmo otimizado
-          let melhorVariacao: { produto: any; score: number } | null = null;
-          const tipoNorm = normalizarParaMatching(tipoIdentificado);
-          
-          for (const variacao of variacoes) {
-            if (!variacao.nome_variacao) continue;
-            
-            const variacaoNorm = normalizarParaMatching(variacao.nome_variacao);
-            let score = calcularSimilaridade(variacaoNorm, tipoNorm);
-            
-            // Bonus por termos da linha original
-            const termosLinha = extrairTermosRelevantes(linhaOriginal);
-            for (const termo of termosLinha) {
-              if (variacaoNorm.includes(normalizarParaMatching(termo))) {
-                score += 0.05;
-              }
-            }
-            
-            // Verifica se a variação aparece na linha original
-            if (normalizarParaMatching(linhaOriginal).includes(variacaoNorm)) {
-              score += 0.15;
-            }
-            
-            if (score > (melhorVariacao?.score || 0.75)) {
-              melhorVariacao = { produto: variacao, score: Math.min(score, 1.0) };
-            }
-          }
-          
-          // Se encontrou uma boa variação, usar ela
-          if (melhorVariacao && melhorVariacao.score > 0.75) {
-            console.log(`🎯 [Refinamento] Variação específica encontrada: "${melhorVariacao.produto.nome_variacao}" (${(melhorVariacao.score * 100).toFixed(1)}%)`);
-            
-            return {
-              produtoId: melhorVariacao.produto.id,
-              produto: melhorVariacao.produto.nome_base || melhorVariacao.produto.produto || produtoBase,
-              tipo: melhorVariacao.produto.nome_variacao || tipoIdentificado,
-              confianca: melhorVariacao.score,
-              fonte: melhorVariacao.score > 0.95 ? 'exato' : 'similar'
-            };
-          }
-        }
-      }
-      
-      // Se não encontrou variação específica, usar o match direto do banco
-      const confidenceFinal = bestDatabaseMatch.similarity / 100;
-      console.log(`📦 [Refinamento] Usando produto encontrado: "${bestDatabaseMatch.produto}" (${bestDatabaseMatch.similarity.toFixed(1)}%)`);
-      
-      return {
-        produtoId: bestDatabaseMatch.id,
-        produto: bestDatabaseMatch.nome_base || bestDatabaseMatch.produto || produtoBase,
-        tipo: bestDatabaseMatch.nome_variacao || tipoIdentificado,
-        confianca: confidenceFinal,
-        fonte: bestDatabaseMatch.matchType === 'exact' ? 'exato' : 'similar'
-      };
+    // SISTEMA INTELIGENTE DESABILITADO - PULAR PARA BUSCA TRADICIONAL
+    if (INTELLIGENT_SIMILARITY_ENABLED) {
+      // Este código está temporariamente desabilitado
+      console.log(`⚠️ [Refinamento] Sistema inteligente desabilitado - usando apenas busca tradicional`);
     }
     
-    // ETAPA 2: Fallback para busca tradicional se sistema inteligente falhou
-    console.log(`⚠️ [Refinamento] Sistema inteligente não encontrou match suficiente, usando busca tradicional...`);
-    
+    // BUSCA TRADICIONAL CONTROLADA
     const produtos = await carregarProdutosBanco();
     const termosLinha = extrairTermosRelevantes(linhaOriginal);
     const produtoBaseNorm = normalizarNome(produtoBase);
     const tipoNorm = normalizarNome(tipoIdentificado);
     
-    // Busca por match da base com threshold mais baixo
-    const produtosBase = produtos.filter(p => {
-      const nomeBaseNorm = normalizarNome(p.nome_base || p.produto || '');
-      return calcularSimilaridade(nomeBaseNorm, produtoBaseNorm) > 0.8; // Threshold reduzido
+    logAssociation('PRODUTOS_CARREGADOS', {
+      totalProdutos: produtos.length,
+      produtoBaseNorm,
+      tipoNorm
     });
     
+    // Busca EXATA primeiro (maior threshold)
+    const produtosExatos = produtos.filter(p => {
+      const nomeBaseNorm = normalizarNome(p.nome_base || p.produto || '');
+      const similarity = calcularSimilaridade(nomeBaseNorm, produtoBaseNorm);
+      
+      logAssociation('COMPARACAO_EXATA', {
+        produtoTeste: p.nome_base || p.produto,
+        produtoBase,
+        nomeBaseNorm,
+        produtoBaseNorm,
+        similarity,
+        aceito: similarity > 0.95
+      });
+      
+      return similarity > 0.95; // Threshold ALTO para matches exatos
+    });
+    
+    let produtosBase = produtosExatos;
+    
+    // Se não encontrou matches exatos, buscar similares (threshold médio)
     if (produtosBase.length === 0) {
+      console.log(`⚠️ [Refinamento] Nenhum match exato, buscando similares...`);
+      
+      produtosBase = produtos.filter(p => {
+        const nomeBaseNorm = normalizarNome(p.nome_base || p.produto || '');
+        const similarity = calcularSimilaridade(nomeBaseNorm, produtoBaseNorm);
+        
+        logAssociation('COMPARACAO_SIMILAR', {
+          produtoTeste: p.nome_base || p.produto,
+          produtoBase,
+          similarity,
+          aceito: similarity > 0.85
+        });
+        
+        return similarity > 0.85; // Threshold MÉDIO para similares
+      });
+    }
+    
+    if (produtosBase.length === 0) {
+      logAssociation('NENHUM_PRODUTO_ENCONTRADO', { produtoBase, tipoIdentificado });
       console.log(`❌ [Refinamento] Nenhum produto encontrado para "${produtoBase}"`);
       return null;
     }
     
-    console.log(`📋 [Refinamento] ${produtosBase.length} produtos similares encontrados na busca tradicional`);
+    logAssociation('PRODUTOS_CANDIDATOS', {
+      total: produtosBase.length,
+      produtos: produtosBase.map(p => ({ id: p.id, nome: p.nome_base || p.produto }))
+    });
     
-    // Busca variação específica
+    console.log(`📋 [Refinamento] ${produtosBase.length} produtos candidatos encontrados`);
+    
+    // Busca variação específica com validação semântica
     let melhorMatch: { produto: ProdutoBanco; score: number } | null = null;
     
     for (const produto of produtosBase) {
@@ -233,21 +224,66 @@ export const refinarIdentificacaoProduto = async (
       const variacaoNorm = normalizarNome(produto.nome_variacao);
       let score = calcularSimilaridade(variacaoNorm, tipoNorm);
       
-      // Bonus por termos encontrados
-      for (const termo of termosLinha) {
-        if (variacaoNorm.includes(normalizarParaMatching(termo))) {
-          score += 0.05;
-        }
+      logAssociation('TESTE_VARIACAO', {
+        produtoBase: produto.nome_base || produto.produto,
+        variacao: produto.nome_variacao,
+        tipoIdentificado,
+        variacaoNorm,
+        tipoNorm,
+        scoreInicial: score
+      });
+      
+      // Validação semântica básica - prevenir associações absurdas
+      const produtoLower = (produto.nome_base || produto.produto || '').toLowerCase();
+      const produtoBaseLower = produtoBase.toLowerCase();
+      
+      // Se os produtos são muito diferentes semanticamente, penalizar score
+      if (!produtoLower.includes(produtoBaseLower.substring(0, 3)) && 
+          !produtoBaseLower.includes(produtoLower.substring(0, 3))) {
+        score *= 0.5; // Penalidade severa para produtos semanticamente diferentes
+        
+        logAssociation('PENALIDADE_SEMANTICA', {
+          produtoBase,
+          produtoTeste: produto.nome_base || produto.produto,
+          scorePenalizado: score,
+          motivo: 'produtos_semanticamente_diferentes'
+        });
       }
       
-      if (score > (melhorMatch?.score || 0.7)) { // Threshold reduzido
+      // Bonus por termos encontrados (mais conservador)
+      let bonusTermos = 0;
+      for (const termo of termosLinha) {
+        if (variacaoNorm.includes(normalizarParaMatching(termo))) {
+          bonusTermos += 0.02; // Reduzido de 0.05 para 0.02
+        }
+      }
+      score += bonusTermos;
+      
+      // Threshold MUITO ALTO para aceitar variações
+      if (score > Math.max(melhorMatch?.score || 0, 0.9)) { // Aumentado de 0.7 para 0.9
         melhorMatch = { produto, score: Math.min(score, 1.0) };
+        
+        logAssociation('NOVA_MELHOR_VARIACAO', {
+          produto: produto.nome_base || produto.produto,
+          variacao: produto.nome_variacao,
+          score,
+          bonusTermos
+        });
       }
     }
     
-    // Retorna melhor match ou produto base
-    if (melhorMatch && melhorMatch.score > 0.7) {
-      console.log(`✅ [Refinamento] Variação tradicional encontrada: "${melhorMatch.produto.nome_variacao}" (${(melhorMatch.score * 100).toFixed(1)}%)`);
+    // Retorna melhor match somente se score for MUITO ALTO
+    if (melhorMatch && melhorMatch.score > 0.9) { // Aumentado de 0.7 para 0.9
+      logAssociation('VARIACAO_ACEITA', {
+        produtoOriginal: produtoBase,
+        tipoOriginal: tipoIdentificado,
+        produtoFinal: melhorMatch.produto.nome_base || melhorMatch.produto.produto,
+        tipoFinal: melhorMatch.produto.nome_variacao,
+        score: melhorMatch.score,
+        fonte: 'variacao_especifica'
+      });
+      
+      console.log(`✅ [Refinamento] Variação aceita: "${melhorMatch.produto.nome_variacao}" (${(melhorMatch.score * 100).toFixed(1)}%)`);
       return {
         produtoId: melhorMatch.produto.id,
         produto: melhorMatch.produto.nome_base || melhorMatch.produto.produto || produtoBase,
@@ -257,24 +293,52 @@ export const refinarIdentificacaoProduto = async (
       };
     }
     
-    // Fallback final - produto base
+    // Fallback final - produto base SOMENTE se score for suficiente
     const produtoBasePrincipal = produtosBase[0];
     const scoreBase = calcularSimilaridade(
       normalizarNome(produtoBasePrincipal.nome_base || produtoBasePrincipal.produto || ''),
       produtoBaseNorm
     );
     
-    console.log(`🔄 [Refinamento] Usando produto base: "${produtoBasePrincipal.nome_base || produtoBasePrincipal.produto}" (${(scoreBase * 100).toFixed(1)}%)`);
-    
-    return {
-      produtoId: produtoBasePrincipal.id,
-      produto: produtoBasePrincipal.nome_base || produtoBasePrincipal.produto || produtoBase,
-      tipo: tipoIdentificado,
-      confianca: scoreBase,
-      fonte: 'base'
-    };
+    // THRESHOLD ALTO para produto base também
+    if (scoreBase > 0.85) { // Apenas aceitar se realmente similar
+      logAssociation('PRODUTO_BASE_ACEITO', {
+        produtoOriginal: produtoBase,
+        tipoOriginal: tipoIdentificado,
+        produtoFinal: produtoBasePrincipal.nome_base || produtoBasePrincipal.produto,
+        scoreBase,
+        fonte: 'produto_base'
+      });
+      
+      console.log(`🔄 [Refinamento] Produto base aceito: "${produtoBasePrincipal.nome_base || produtoBasePrincipal.produto}" (${(scoreBase * 100).toFixed(1)}%)`);
+      
+      return {
+        produtoId: produtoBasePrincipal.id,
+        produto: produtoBasePrincipal.nome_base || produtoBasePrincipal.produto || produtoBase,
+        tipo: tipoIdentificado,
+        confianca: scoreBase,
+        fonte: 'base'
+      };
+    } else {
+      // REJEITAR se score não for suficiente
+      logAssociation('PRODUTO_REJEITADO', {
+        produtoOriginal: produtoBase,
+        tipoOriginal: tipoIdentificado,
+        produtoTeste: produtoBasePrincipal.nome_base || produtoBasePrincipal.produto,
+        scoreBase,
+        motivo: 'score_insuficiente'
+      });
+      
+      console.log(`❌ [Refinamento] Produto rejeitado por score baixo: "${produtoBasePrincipal.nome_base || produtoBasePrincipal.produto}" (${(scoreBase * 100).toFixed(1)}%)`);
+      return null;
+    }
     
   } catch (error) {
+    logAssociation('ERRO_REFINAMENTO', {
+      produtoBase,
+      tipoIdentificado,
+      erro: error instanceof Error ? error.message : String(error)
+    });
     console.error('❌ [Refinement] Erro no refinamento:', error);
     return null;
   }
