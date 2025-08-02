@@ -78,7 +78,8 @@ export const dicionarioProdutos = {
   },
   'banana': {
     'prata': ['banana prata', 'banana prata kg', 'banana prata 20 kg'],
-    'nanica': ['banana nanica', 'banana katurra', 'banana caturra', 'banana nanica kg', 'banana caturra kg'],
+    'caturra': ['banana katurra', 'banana caturra', 'banana caturra kg'],
+    'nanica': ['banana nanica', 'nanica', 'banana nanica kg'],
     'maçã': ['banana maçã', 'banana maca', 'banana maça kg'],
     'da terra': ['banana da terra', 'banana terra', 'banana da terra kg'],
     'ouro': ['banana ouro', 'banana ouro kg'],
