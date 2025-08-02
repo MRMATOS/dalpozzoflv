@@ -25,11 +25,10 @@ export async function buscarProdutoNoBanco(
         .from('produtos')
         .select(`
           id,
-          nome,
-          produto_pai_id,
-          produtos_pai!inner(nome)
+          produto,
+          produto_pai_id
         `)
-        .or(`nome.ilike.%${resultadoInteligente.produto}%,nome.ilike.%${resultadoInteligente.tipo}%`)
+        .or(`produto.ilike.%${resultadoInteligente.produto}%,nome_variacao.ilike.%${resultadoInteligente.tipo}%`)
         .eq('ativo', true)
         .limit(5);
 
@@ -42,9 +41,9 @@ export async function buscarProdutoNoBanco(
         const produto = produtos[0];
         return {
           id: produto.id,
-          nome: produto.nome,
+          nome: produto.produto,
           produtoPaiId: produto.produto_pai_id,
-          produtoPaiNome: produto.produtos_pai?.nome,
+          produtoPaiNome: undefined,
           confidence: resultadoInteligente.confidence
         };
       }
@@ -55,11 +54,10 @@ export async function buscarProdutoNoBanco(
       .from('produtos')
       .select(`
         id,
-        nome,
-        produto_pai_id,
-        produtos_pai(nome)
+        produto,
+        produto_pai_id
       `)
-      .ilike('nome', `%${termoBusca}%`)
+      .ilike('produto', `%${termoBusca}%`)
       .eq('ativo', true)
       .limit(3);
 
@@ -72,9 +70,9 @@ export async function buscarProdutoNoBanco(
       const produto = produtosDireto[0];
       return {
         id: produto.id,
-        nome: produto.nome,
+        nome: produto.produto,
         produtoPaiId: produto.produto_pai_id,
-        produtoPaiNome: produto.produtos_pai?.nome,
+        produtoPaiNome: undefined,
         confidence: 60 // Confiança menor para busca direta
       };
     }
@@ -93,15 +91,14 @@ export async function enriquecerProdutosExtraidos(
   const produtosEnriquecidos = [];
 
   for (const produto of produtos) {
-    const produtoEncontrado = await buscarProdutoNoBanco(produto.nome);
+    const produtoEncontrado = await buscarProdutoNoBanco(produto.produto);
     
     const produtoEnriquecido: ProdutoExtraido = {
       ...produto,
       produtoId: produtoEncontrado?.id,
-      produtoPaiId: produtoEncontrado?.produtoPaiId,
-      produtoPaiNome: produtoEncontrado?.produtoPaiNome,
-      confidence: produtoEncontrado?.confidence || produto.confidence || 0,
-      integracaoAutomatica: !!produtoEncontrado
+      variacaoId: produtoEncontrado?.produtoPaiId,
+      confianca: (produtoEncontrado?.confidence || 0) / 100,
+      origem: produtoEncontrado ? 'banco' : produto.origem
     };
 
     produtosEnriquecidos.push(produtoEnriquecido);
@@ -118,7 +115,7 @@ export async function salvarAprendizadoExtração(
 ): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('aprendizado_extração')
+      .from('aprendizado_extracao')
       .insert({
         termo_original: termoOriginal,
         produto_correto_id: produtoCorretoId,
@@ -144,7 +141,7 @@ export async function recuperarAprendizados(
 ): Promise<Record<string, string>> {
   try {
     let query = supabase
-      .from('aprendizado_extração')
+      .from('aprendizado_extracao')
       .select('termo_original, produto_correto_id');
 
     if (fornecedor) {
