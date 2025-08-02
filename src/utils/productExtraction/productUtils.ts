@@ -175,7 +175,55 @@ export const buscarProdutoPai = async (nomeProduto: string): Promise<ProdutoCach
   }
 };
 
-// Função para buscar variação específica
+// Função para normalizar texto para matching
+const normalizarParaMatching = (texto: string): string => {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^\w\s]/g, ' ') // Remove caracteres especiais
+    .replace(/\s+/g, ' ') // Múltiplos espaços -> um espaço
+    .trim();
+};
+
+// Função para extrair tipo base de um tipo completo
+const extrairTipoBase = (tipoCompleto: string): string => {
+  const tipoNormalizado = normalizarParaMatching(tipoCompleto);
+  
+  // Lista de palavras que devem ser removidas para encontrar o tipo base
+  const palavrasExtras = [
+    'graudo', 'graúdo', 'medio', 'médio', 'miudo', 'miúdo',
+    'grande', 'pequeno', 'extra', 'especial', 'top', 'premium',
+    'klaina', 'leve', 'lev', 'comum', 'tradicional', 'normal',
+    'kg', 'k', 'quilo', 'caixa', 'cx', 'bandeja', 'bdj',
+    'unidade', 'un', 'maco', 'maço', '20kg', '15kg', '10kg', '25kg'
+  ];
+  
+  let tipoBase = tipoNormalizado;
+  
+  // Remove palavras extras uma por uma
+  for (const palavra of palavrasExtras) {
+    tipoBase = tipoBase.replace(new RegExp(`\\b${palavra}\\b`, 'g'), ' ');
+  }
+  
+  // Limpa espaços extras e retorna
+  tipoBase = tipoBase.replace(/\s+/g, ' ').trim();
+  
+  // Se ficou vazio, usar o tipo original
+  if (!tipoBase) {
+    tipoBase = tipoNormalizado.split(' ')[0]; // Primeira palavra
+  }
+  
+  logProductMapping('TIPO_BASE_EXTRAIDO', {
+    original: tipoCompleto,
+    tipoBase: tipoBase,
+    source: 'normalizacao'
+  });
+  
+  return tipoBase;
+};
+
+// Função aprimorada para buscar variação específica
 export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string): Promise<ProdutoCache | null> => {
   try {
     if (!isCacheValid()) {
@@ -186,38 +234,97 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
 
     // Primeiro buscar o produto pai
     const produtoPai = await buscarProdutoPai(nomeProduto);
-    if (!produtoPai) return null;
+    if (!produtoPai) {
+      logProductMapping('PRODUTO_PAI_NAO_ENCONTRADO_PARA_VARIACAO', {
+        produto: nomeProduto,
+        variacao: nomeVariacao
+      });
+      return null;
+    }
 
     // Buscar variações do produto pai
     const variacoesDoPai = cache.variacoes.get(produtoPai.id) || [];
-    const nomeVariacaoNormalizado = nomeVariacao.toLowerCase().trim();
+    
+    if (variacoesDoPai.length === 0) {
+      logProductMapping('SEM_VARIACOES_CADASTRADAS', {
+        produto: nomeProduto,
+        produtoId: produtoPai.id,
+        variacao: nomeVariacao
+      });
+      return null;
+    }
 
-    // Buscar correspondência exata
+    const nomeVariacaoNormalizado = normalizarParaMatching(nomeVariacao);
+    const tipoBase = extrairTipoBase(nomeVariacao);
+    
+    logProductMapping('BUSCANDO_VARIACAO', {
+      produto: nomeProduto,
+      variacaoOriginal: nomeVariacao,
+      variacaoNormalizada: nomeVariacaoNormalizado,
+      tipoBase: tipoBase,
+      totalVariacoes: variacoesDoPai.length,
+      variacoesDisponiveis: variacoesDoPai.map(v => v.nome_variacao)
+    });
+
+    // 1. Buscar correspondência exata com tipo base
     for (const variacao of variacoesDoPai) {
-      const nomeVariacaoProduto = (variacao.nome_variacao || '').toLowerCase();
-      if (nomeVariacaoProduto === nomeVariacaoNormalizado) {
-        logProductMapping('VARIACAO_ENCONTRADA', {
+      const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
+      if (nomeVariacaoProduto === tipoBase) {
+        logProductMapping('VARIACAO_ENCONTRADA_TIPO_BASE', {
           original: `${nomeProduto} ${nomeVariacao}`,
           produto: variacao.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
-          source: 'variacao'
+          source: 'exato_tipo_base',
+          confidence: 0.95
         });
         return variacao;
       }
     }
 
-    // Buscar correspondência parcial
+    // 2. Buscar correspondência exata completa
     for (const variacao of variacoesDoPai) {
-      const nomeVariacaoProduto = (variacao.nome_variacao || '').toLowerCase();
-      if (nomeVariacaoProduto.includes(nomeVariacaoNormalizado) || 
-          nomeVariacaoNormalizado.includes(nomeVariacaoProduto)) {
-        logProductMapping('VARIACAO_ENCONTRADA_PARCIAL', {
+      const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
+      if (nomeVariacaoProduto === nomeVariacaoNormalizado) {
+        logProductMapping('VARIACAO_ENCONTRADA_EXATA', {
           original: `${nomeProduto} ${nomeVariacao}`,
           produto: variacao.produto,
           tipo: variacao.nome_variacao,
           produtoId: variacao.id,
-          source: 'variacao',
+          source: 'exato_completo',
+          confidence: 1.0
+        });
+        return variacao;
+      }
+    }
+
+    // 3. Buscar correspondência onde variação contém tipo base
+    for (const variacao of variacoesDoPai) {
+      const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
+      if (nomeVariacaoProduto.includes(tipoBase) || tipoBase.includes(nomeVariacaoProduto)) {
+        logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_TIPO_BASE', {
+          original: `${nomeProduto} ${nomeVariacao}`,
+          produto: variacao.produto,
+          tipo: variacao.nome_variacao,
+          produtoId: variacao.id,
+          source: 'parcial_tipo_base',
+          confidence: 0.8
+        });
+        return variacao;
+      }
+    }
+
+    // 4. Buscar correspondência parcial com texto completo
+    for (const variacao of variacoesDoPai) {
+      const nomeVariacaoProduto = normalizarParaMatching(variacao.nome_variacao || '');
+      if (nomeVariacaoProduto.includes(nomeVariacaoNormalizado) || 
+          nomeVariacaoNormalizado.includes(nomeVariacaoProduto)) {
+        logProductMapping('VARIACAO_ENCONTRADA_PARCIAL_COMPLETA', {
+          original: `${nomeProduto} ${nomeVariacao}`,
+          produto: variacao.produto,
+          tipo: variacao.nome_variacao,
+          produtoId: variacao.id,
+          source: 'parcial_completo',
           confidence: 0.7
         });
         return variacao;
@@ -226,7 +333,11 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
 
     logProductMapping('VARIACAO_NAO_ENCONTRADA', { 
       produto: nomeProduto,
-      variacao: nomeVariacao
+      variacao: nomeVariacao,
+      variacaoNormalizada: nomeVariacaoNormalizado,
+      tipoBase: tipoBase,
+      variacoesDisponiveis: variacoesDoPai.map(v => v.nome_variacao),
+      tentativasRealizadas: ['exato_tipo_base', 'exato_completo', 'parcial_tipo_base', 'parcial_completo']
     });
     return null;
 
@@ -240,36 +351,51 @@ export const buscarVariacao = async (nomeProduto: string, nomeVariacao: string):
   }
 };
 
-// Função para determinar se um tipo é considerado "genérico" (deve ir para produto pai)
+// Função aprimorada para determinar se um tipo é considerado "genérico" (deve ir para produto pai)
 export const isGenericType = (tipo: string): boolean => {
-  const tipoNormalizado = tipo.toLowerCase().trim();
+  const tipoNormalizado = normalizarParaMatching(tipo);
   
-  // Lista de tipos que indicam produto genérico (não uma variação específica)
+  // Lista expandida de tipos que indicam produto genérico (não uma variação específica)
   const tiposGenericos = [
-    'padrão',
+    'padrao', 'padrão',
     'normal',
     'comum',
-    'básico',
+    'basico', 'básico',
     'tradicional',
-    'kg',
-    'caixa',
-    'unidade',
-    '20kg',
-    '10kg',
-    '15kg',
-    '25kg'
+    'kg', 'k', 'quilo',
+    'caixa', 'cx',
+    'unidade', 'un',
+    'bandeja', 'bdj',
+    'maco', 'maço',
+    // Pesos específicos
+    '20kg', '10kg', '15kg', '25kg', '5kg', '30kg',
+    // Palavras que indicam quantidade/embalagem, não variação
+    'graudo', 'graúdo', 'medio', 'médio', 'miudo', 'miúdo',
+    'grande', 'pequeno', 'extra', 'top', 'premium', 'especial',
+    // Nomes genéricos do próprio produto
+    'comum', 'leve', 'lev'
   ];
 
-  // Verificar se é um tipo genérico
-  const isGeneric = tiposGenericos.some(generico => 
-    tipoNormalizado === generico || 
-    tipoNormalizado.includes(generico)
+  // Verificar se o tipo é completamente genérico
+  const isCompletelyGeneric = tiposGenericos.some(generico => 
+    tipoNormalizado === generico
   );
+
+  // Verificar se contém apenas palavras genéricas
+  const palavras = tipoNormalizado.split(' ').filter(p => p.length > 0);
+  const todasPalavrasGenericas = palavras.length > 0 && palavras.every(palavra =>
+    tiposGenericos.some(generico => generico === palavra)
+  );
+
+  const isGeneric = isCompletelyGeneric || todasPalavrasGenericas;
 
   if (isGeneric) {
     logProductMapping('TIPO_GENERICO_DETECTADO', { 
       tipo,
-      source: 'generic_detection'
+      tipoNormalizado,
+      palavras,
+      motivo: isCompletelyGeneric ? 'completamente_generico' : 'todas_palavras_genericas',
+      source: 'generic_detection_aprimorado'
     });
   }
 

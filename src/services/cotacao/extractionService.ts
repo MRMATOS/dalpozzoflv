@@ -82,51 +82,94 @@ const extrairDescricaoOriginal = (linhaOriginal: string): string => {
   return descricao;
 };
 
-// Nova função para buscar produto pai ou variação específica no banco
+// Função aprimorada para buscar produto pai ou variação específica no banco
 const buscarProdutoOuVariacao = async (nomeProduto: string, nomeVariacao: string): Promise<{
   produto: any;
   ehProdutoPai: boolean;
 } | null> => {
   try {
-    // Primeiro, tentar buscar variação específica
+    // Log detalhado do processo de busca
+    logProductMapping('INICIO_BUSCA_PRODUTO_VARIACAO', {
+      nomeProduto,
+      nomeVariacao,
+      tipoGenerico: isGenericType(nomeVariacao || ''),
+      timestamp: new Date().toISOString()
+    });
+
+    // Primeiro, tentar buscar variação específica SE não for genérico
     if (nomeVariacao && !isGenericType(nomeVariacao)) {
+      logProductMapping('TENTANDO_BUSCAR_VARIACAO_ESPECIFICA', {
+        nomeProduto,
+        nomeVariacao,
+        motivo: 'tipo_nao_generico'
+      });
+      
       const variacao = await buscarVariacao(nomeProduto, nomeVariacao);
       if (variacao) {
-        logProductMapping('produto_variacao_encontrada', {
+        logProductMapping('VARIACAO_ENCONTRADA_BANCO', {
           nomeProduto,
           nomeVariacao,
           produtoId: variacao.id,
-          origem: 'banco_variacao'
+          nomeVariacaoBanco: variacao.nome_variacao,
+          nomeProdutoBanco: variacao.produto,
+          origem: 'banco_variacao_especifica',
+          success: true
         });
         return { produto: variacao, ehProdutoPai: false };
+      } else {
+        logProductMapping('VARIACAO_NAO_ENCONTRADA_BANCO', {
+          nomeProduto,
+          nomeVariacao,
+          motivo: 'nao_existe_ou_nao_combina',
+          proximoPasso: 'buscar_produto_pai'
+        });
       }
+    } else {
+      logProductMapping('PULANDO_BUSCA_VARIACAO', {
+        nomeProduto,
+        nomeVariacao,
+        motivo: isGenericType(nomeVariacao || '') ? 'tipo_generico' : 'nome_variacao_vazio'
+      });
     }
 
-    // Se não encontrou variação ou é tipo genérico, buscar produto pai
+    // Se não encontrou variação específica OU é tipo genérico, buscar produto pai
+    logProductMapping('TENTANDO_BUSCAR_PRODUTO_PAI', {
+      nomeProduto,
+      nomeVariacao,
+      motivo: isGenericType(nomeVariacao || '') ? 'tipo_generico' : 'variacao_nao_encontrada'
+    });
+    
     const produtoPai = await buscarProdutoPai(nomeProduto);
     if (produtoPai) {
-      logProductMapping('produto_pai_usado', {
+      logProductMapping('PRODUTO_PAI_ENCONTRADO_BANCO', {
         nomeProduto,
         nomeVariacao,
         produtoId: produtoPai.id,
+        nomeProdutoBanco: produtoPai.produto || produtoPai.nome_base,
         origem: 'banco_produto_pai',
-        motivo: isGenericType(nomeVariacao) ? 'tipo_generico' : 'variacao_nao_encontrada'
+        motivo: isGenericType(nomeVariacao || '') ? 'tipo_generico' : 'variacao_nao_encontrada',
+        success: true
       });
       return { produto: produtoPai, ehProdutoPai: true };
     }
 
-    logProductMapping('produto_nao_encontrado', {
+    // Nenhum resultado encontrado
+    logProductMapping('NENHUM_PRODUTO_ENCONTRADO_BANCO', {
       nomeProduto,
       nomeVariacao,
-      origem: 'banco_sem_resultado'
+      origem: 'banco_sem_resultado',
+      tentativas: ['variacao_especifica', 'produto_pai'],
+      success: false
     });
     return null;
+    
   } catch (error) {
     console.error('Erro ao buscar produto no banco:', error);
-    logProductMapping('erro_busca_banco', {
+    logProductMapping('ERRO_BUSCA_BANCO', {
       nomeProduto,
       nomeVariacao,
-      erro: error instanceof Error ? error.message : String(error)
+      erro: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
     });
     return null;
   }
