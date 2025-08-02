@@ -22,7 +22,6 @@ import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
 import { useCotacaoShortcuts } from '@/hooks/useKeyboardShortcuts';
-import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Lazy loading de componentes pesados para melhor performance
 const TabelaComparativa = lazy(() => import('@/components/cotacao/TabelaComparativa'));
@@ -212,135 +211,133 @@ const Cotacao = () => {
   }
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gray-50">
-        <CotacaoHeader 
-          profile={profile} 
-          syncStatus={syncStatus}
-          formatLastSyncTime={formatLastSyncTime}
-          onRetrySync={retrySync}
-          onRestaurarCotacao={handleRestaurarCotacao}
-        />
+    <div className="min-h-screen bg-gray-50">
+      <CotacaoHeader 
+        profile={profile} 
+        syncStatus={syncStatus}
+        formatLastSyncTime={formatLastSyncTime}
+        onRetrySync={retrySync}
+        onRestaurarCotacao={handleRestaurarCotacao}
+      />
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <Calculator className="text-green-600" />
-              Cotação de produtos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="nova-cotacao" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="nova-cotacao" className="flex items-center gap-2">
-                  <Calculator className="h-4 w-4" />
-                  Nova Cotação
-                </TabsTrigger>
-                <TabsTrigger value="historico" className="flex items-center gap-2">
-                  <History className="h-4 w-4" />
-                  Histórico de Pedidos
-                </TabsTrigger>
-              </TabsList>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-3">
+            <Calculator className="text-green-600" />
+            Cotação de produtos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="nova-cotacao" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="nova-cotacao" className="flex items-center gap-2">
+                <Calculator className="h-4 w-4" />
+                Nova Cotação
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Histórico de Pedidos
+              </TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="nova-cotacao" className="space-y-6">
-                <div className="text-gray-600 text-sm">
-                  Selecione um fornecedor e cole a mensagem que ele enviou no campo abaixo.
-                </div>
-                
-                <FornecedorInput
-                  fornecedores={fornecedores}
-                  fornecedoresProcessados={fornecedoresProcessados}
-                  fornecedorSelecionado={fornecedorSelecionado}
-                  mensagemAtual={mensagemAtual}
-                  onFornecedorSelect={selecionarFornecedor}
-                  onMensagemChange={setMensagemAtual}
-                  onProcessar={processarMensagem}
+            <TabsContent value="nova-cotacao" className="space-y-6">
+              <div className="text-gray-600 text-sm">
+                Selecione um fornecedor e cole a mensagem que ele enviou no campo abaixo.
+              </div>
+              
+              <FornecedorInput
+                fornecedores={fornecedores}
+                fornecedoresProcessados={fornecedoresProcessados}
+                fornecedorSelecionado={fornecedorSelecionado}
+                mensagemAtual={mensagemAtual}
+                onFornecedorSelect={selecionarFornecedor}
+                onMensagemChange={setMensagemAtual}
+                onProcessar={processarMensagem}
+              />
+
+              {cotacaoRestaurada && (
+                <CotacaoRestauradaMessage 
+                  dataRestauracao={cotacaoRestaurada} 
+                  tipoRestauracao={tipoCotacao || 'rascunho'}
                 />
+              )}
 
-                {cotacaoRestaurada && (
-                  <CotacaoRestauradaMessage 
-                    dataRestauracao={cotacaoRestaurada} 
-                    tipoRestauracao={tipoCotacao || 'rascunho'}
+              {(tabelaComparativa || []).length > 0 && (
+                <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                  <TabelaComparativa
+                    tabela={tabelaComparativa}
+                    lojasComRequisicoes={lojasComRequisicoes}
+                    fornecedoresComProdutos={fornecedoresComProdutos}
+                    temDados={temDados}
+                    onCalcularPercentual={calcularPercentualSuprimento}
+                    onSalvarRascunho={handleSalvarRascunho}
+                    onRestaurar={handleRestaurarCotacao}
+                    onNova={handleNovaCotacao}
+                    onVerResumo={irParaResumo}
+                    onAdicionarProduto={handleAdicionarProduto}
+                    onObterEstoques={obterEstoquesDisplay}
+                    onQuantidadeChange={atualizarQuantidade}
+                    onUnidadeChange={atualizarUnidadePedido}
+                    onPrecoChange={atualizarPreco}
+                    onCalcularTotal={calcularTotalFornecedor}
                   />
-                )}
-
-                {(tabelaComparativa || []).length > 0 && (
-                  <Suspense fallback={<Skeleton className="h-64 w-full" />}>
-                    <TabelaComparativa
-                      tabela={tabelaComparativa}
-                      lojasComRequisicoes={lojasComRequisicoes}
-                      fornecedoresComProdutos={fornecedoresComProdutos}
-                      temDados={temDados}
-                      onCalcularPercentual={calcularPercentualSuprimento}
-                      onSalvarRascunho={handleSalvarRascunho}
-                      onRestaurar={handleRestaurarCotacao}
-                      onNova={handleNovaCotacao}
-                      onVerResumo={irParaResumo}
-                      onAdicionarProduto={handleAdicionarProduto}
-                      onObterEstoques={obterEstoquesDisplay}
-                      onQuantidadeChange={atualizarQuantidade}
-                      onUnidadeChange={atualizarUnidadePedido}
-                      onPrecoChange={atualizarPreco}
-                      onCalcularTotal={calcularTotalFornecedor}
-                    />
-                  </Suspense>
-                )}
-
-                {/* Controles Manuais */}
-                <CotacaoManualControls
-                  produtosExtraidos={produtosExtraidos}
-                  fornecedoresComProdutos={fornecedoresComProdutos}
-                  onAdicionarProduto={handleAdicionarProduto}
-                  onEditarProdutos={handleEditarProdutos}
-                  onLimparTudo={handleLimparTudo}
-                />
-                
-                <ProdutosExtraidosDetails 
-                  produtosExtraidos={produtosExtraidos}
-                  textoOriginalPorFornecedor={textosPorFornecedor}
-                  onEditarProduto={editarProdutoExtraido}
-                  onDeletarProduto={deletarProdutoExtraido}
-                  onFeedbackEnviado={handleFeedbackEnviado}
-                />
-
-                <GuiaUsoCotacao />
-                
-                {/* Indicador de saúde do sistema (apenas em desenvolvimento) */}
-                {process.env.NODE_ENV === 'development' && (
-                  <SystemHealthIndicator 
-                    cotacaoHook={{
-                      processarMensagem,
-                      editarProdutoExtraido,
-                      deletarProdutoExtraido,
-                      adicionarProdutoManual,
-                      atualizarQuantidade,
-                      atualizarPreco,
-                      handleSalvarRascunho
-                    }}
-                    produtosExtraidos={produtosExtraidos}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="historico">
-                <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-                  <HistoricoPedidos />
                 </Suspense>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+              )}
 
-        <AdicionarProdutoModal
-          isOpen={modalAdicionarAberto}
-          onClose={() => setModalAdicionarAberto(false)}
-          fornecedoresDisponiveis={fornecedoresComProdutos}
-          onProdutoAdicionado={handleProdutoAdicionado}
-        />
-        </main>
-      </div>
-    </ErrorBoundary>
+              {/* Controles Manuais */}
+              <CotacaoManualControls
+                produtosExtraidos={produtosExtraidos}
+                fornecedoresComProdutos={fornecedoresComProdutos}
+                onAdicionarProduto={handleAdicionarProduto}
+                onEditarProdutos={handleEditarProdutos}
+                onLimparTudo={handleLimparTudo}
+              />
+              
+              <ProdutosExtraidosDetails 
+                produtosExtraidos={produtosExtraidos}
+                textoOriginalPorFornecedor={textosPorFornecedor}
+                onEditarProduto={editarProdutoExtraido}
+                onDeletarProduto={deletarProdutoExtraido}
+                onFeedbackEnviado={handleFeedbackEnviado}
+              />
+
+              <GuiaUsoCotacao />
+              
+              {/* Indicador de saúde do sistema (apenas em desenvolvimento) */}
+              {process.env.NODE_ENV === 'development' && (
+                <SystemHealthIndicator 
+                  cotacaoHook={{
+                    processarMensagem,
+                    editarProdutoExtraido,
+                    deletarProdutoExtraido,
+                    adicionarProdutoManual,
+                    atualizarQuantidade,
+                    atualizarPreco,
+                    handleSalvarRascunho
+                  }}
+                  produtosExtraidos={produtosExtraidos}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="historico">
+              <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+                <HistoricoPedidos />
+              </Suspense>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <AdicionarProdutoModal
+        isOpen={modalAdicionarAberto}
+        onClose={() => setModalAdicionarAberto(false)}
+        fornecedoresDisponiveis={fornecedoresComProdutos}
+        onProdutoAdicionado={handleProdutoAdicionado}
+      />
+      </main>
+    </div>
   );
 };
 
