@@ -242,14 +242,17 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
     if (!produtoEncontrado) {
       for (const mapeamento of dicionario) {
         if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
+          // CORREÇÃO DEFINITIVA: converter 'padrão' para '' (produto pai)
+          const tipoFinal = mapeamento.tipo === 'padrão' ? '' : mapeamento.tipo;
+          
           produtoEncontrado = {
             produto: mapeamento.produto,
-            tipo: mapeamento.tipo,
+            tipo: tipoFinal,
             alias: mapeamento.alias,
           };
           
           if (DEBUG_EXTRACTION) {
-            console.log(`🔍 [DEBUG-EXTRACT] Dicionário encontrado: ${mapeamento.produto} - ${mapeamento.tipo} via alias "${mapeamento.alias}"`);
+            console.log(`🔍 [DEBUG-EXTRACT] Dicionário encontrado: ${mapeamento.produto} - ${tipoFinal} via alias "${mapeamento.alias}"`);
           }
           
           // Para matches muito específicos, parar busca
@@ -297,7 +300,8 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
 
       let tipoFinal = produtoEncontrado.tipo;
       if (infoAdicional && infoAdicional.length > 1) {
-        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+        // CORREÇÃO: já convertido acima, mas verificação adicional
+        tipoFinal += (tipoFinal === '' || tipoFinal === 'padrão' ? '' : ' ') + infoAdicional;
       }
 
       const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
@@ -468,9 +472,12 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
     // Loop otimizado no dicionário - buscar por alias normalizado
     for (const mapeamento of dicionario) {
       if (linhaNormalizada.includes(mapeamento.aliasNormalizado)) {
+        // CORREÇÃO DEFINITIVA: converter 'padrão' para '' (produto pai)
+        const tipoFinal = mapeamento.tipo === 'padrão' ? '' : mapeamento.tipo;
+        
         produtoEncontrado = {
           produto: mapeamento.produto,
-          tipo: mapeamento.tipo,
+          tipo: tipoFinal,
           alias: mapeamento.alias,
         };
         
@@ -503,7 +510,8 @@ export const extrairProdutos = (mensagem: string, nomeFornecedor: string): Produ
 
       let tipoFinal = produtoEncontrado.tipo;
       if (infoAdicional && infoAdicional.length > 1) {
-        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+        // CORREÇÃO: já convertido acima, mas verificação adicional
+        tipoFinal += (tipoFinal === '' || tipoFinal === 'padrão' ? '' : ' ') + infoAdicional;
       }
 
       const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
@@ -607,7 +615,8 @@ export const extrairProdutosSincrono = (mensagem: string, nomeFornecedor: string
 
       let tipoFinal = produtoEncontrado.tipo;
       if (infoAdicional && infoAdicional.length > 1) {
-        tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+        // CORREÇÃO: já convertido acima, mas verificação adicional  
+        tipoFinal += (tipoFinal === '' || tipoFinal === 'padrão' ? '' : ' ') + infoAdicional;
       }
 
       const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();

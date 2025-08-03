@@ -131,7 +131,9 @@ const buscarProdutoOtimizado = (linha: string, dicionario: MapeamentoProduto[]):
   for (const item of dicionario) {
     const aliasNorm = normalizarTexto(item.alias);
     if (linhaNormalizada.includes(aliasNorm)) {
-      return { produto: item.produto, tipo: item.tipo, alias: item.alias };
+      // CORREÇÃO DEFINITIVA: converter 'padrão' para '' (produto pai)
+      const tipoFinal = item.tipo === 'padrão' ? '' : item.tipo;
+      return { produto: item.produto, tipo: tipoFinal, alias: item.alias };
     }
   }
   
@@ -144,7 +146,9 @@ const buscarProdutoOtimizado = (linha: string, dicionario: MapeamentoProduto[]):
     
     const percentualCoincidencia = coincidencias / Math.max(palavrasAlias.length, 1);
     if (percentualCoincidencia >= 0.6 && coincidencias >= 2) {
-      return { produto: item.produto, tipo: item.tipo, alias: item.alias };
+      // CORREÇÃO DEFINITIVA: converter 'padrão' para '' (produto pai)
+      const tipoFinal = item.tipo === 'padrão' ? '' : item.tipo;
+      return { produto: item.produto, tipo: tipoFinal, alias: item.alias };
     }
   }
   
@@ -278,7 +282,8 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
 
     let tipoFinal = produtoEncontrado.tipo;
     if (infoAdicional && infoAdicional.length > 1) {
-      tipoFinal += (produtoEncontrado.tipo === 'padrão' ? '' : ' ') + infoAdicional;
+      // CORREÇÃO: já convertido acima, mas verificação adicional
+      tipoFinal += (tipoFinal === '' || tipoFinal === 'padrão' ? '' : ' ') + infoAdicional;
     }
 
     const nomeProdutoLowerCase = produtoEncontrado.produto.toLowerCase();
