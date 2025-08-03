@@ -321,6 +321,25 @@ const ProdutosTab = () => {
     setDeleteDialog({ open: false, produto: null });
   };
 
+  const handleCreateVariation = () => {
+    if (!addingVariationTo) return;
+    
+    createVariationMutation.mutate({
+      produtoPaiId: addingVariationTo,
+      variacao: newVariation
+    });
+  };
+
+  const handleCancelVariation = () => {
+    setAddingVariationTo(null);
+    setNewVariation({
+      nome_variacao: '',
+      unidade: 'Kg',
+      media_por_caixa: 20,
+      ativo: true
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -491,6 +510,84 @@ const ProdutosTab = () => {
                       Cancelar
                     </Button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal de Nova Variação */}
+          {addingVariationTo && (
+            <div className="mb-6 p-4 border rounded-lg bg-green-50">
+              <h3 className="font-semibold mb-4">
+                Nova Variação para: {produtos?.find(p => p.id === addingVariationTo)?.produto}
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <Input
+                  placeholder="Nome da variação"
+                  value={newVariation.nome_variacao}
+                  onChange={(e) => setNewVariation({ ...newVariation, nome_variacao: e.target.value })}
+                />
+
+                <Select 
+                  value={newVariation.unidade} 
+                  onValueChange={(value) => {
+                    setNewVariation({ 
+                      ...newVariation, 
+                      unidade: value,
+                      media_por_caixa: value.toLowerCase() === 'caixa' ? 20 : 1
+                    });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unidades.map((unidade) => (
+                      <SelectItem key={unidade} value={unidade}>
+                        {unidade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {mostrarMediaPorCaixa(newVariation.unidade) && (
+                  <Input
+                    type="number"
+                    placeholder="Média por caixa (kg)"
+                    value={newVariation.media_por_caixa}
+                    onChange={(e) => setNewVariation({ ...newVariation, media_por_caixa: parseFloat(e.target.value) || 0 })}
+                  />
+                )}
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={newVariation.ativo}
+                    onCheckedChange={(checked) => setNewVariation({ ...newVariation, ativo: checked })}
+                  />
+                  <span className="text-sm">Ativo</span>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleCreateVariation}
+                    disabled={!newVariation.nome_variacao || createVariationMutation.isPending}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {createVariationMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Salvar
+                  </Button>
+                  <Button
+                    onClick={handleCancelVariation}
+                    variant="outline"
+                    disabled={createVariationMutation.isPending}
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </div>
             </div>
