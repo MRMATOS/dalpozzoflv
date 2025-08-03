@@ -22,6 +22,7 @@ import GuiaUsoCotacao from '@/components/cotacao/GuiaUsoCotacao';
 import AdicionarProdutoModal from '@/components/cotacao/AdicionarProdutoModal';
 import CotacaoManualControls from '@/components/cotacao/CotacaoManualControls';
 import SystemHealthIndicator from '@/components/cotacao/SystemHealthIndicator';
+import Fase4TesteComponent from '@/components/cotacao/Fase4TesteComponent';
 
 // Lazy loading de componentes pesados para melhor performance
 const TabelaComparativa = lazy(() => import('@/components/cotacao/TabelaComparativa'));
@@ -208,7 +209,7 @@ const Cotacao = () => {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="nova-cotacao" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="nova-cotacao" className="flex items-center gap-2">
                   <Calculator className="h-4 w-4" />
                   Nova Cotação
@@ -216,6 +217,10 @@ const Cotacao = () => {
                 <TabsTrigger value="historico" className="flex items-center gap-2">
                   <History className="h-4 w-4" />
                   Histórico de Pedidos
+                </TabsTrigger>
+                <TabsTrigger value="teste-fase4" className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4" />
+                  Teste Fase 4
                 </TabsTrigger>
               </TabsList>
 
@@ -303,6 +308,10 @@ const Cotacao = () => {
                 <Suspense fallback={<Skeleton className="h-48 w-full" />}>
                   <HistoricoPedidos />
                 </Suspense>
+              </TabsContent>
+
+              <TabsContent value="teste-fase4">
+                <Fase4TesteComponent />
               </TabsContent>
             </Tabs>
           </CardContent>
