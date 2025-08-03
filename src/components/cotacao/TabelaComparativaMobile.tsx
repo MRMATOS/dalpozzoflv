@@ -125,7 +125,7 @@ const TabelaComparativaMobile: React.FC<TabelaComparativaMobileProps> = ({
                 {/* Cabeçalho do produto */}
                  <div className="mb-4">
                    <h3 className="font-semibold text-lg text-gray-900">{item.produto}</h3>
-                   <Badge variant="secondary" className="mt-1">{item.tipo}</Badge>
+                   <Badge variant="secondary" className="mt-1">{item.tipo || item.produto}</Badge>
                    
                    {/* Mostrar descrições originais dos fornecedores */}
                    {item.descricaoOriginal && Object.entries(item.descricaoOriginal).some(([_, desc]) => desc.trim()) && (

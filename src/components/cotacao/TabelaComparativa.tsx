@@ -136,7 +136,7 @@ const TabelaComparativa: React.FC<TabelaComparativaProps> = (props) => {
                     <td className="w-[100px] min-w-[100px] p-3 font-medium border-r"><span className="truncate block">{item.produto || 'Produto não identificado'}</span></td>
                     <td className="w-[150px] min-w-[150px] p-3 border-r">
                       <div className="space-y-1">
-                        <Badge variant="secondary" className="truncate max-w-full block">{item.tipo}</Badge>
+                        <Badge variant="secondary" className="truncate max-w-full block">{item.tipo || item.produto}</Badge>
                         {/* Mostrar descrições originais dos fornecedores */}
                         {item.descricaoOriginal && Object.entries(item.descricaoOriginal).some(([_, desc]) => desc.trim()) && (
                           <TooltipProvider>

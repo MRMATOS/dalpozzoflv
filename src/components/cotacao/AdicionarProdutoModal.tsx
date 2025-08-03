@@ -106,7 +106,7 @@ const AdicionarProdutoModal: React.FC<AdicionarProdutoModalProps> = ({
     }
 
     const nomeProduto = produtoSelecionado.nome_base || produtoSelecionado.produto;
-    const tipoProduto = produtoSelecionado.nome_variacao || 'padrão';
+    const tipoProduto = produtoSelecionado.nome_variacao || '';
 
     onProdutoAdicionado(fornecedorSelecionado, nomeProduto, tipoProduto, precoNumerico, produtoSelecionado.id);
     
