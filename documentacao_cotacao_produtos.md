@@ -11,7 +11,7 @@ Esta documentação descreve o comportamento atual do sistema de cotação, prob
 - **Produto com variação existente**:
   - Exemplo: Produto "abacaxi-havaí" foi corretamente identificado, mesmo com variação escrita como "Hawaí". O sistema reconheceu corretamente "Hawaí" como "Havaí".
 
-### Problemas identificados
+### Os problemas identificados
 
 1. **Associação incorreta ao criar variação "padrão" artificialmente**:
 
