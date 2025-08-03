@@ -34,7 +34,7 @@ export const dicionarioProdutos = {
     'lv': ['abobrinha lv', 'abobrinha leve', 'abobrinha lev']
   },
   'acelga': {
-    'padrão': ['acelga', 'acelga kg', 'acelga comum', 'acelga verde']
+    'acelga': ['acelga', 'acelga kg', 'acelga comum', 'acelga verde']
   },
   'selga': {
     'padrão': ['selga', 'selga kg', 'selga comum', 'selga verde']
