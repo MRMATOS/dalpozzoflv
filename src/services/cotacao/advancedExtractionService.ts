@@ -189,7 +189,7 @@ const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: 
       if (produto) {
         return {
           produto: produto.nome_base || produto.produto || 'Produto',
-          tipo: produto.nome_variacao || 'padrão',
+          tipo: produto.nome_variacao || '',
           alias: sinonimo.sinonimo,
           produtoId: produto.id
         };
@@ -209,7 +209,7 @@ const buscarNosSinonimos = async (linhaNormalizada: string): Promise<{ produto: 
       if (produto) {
         return {
           produto: produto.nome_base || produto.produto || 'Produto',
-          tipo: produto.nome_variacao || 'padrão',
+          tipo: produto.nome_variacao || '',
           alias: sinonimo.sinonimo,
           produtoId: produto.id
         };
@@ -247,7 +247,7 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
       console.log(`Refinamento aplicado: ${refinamento.produto} - ${refinamento.tipo} (confiança: ${refinamento.confianca.toFixed(2)})`);
       return {
         produto: (refinamento.produto || 'Produto').charAt(0).toUpperCase() + (refinamento.produto || 'Produto').slice(1),
-        tipo: (refinamento.tipo || 'padrão').charAt(0).toUpperCase() + (refinamento.tipo || 'padrão').slice(1),
+        tipo: (refinamento.tipo || '').charAt(0).toUpperCase() + (refinamento.tipo || '').slice(1),
         preco,
         fornecedor: nomeFornecedor,
         linhaOriginal: linha,
@@ -287,13 +287,13 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
       tipoFinal = tipoFinal.replace(new RegExp(produtoEncontrado.produto, 'gi'), '').trim();
       tipoFinal = tipoFinal.replace(/\s+/g, ' ').replace(/^[\s-]+|[\s-]+$/g, '');
       if (!tipoFinal || tipoFinal.length === 0) {
-        tipoFinal = 'padrão';
+        tipoFinal = '';
       }
     }
 
     return {
       produto: (produtoEncontrado.produto || 'Produto').charAt(0).toUpperCase() + (produtoEncontrado.produto || 'Produto').slice(1),
-      tipo: (tipoFinal || 'padrão').charAt(0).toUpperCase() + (tipoFinal || 'padrão').slice(1),
+      tipo: (tipoFinal || '').charAt(0).toUpperCase() + (tipoFinal || '').slice(1),
       preco,
       fornecedor: nomeFornecedor,
       linhaOriginal: linha,
@@ -309,7 +309,7 @@ const processarLinha = async (linha: string, nomeFornecedor: string): Promise<Pr
   if (sinonimo) {
     return {
       produto: (sinonimo.produto || 'Produto').charAt(0).toUpperCase() + (sinonimo.produto || 'Produto').slice(1),
-      tipo: (sinonimo.tipo || 'padrão').charAt(0).toUpperCase() + (sinonimo.tipo || 'padrão').slice(1),
+      tipo: (sinonimo.tipo || '').charAt(0).toUpperCase() + (sinonimo.tipo || '').slice(1),
       preco,
       fornecedor: nomeFornecedor,
       linhaOriginal: linha,

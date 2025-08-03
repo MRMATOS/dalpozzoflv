@@ -58,7 +58,7 @@ class FallbackSystemManager {
 
             return {
               produto: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-              tipo: contexto !== keyword ? contexto : 'padrão',
+              tipo: contexto !== keyword ? contexto : '',
               preco,
               fornecedor: nomeFornecedor,
               linhaOriginal: linha,
