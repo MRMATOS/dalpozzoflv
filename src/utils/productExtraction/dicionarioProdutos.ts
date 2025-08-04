@@ -111,6 +111,7 @@ export const dicionarioProdutos = {
     ]
   },
   'beterraba': {
+    'padrão':['beterraba','beterraba selecionada','beterraba produtor']
   },
   'brócolis': {
     'bandeja': ['brócolis bdj', 'brocolis bdj'],
