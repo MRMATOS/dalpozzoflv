@@ -57,4 +57,9 @@ Como deve funcionar:
 	•	Se não, pula.
 	•	O componente de calendário deve calcular dinamicamente o início e fim da faixa exibida com base nos pedidos agendados.
 
+5. Os usuários compradores devem sempre visualizar todos os pedidos, de qualquer outro usuário, de qualquer modalidade.
+  É importante garantir que os compradores possam visualizar seus pedidos, independente do modo feito, independente do usuário que fez.
+
+6. Na cotação, também será implementada uma opção de inserir a data prevista de chegada dos produtos da quele pedido, mas será feita posteriormente, por enquanto, vamos focar nessa página.
+  
 
