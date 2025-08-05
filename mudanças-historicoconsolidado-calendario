@@ -1,0 +1,60 @@
+Alterações na página de "histórico consolidado - aba calendário".
+Sempre veja a imagem de referência de como deve ficar.
+
+1. Remover completamente, na aba calendário, começando de cima para baixo.
+	•	Remover o texto Análise completa de pedidos e cotações.
+	•	Remover os filtros rápidos (“Hoje”, “Última Semana”, “Último Mês”, “Só Cotações”, “Só Pedidos Simples”).
+	•	Remover o filtro avançado. (ícone de filtro canto superior direito).
+	•	Remover a opção de busca por pedidos do topo. (será colocado em outro lugar).
+	•	Remover todos os totalizadores e métricas (dias com pedidos, total de pedidos, itens totais, valor total) do topo do calendário.
+	•	Remover botões “Mês”, “Semana”, “Dia” (apenas manter navegação por semana, simples).
+•	Remover botões de “Hoje”, “Anterior” e “Próximo”.
+	•	Qualquer informação de status que polua visualmente (ícones, cor de texto extra, highlights desnecessários)
+
+2. Adicionar/modificar:
+	•	Exibir as abas de “Calendário”, “Lista e “Métircas” no lado superior esquerdo, abaixo do header.
+	•	Manter o botão de refresh.
+	•	Exibir Ícone de lupar. Ao clicar, deve abrir um input para pesquisar por fornecedor e produto.
+	•	Título do mês (“Agosto 2025”, por exemplo) à esquerda, limpo, fonte grande, sem sublinhado ou info extra.
+	•	Setas de navegação (“<” e “>”) alinhados à direita, maiores e visíveis, sem outras opções de navegação.
+	•	Exibir somente as semanas/dias que possuem pedidos agendados (espaço dinâmico — não mostrar linhas vazias)
+	•	Card de cada dia deve mostrar, alinhados à esquerda, nomes completos dos fornecedores, separados por vírgula.
+	•	Fundo dos cards de dias com pedidos: azul claro, com stroke azul mais forte (usar o mesmo azul dos destaques do sistema)
+	•	Legenda “Previsto para receber” deve ficar sempre alinhada no rodapé do card, independentemente da quantidade de fornecedores, com uma linha separatória acima.
+
+3. Consistência visual:
+	•	Cards com pedidos ficam sempre em azul claro + stroke azul.
+	•	Ao passar o mouse em cima de um card, precisa ver uma leve animação de hover.
+	•	Legenda de datas sempre igual (“Previsto para receber”)
+	•	Sem variações de cor ou elementos gráficos extras.
+
+4. Responsividade:
+	•	No mobile, mostrar cards em lista, não em grid.
+
+Lógica para exibição dinâmica das semanas no calendário
+
+Exibir no calendário apenas as semanas (linhas) que contêm pelo menos um dia com pedido previsto para recebimento.
+
+Como deve funcionar:
+	1.	Avaliação semanal:
+	•	Para cada semana do mês/intervalo exibido, verifique se há pelo menos um dia com pedido previsto (“Previsto para receber”).
+	•	Se não houver nenhum pedido previsto em uma semana (todos os dias da semana estão vazios), NÃO exiba aquela linha no calendário.
+	•	Se houver pelo menos um dia com pedido, exiba a semana inteira (com os demais dias vazios, mas mantendo a estrutura de 7 colunas para manter o grid).
+	2.	Intervalo dinâmico:
+	•	O calendário deve começar na primeira semana onde há pedido previsto.
+	•	Deve exibir apenas até a última semana que contém algum dia com pedido.
+	•	Não precisa mostrar o mês completo: exibe só da primeira até a última semana útil (com pedido).
+	3.	Exemplo prático:
+	•	Se só existem pedidos entre os dias 1 e 10 (primeiras duas semanas do mês), só aparecem essas duas linhas (semanas) no grid.
+	•	Se há pedidos em dias 3, 8, 14, 17, 28, exibe da semana do dia 3 até a semana do dia 28 (todas semanas no meio que tenham pelo menos um pedido).
+	•	Semanas sem nenhum pedido, mesmo que estejam entre semanas exibidas, não aparecem.
+	4.	Layout:
+	•	Cada semana exibida mantém os dias padrão (domingo a sábado), mesmo que só um ou dois dias tenham pedido (os outros ficam como células vazias).
+	•	Cards de dias com pedido exibem o conteúdo, os demais ficam em branco/sem destaque.
+	5.	Resumo técnico:
+	•	Itere sobre as semanas do mês:
+	•	Se semana contém ao menos um pedido, exibe.
+	•	Se não, pula.
+	•	O componente de calendário deve calcular dinamicamente o início e fim da faixa exibida com base nos pedidos agendados.
+
+
