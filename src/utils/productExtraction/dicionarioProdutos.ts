@@ -28,7 +28,6 @@ export const dicionarioProdutos = {
     'seca': ['seca', 'abóbora seca']
   },
   'abobrinha': {
-    'padrão': ['abobrinha padrão', 'abobrinha', 'abobrinha kg', 'abobrinha comum'],
     'colombense': ['abobrinha colombense', 'abobrinha colombense 20 kg'],
     'klaina': ['abobrinha klaina', 'abobrinha klaina graúda'],
     'lv': ['abobrinha lv', 'abobrinha leve', 'abobrinha lev']
