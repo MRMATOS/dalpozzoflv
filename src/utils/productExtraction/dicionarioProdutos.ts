@@ -261,7 +261,7 @@ export const dicionarioProdutos = {
     'solto': ['melão solto']
   },
   'milho-verde': {
-    'milho verde': ['milho verde', 'milho-verde'],
+    'padrão': ['milho verde', 'milho-verde'],
     'bandeja': ['milho verde bandeja', 'milho verde bdj'],
     'unidade': ['milho verde', 'milho verde c 3.', 'milho verde c 4.', 'milho verde top']
   },
