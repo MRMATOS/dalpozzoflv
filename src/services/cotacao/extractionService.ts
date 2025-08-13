@@ -8,6 +8,7 @@ import {
   clearProductCache 
 } from '@/utils/productExtraction/productUtils';
 import { intelligentProductSearch, contextualSearch } from '@/utils/productExtraction/advancedSearch';
+import { getDbSynonymsMappings } from '@/utils/productExtraction/dbSynonymsProvider';
 
 // ⚠️ ROLLBACK CONTROLADO - FASE 1
 // Sistema de similaridade inteligente e busca avançada temporariamente limitados
@@ -73,6 +74,28 @@ const getDicionarioOtimizado = (): MapeamentoProduto[] => {
   dicionarioLoadTime = now;
   console.log(`Dicionário otimizado carregado: ${listaMapeamentos.length} entradas`);
   return dicionarioOtimizado;
+};
+
+// Versão assíncrona que inclui sinônimos do banco (com cache TTL)
+let dicionarioOtimizadoAsyncCache: { data: MapeamentoProduto[]; time: number } | null = null;
+const getDicionarioOtimizadoAsync = async (): Promise<MapeamentoProduto[]> => {
+  const now = Date.now();
+  if (dicionarioOtimizadoAsyncCache && (now - dicionarioOtimizadoAsyncCache.time) < DICIONARIO_CACHE_TTL) {
+    return dicionarioOtimizadoAsyncCache.data;
+  }
+
+  // Carregar sinônimos do banco
+  const dbMappings = await getDbSynonymsMappings();
+
+  // Carregar dicionário estático
+  const staticMappings = getDicionarioOtimizado();
+
+  const combined = [...dbMappings, ...staticMappings];
+  combined.sort((a, b) => b.aliasNormalizado.length - a.aliasNormalizado.length);
+
+  dicionarioOtimizadoAsyncCache = { data: combined, time: now };
+  console.log(`Dicionário (DB + estático) carregado: ${combined.length} entradas`);
+  return combined;
 };
 
 // Função auxiliar para extrair descrição original limpa (sem preço)
@@ -201,7 +224,7 @@ export const extrairProdutosComIntegracao = async (mensagem: string, nomeFornece
   
   const linhas = mensagem.split('\n').filter(linha => linha.trim() !== '');
   const produtosMap = new Map<string, ProdutoExtraido>();
-  const dicionario = getDicionarioOtimizado();
+  const dicionario = await getDicionarioOtimizadoAsync();
 
   // Log inicial da extração
   logProductMapping('inicio_extracao_integrada', {

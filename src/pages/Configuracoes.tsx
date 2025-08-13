@@ -8,6 +8,7 @@ import ProdutosTab from '@/components/configuracoes/ProdutosTab';
 import UsuariosTab from '@/components/configuracoes/UsuariosTab';
 import FornecedoresTab from '@/components/configuracoes/FornecedoresTab';
 import LojasTab from '@/components/configuracoes/LojasTab';
+import DicionarioTab from '@/components/configuracoes/DicionarioTab';
 
 
 const Configuracoes = () => {
@@ -18,10 +19,10 @@ const Configuracoes = () => {
   const isComprador = hasRole('comprador') || user?.tipo === 'comprador';
 
   const availableTabs = isMaster 
-    ? ['produtos', 'usuarios', 'fornecedores', 'lojas']
+    ? ['produtos', 'dicionario', 'usuarios', 'fornecedores', 'lojas']
     : isComprador 
-    ? ['produtos', 'fornecedores']
-    : ['produtos', 'fornecedores'];
+    ? ['produtos', 'dicionario', 'fornecedores']
+    : ['produtos', 'dicionario', 'fornecedores'];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,9 +48,12 @@ const Configuracoes = () => {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Tabs defaultValue="produtos" className="w-full">
-          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-4' : 'grid-cols-2'}`}>
+          <TabsList className={`grid w-full ${isMaster ? 'grid-cols-5' : 'grid-cols-3'}`}>
             {availableTabs.includes('produtos') && (
               <TabsTrigger value="produtos">Produtos</TabsTrigger>
+            )}
+            {availableTabs.includes('dicionario') && (
+              <TabsTrigger value="dicionario">Dicionário</TabsTrigger>
             )}
             {availableTabs.includes('usuarios') && (
               <TabsTrigger value="usuarios">Usuários</TabsTrigger>
@@ -61,10 +65,16 @@ const Configuracoes = () => {
               <TabsTrigger value="lojas">Lojas</TabsTrigger>
             )}
           </TabsList>
-          
+
           {availableTabs.includes('produtos') && (
             <TabsContent value="produtos" className="mt-6">
               <ProdutosTab />
+            </TabsContent>
+          )}
+
+          {availableTabs.includes('dicionario') && (
+            <TabsContent value="dicionario" className="mt-6">
+              <DicionarioTab />
             </TabsContent>
           )}
           
@@ -73,7 +83,7 @@ const Configuracoes = () => {
               <UsuariosTab />
             </TabsContent>
           )}
-          
+
           {availableTabs.includes('fornecedores') && (
             <TabsContent value="fornecedores" className="mt-6">
               <FornecedoresTab />
