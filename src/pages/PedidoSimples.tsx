@@ -13,6 +13,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFornecedores } from "@/hooks/useFornecedores";
 import { useProdutosComPai } from "@/hooks/useProdutosComPai";
+import { usePedidosCompradores } from "@/hooks/usePedidosCompradores";
+import NovoFornecedorModal from "@/components/pedidos/NovoFornecedorModal";
 import { Combobox } from "@/components/ui/combobox";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -54,6 +56,15 @@ const PedidoSimples = () => {
   const { user } = useAuth();
   const { fornecedores } = useFornecedores('pedido_simples');
   const { produtos } = useProdutosComPai();
+  const { 
+    pedidos: historicoCompleto, 
+    compradores, 
+    loading: loadingCompradores,
+    buscarPedidos,
+    marcarComoRecebido: marcarRecebidoService,
+    excluirPedido: excluirPedidoService,
+    excluirPedidosFornecedor: excluirFornecedorService
+  } = usePedidosCompradores();
   
   // Estado do formulário
   const [fornecedor, setFornecedor] = useState("");
@@ -62,14 +73,15 @@ const PedidoSimples = () => {
   const [unidade, setUnidade] = useState("Caixa");
   const [quantidade, setQuantidade] = useState("");
   const [valorUnitario, setValorUnitario] = useState("");
+  const [mediaPorCaixa, setMediaPorCaixa] = useState("");
   const [dataPrevista, setDataPrevista] = useState<Date>(new Date());
   const [observacoes, setObservacoes] = useState("");
   const [loading, setLoading] = useState(false);
+  const [modalFornecedor, setModalFornecedor] = useState(false);
   
-  // Estado do histórico
-  const [historico, setHistorico] = useState<PedidoSimples[]>([]);
-  const [loadingHistorico, setLoadingHistorico] = useState(false);
-  const [filtros, setFiltros] = useState({
+  // Estado do histórico com filtros melhorados
+  const [filtrosHistorico, setFiltrosHistorico] = useState({
+    comprador: 'meus' as 'todos' | 'meus' | string,
     fornecedor: "todos",
     produto: "",
     dataInicio: "",
@@ -80,16 +92,49 @@ const PedidoSimples = () => {
   const calcularTotal = () => {
     const qtd = parseFloat(quantidade) || 0;
     const valor = parseFloat(valorUnitario) || 0;
-    const produtoSelecionado = produtos.find(p => p.id === produtoId);
+    const media = parseFloat(mediaPorCaixa) || 0;
     
     if (qtd === 0 || valor === 0) return 0;
     
     // Se valor <= 14,99 E unidade for "Caixa", multiplicar por média_kg_caixa
-    if (valor <= 14.99 && produtoSelecionado?.media_por_caixa && unidade === 'Caixa') {
-      return valor * produtoSelecionado.media_por_caixa * qtd;
+    if (valor <= 14.99 && media > 0 && unidade === 'Caixa') {
+      return valor * media * qtd;
     } else {
       return valor * qtd;
     }
+  };
+
+  // Função para atualizar média por caixa no produto
+  const atualizarMediaPorCaixa = async (novaMedia: string) => {
+    if (!produtoId || !novaMedia) return;
+    
+    try {
+      const { error } = await supabase
+        .from('produtos')
+        .update({ media_por_caixa: parseFloat(novaMedia) })
+        .eq('id', produtoId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Erro ao atualizar média por caixa:', error);
+    }
+  };
+
+  // Carregar média por caixa quando produto for selecionado
+  const handleProdutoChange = (produtoIdSelecionado: string) => {
+    setProdutoId(produtoIdSelecionado);
+    const produtoSelecionado = produtos.find(p => p.id === produtoIdSelecionado);
+    if (produtoSelecionado?.media_por_caixa) {
+      setMediaPorCaixa(produtoSelecionado.media_por_caixa.toString());
+    } else {
+      setMediaPorCaixa('');
+    }
+  };
+
+  // Função para criar novo fornecedor
+  const handleNovoFornecedor = (novoFornecedor: { id: string; nome: string; telefone?: string; status_tipo?: string }) => {
+    setFornecedorId(novoFornecedor.id);
+    setFornecedor(novoFornecedor.nome);
   };
 
   const valorTotal = calcularTotal();
@@ -184,9 +229,7 @@ const PedidoSimples = () => {
       setDataPrevista(new Date());
       
       // Atualizar histórico se estiver na aba histórico
-      if (loadingHistorico) {
-        carregarHistorico();
-      }
+      buscarPedidos(filtrosHistorico);
       
     } catch (error: any) {
       console.error('Erro ao registrar pedido:', error);
@@ -196,39 +239,9 @@ const PedidoSimples = () => {
     }
   };
 
-  const carregarHistorico = async () => {
-    setLoadingHistorico(true);
-    try {
-      let query = supabase
-        .from('pedidos_simples')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('criado_em', { ascending: false });
-
-      // Aplicar filtros
-      if (filtros.fornecedor && filtros.fornecedor !== "todos") {
-        query = query.eq('fornecedor_nome', filtros.fornecedor);
-      }
-      if (filtros.produto) {
-        query = query.ilike('produto_nome', `%${filtros.produto}%`);
-      }
-      if (filtros.dataInicio) {
-        query = query.gte('data_pedido', filtros.dataInicio);
-      }
-      if (filtros.dataFim) {
-        query = query.lte('data_pedido', filtros.dataFim);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setHistorico(data || []);
-    } catch (error: any) {
-      console.error('Erro ao carregar histórico:', error);
-      toast.error("Erro ao carregar histórico");
-    } finally {
-      setLoadingHistorico(false);
-    }
+  // Carregar histórico usando o novo hook
+  const carregarHistorico = () => {
+    buscarPedidos(filtrosHistorico);
   };
 
   const selecionarFornecedor = (fornecedorSelecionado: any) => {
@@ -237,7 +250,7 @@ const PedidoSimples = () => {
   };
 
   // Agrupar histórico por fornecedor
-  const historicoPorFornecedor = historico.reduce((acc, pedido) => {
+  const historicoPorFornecedor = historicoCompleto.reduce((acc, pedido) => {
     const fornecedor = pedido.fornecedor_nome;
     if (!acc[fornecedor]) {
       acc[fornecedor] = [];
@@ -253,93 +266,39 @@ const PedidoSimples = () => {
 
   // Obter fornecedores únicos do histórico para o dropdown
   const fornecedoresUnicos = Array.from(
-    new Set(historico.map(p => p.fornecedor_nome))
+    new Set(historicoCompleto.map(p => p.fornecedor_nome))
   ).sort();
 
   // Função para excluir pedido individual
   const excluirPedido = async (pedidoId: string) => {
-    try {
-      console.log('Tentando excluir pedido:', pedidoId, 'para usuário:', user?.id);
-      
-      const { data, error } = await supabase
-        .from('pedidos_simples')
-        .delete()
-        .eq('id', pedidoId)
-        .eq('user_id', user?.id)
-        .select();
-
-      console.log('Resultado da exclusão:', { data, error });
-
-      if (error) {
-        console.error('Erro na exclusão:', error);
-        throw error;
-      }
-
-      if (data && data.length === 0) {
-        toast.error("Pedido não encontrado ou você não tem permissão para excluí-lo");
-        return;
-      }
-
+    const sucesso = await excluirPedidoService(pedidoId);
+    if (sucesso) {
       toast.success("Pedido excluído com sucesso!");
       carregarHistorico();
-    } catch (error: any) {
-      console.error('Erro ao excluir pedido:', error);
-      toast.error(error.message || 'Erro ao excluir pedido');
+    } else {
+      toast.error("Erro ao excluir pedido");
     }
   };
 
   // Função para excluir todos os pedidos de um fornecedor
   const excluirPedidosFornecedor = async (nomeFornecedor: string) => {
-    try {
-      console.log('Tentando excluir pedidos do fornecedor:', nomeFornecedor, 'para usuário:', user?.id);
-      
-      const { data, error } = await supabase
-        .from('pedidos_simples')
-        .delete()
-        .eq('fornecedor_nome', nomeFornecedor)
-        .eq('user_id', user?.id)
-        .select();
-
-      console.log('Resultado da exclusão do fornecedor:', { data, error });
-
-      if (error) {
-        console.error('Erro na exclusão do fornecedor:', error);
-        throw error;
-      }
-
-      if (data && data.length === 0) {
-        toast.error("Nenhum pedido encontrado para este fornecedor ou você não tem permissão");
-        return;
-      }
-
-      toast.success(`${data?.length || 0} pedidos do fornecedor "${nomeFornecedor}" foram excluídos!`);
+    const quantidade = await excluirFornecedorService(nomeFornecedor);
+    if (quantidade > 0) {
+      toast.success(`${quantidade} pedidos do fornecedor "${nomeFornecedor}" foram excluídos!`);
       carregarHistorico();
-    } catch (error: any) {
-      console.error('Erro ao excluir pedidos do fornecedor:', error);
-      toast.error(error.message || 'Erro ao excluir pedidos do fornecedor');
+    } else {
+      toast.error("Nenhum pedido encontrado para este fornecedor ou erro na operação");
     }
   };
 
   // Função para marcar pedido como recebido
   const marcarComoRecebido = async (pedidoId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('pedidos_simples')
-        .update({ 
-          data_recebimento: new Date().toISOString() 
-        })
-        .eq('id', pedidoId)
-        .eq('user_id', user?.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
+    const sucesso = await marcarRecebidoService(pedidoId);
+    if (sucesso) {
       toast.success("Pedido marcado como recebido!");
       carregarHistorico();
-    } catch (error: any) {
-      console.error('Erro ao marcar como recebido:', error);
-      toast.error(error.message || 'Erro ao marcar como recebido');
+    } else {
+      toast.error("Erro ao marcar como recebido");
     }
   };
 
@@ -428,44 +387,36 @@ const PedidoSimples = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Primeira linha: Fornecedor e Produto */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {/* Fornecedor */}
+                     {/* Fornecedor Unificado */}
                     <div className="space-y-2">
                       <Label htmlFor="fornecedor">Fornecedor *</Label>
                       <Combobox
-                        options={fornecedores.map(f => ({
-                          value: f.id,
-                          label: f.nome
-                        }))}
+                        options={[
+                          { value: 'novo', label: '➕ Novo Fornecedor' },
+                          ...fornecedores.map(f => ({
+                            value: f.id,
+                            label: f.nome
+                          }))
+                        ]}
                         value={fornecedorId || ""}
                         onValueChange={(value) => {
-                          setFornecedorId(value);
-                          const fornecedorSelecionado = fornecedores.find(f => f.id === value);
-                          setFornecedor(fornecedorSelecionado ? fornecedorSelecionado.nome : "");
+                          if (value === 'novo') {
+                            setModalFornecedor(true);
+                          } else {
+                            setFornecedorId(value);
+                            const fornecedorSelecionado = fornecedores.find(f => f.id === value);
+                            setFornecedor(fornecedorSelecionado ? fornecedorSelecionado.nome : "");
+                          }
                         }}
                         placeholder="Busque e selecione o fornecedor..."
                         searchPlaceholder="Buscar fornecedor..."
-                        emptyText="Nenhum fornecedor encontrado. Digite para criar novo."
+                        emptyText="Nenhum fornecedor encontrado. Selecione 'Novo Fornecedor'."
                         className="w-full"
                       />
                       
-                      {/* Opção para criar novo fornecedor */}
-                      {!fornecedorId && (
-                        <div className="flex items-center space-x-2">
-                          <Input
-                            placeholder="Ou digite um novo fornecedor..."
-                            value={fornecedor}
-                            onChange={(e) => {
-                              setFornecedor(e.target.value);
-                              setFornecedorId(null);
-                            }}
-                            className="flex-1"
-                          />
-                        </div>
-                      )}
-                      
-                      {fornecedor && !fornecedorId && (
-                        <p className="text-xs text-blue-600">
-                          Novo fornecedor "{fornecedor}" será cadastrado automaticamente
+                      {fornecedorId && (
+                        <p className="text-xs text-green-600">
+                          ✓ Fornecedor selecionado: {fornecedor}
                         </p>
                       )}
                     </div>
@@ -476,7 +427,7 @@ const PedidoSimples = () => {
                       <Combobox
                         options={produtoOptions}
                         value={produtoId}
-                        onValueChange={setProdutoId}
+                        onValueChange={handleProdutoChange}
                         placeholder="Busque e selecione o produto..."
                         searchPlaceholder="Buscar produto..."
                         emptyText="Nenhum produto encontrado."
@@ -484,8 +435,8 @@ const PedidoSimples = () => {
                     </div>
                   </div>
 
-                  {/* Segunda linha: Unidade, Quantidade, Valor Unitário e Data */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Segunda linha: Unidade, Quantidade, Valor Unitário, Média por Caixa e Data */}
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     {/* Unidade */}
                     <div className="space-y-2">
                       <Label htmlFor="unidade">Unidade *</Label>
@@ -531,6 +482,28 @@ const PedidoSimples = () => {
                         placeholder="0,00"
                       />
                     </div>
+
+                    {/* Média por Caixa - só aparece quando unidade for Caixa */}
+                    {unidade === 'Caixa' && (
+                      <div className="space-y-2">
+                        <Label htmlFor="media">Média por Caixa (kg)</Label>
+                        <Input
+                          id="media"
+                          type="number"
+                          step="0.01"
+                          value={mediaPorCaixa}
+                          onChange={(e) => {
+                            setMediaPorCaixa(e.target.value);
+                            // Atualizar no banco em tempo real
+                            if (e.target.value && produtoId) {
+                              atualizarMediaPorCaixa(e.target.value);
+                            }
+                          }}
+                          placeholder="0,00"
+                        />
+                        <p className="text-xs text-gray-500">Atualiza automaticamente o cadastro do produto</p>
+                      </div>
+                    )}
 
                     {/* Data Prevista */}
                     <div className="space-y-2">
@@ -578,9 +551,9 @@ const PedidoSimples = () => {
                         R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
                       <p className="text-xs text-blue-700 mt-1">
-                        {parseFloat(valorUnitario) <= 14.99 && unidade === 'Caixa' ? 
-                          'Cálculo: Valor × Média por Caixa × Quantidade' : 
-                          'Cálculo: Valor × Quantidade'
+                        {parseFloat(valorUnitario) <= 14.99 && unidade === 'Caixa' && mediaPorCaixa ? 
+                          `Cálculo: R$ ${valorUnitario} × ${mediaPorCaixa} kg × ${quantidade} = R$ ${valorTotal.toFixed(2)}` : 
+                          `Cálculo: R$ ${valorUnitario} × ${quantidade} = R$ ${valorTotal.toFixed(2)}`
                         }
                       </p>
                     </div>
@@ -625,11 +598,39 @@ const PedidoSimples = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* Filtros */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                {/* Filtros Melhorados */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                  {/* Filtro por Comprador */}
                   <Select 
-                    value={filtros.fornecedor} 
-                    onValueChange={(value) => setFiltros({...filtros, fornecedor: value})}
+                    value={filtrosHistorico.comprador} 
+                    onValueChange={(value) => {
+                      const novosFiltros = {...filtrosHistorico, comprador: value as 'todos' | 'meus' | string};
+                      setFiltrosHistorico(novosFiltros);
+                      buscarPedidos(novosFiltros);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar comprador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="meus">Somente meus pedidos</SelectItem>
+                      <SelectItem value="todos">Todos os compradores</SelectItem>
+                      {compradores.map((comprador) => (
+                        <SelectItem key={comprador.id} value={comprador.id}>
+                          {comprador.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Filtro por Fornecedor */}
+                  <Select 
+                    value={filtrosHistorico.fornecedor} 
+                    onValueChange={(value) => {
+                      const novosFiltros = {...filtrosHistorico, fornecedor: value};
+                      setFiltrosHistorico(novosFiltros);
+                      buscarPedidos(novosFiltros);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Todos os fornecedores" />
@@ -643,36 +644,50 @@ const PedidoSimples = () => {
                       ))}
                     </SelectContent>
                   </Select>
+
+                  {/* Filtro por Produto */}
                   <Input
                     placeholder="Filtrar por produto..."
-                    value={filtros.produto}
-                    onChange={(e) => setFiltros({...filtros, produto: e.target.value})}
+                    value={filtrosHistorico.produto}
+                    onChange={(e) => {
+                      const novosFiltros = {...filtrosHistorico, produto: e.target.value};
+                      setFiltrosHistorico(novosFiltros);
+                      buscarPedidos(novosFiltros);
+                    }}
                   />
+
+                  {/* Data Início */}
                   <Input
                     type="date"
                     placeholder="Data início"
-                    value={filtros.dataInicio}
-                    onChange={(e) => setFiltros({...filtros, dataInicio: e.target.value})}
+                    value={filtrosHistorico.dataInicio}
+                    onChange={(e) => {
+                      const novosFiltros = {...filtrosHistorico, dataInicio: e.target.value};
+                      setFiltrosHistorico(novosFiltros);
+                      buscarPedidos(novosFiltros);
+                    }}
                   />
+
+                  {/* Data Fim */}
                   <Input
                     type="date"
                     placeholder="Data fim"
-                    value={filtros.dataFim}
-                    onChange={(e) => setFiltros({...filtros, dataFim: e.target.value})}
+                    value={filtrosHistorico.dataFim}
+                    onChange={(e) => {
+                      const novosFiltros = {...filtrosHistorico, dataFim: e.target.value};
+                      setFiltrosHistorico(novosFiltros);
+                      buscarPedidos(novosFiltros);
+                    }}
                   />
                 </div>
 
-                <Button onClick={carregarHistorico} className="mb-4">
-                  Buscar
-                </Button>
-
                 {/* Lista do histórico agrupada por fornecedor */}
-                {loadingHistorico ? (
+                {loadingCompradores ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Carregando histórico...</p>
                   </div>
-                ) : historico.length === 0 ? (
+                ) : historicoCompleto.length === 0 ? (
                   <div className="text-center py-8">
                     <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500">Nenhum pedido encontrado</p>
@@ -815,6 +830,13 @@ const PedidoSimples = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Modal Novo Fornecedor */}
+      <NovoFornecedorModal
+        isOpen={modalFornecedor}
+        onClose={() => setModalFornecedor(false)}
+        onFornecedorCriado={handleNovoFornecedor}
+      />
     </div>
   );
 };
