@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1571,25 +1571,22 @@ export type Database = {
       }
     }
     Functions: {
-      aprovar_usuario: {
-        Args: { user_uuid: string }
-        Returns: boolean
-      }
+      aprovar_usuario: { Args: { user_uuid: string }; Returns: boolean }
       calcular_status_entrega: {
         Args: { data_prev: string; data_receb: string }
         Returns: string
       }
       calcular_tara_pallets: {
-        Args: { _recebimento_id: string; _pallets_utilizados: number[] }
+        Args: { _pallets_utilizados: number[]; _recebimento_id: string }
         Returns: number
       }
       check_produto_dependencies: {
         Args: { produto_uuid: string }
         Returns: {
+          estoque_total: number
+          has_cotacoes: boolean
           has_estoque: boolean
           has_requisicoes: boolean
-          has_cotacoes: boolean
-          estoque_total: number
           message: string
         }[]
       }
@@ -1601,49 +1598,37 @@ export type Database = {
         Args: { fornecedor_uuid: string }
         Returns: boolean
       }
-      force_delete_produto: {
-        Args: { produto_uuid: string }
-        Returns: boolean
-      }
-      get_cd_loja: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      force_delete_produto: { Args: { produto_uuid: string }; Returns: boolean }
+      get_cd_loja: { Args: never; Returns: string }
       get_default_permissions_for_type: {
         Args: { user_type: string }
         Returns: {
-          resource: Database["public"]["Enums"]["system_resource"]
           action: Database["public"]["Enums"]["permission_action"]
+          resource: Database["public"]["Enums"]["system_resource"]
         }[]
       }
       get_transferencia_historico: {
         Args: { transferencia_uuid: string }
         Returns: {
-          id: string
-          tipo: string
+          criado_em: string
           descricao: string
-          status_anterior: string
-          status_novo: string
+          id: string
           quantidade_anterior: number
           quantidade_nova: number
+          status_anterior: string
+          status_novo: string
+          tipo: string
           usuario_nome: string
-          criado_em: string
         }[]
       }
-      get_user_loja: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_user_loja_new: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_loja: { Args: never; Returns: string }
+      get_user_loja_new: { Args: never; Returns: string }
       get_user_permissions: {
         Args: { _user_id: string }
         Returns: {
-          resource: Database["public"]["Enums"]["system_resource"]
           action: Database["public"]["Enums"]["permission_action"]
           enabled: boolean
+          resource: Database["public"]["Enums"]["system_resource"]
         }[]
       }
       get_user_profile: {
@@ -1657,62 +1642,41 @@ export type Database = {
           nome: string
           ultimo_login: string | null
         }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      get_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_user_role: { Args: never; Returns: string }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
-      is_cd_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_comprador_or_master: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_master_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_comprador_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_master: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_master_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_cd_user: { Args: never; Returns: boolean }
+      is_comprador_or_master: { Args: never; Returns: boolean }
+      is_master_user: { Args: never; Returns: boolean }
+      is_user_comprador_safe: { Args: never; Returns: boolean }
+      is_user_master: { Args: never; Returns: boolean }
+      is_user_master_safe: { Args: never; Returns: boolean }
       populate_default_permissions: {
         Args: { target_user_id: string; user_type: string }
         Returns: undefined
       }
-      user_exists_in_usuarios: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      user_exists_in_usuarios: { Args: never; Returns: boolean }
       user_has_permission: {
         Args: {
-          _user_id: string
-          _resource: Database["public"]["Enums"]["system_resource"]
           _action: Database["public"]["Enums"]["permission_action"]
+          _resource: Database["public"]["Enums"]["system_resource"]
+          _user_id: string
         }
         Returns: boolean
       }
-      validate_user_role_access: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      validate_user_role_access: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "master" | "comprador" | "estoque" | "cd"
