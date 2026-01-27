@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { ArrowLeft, Clock } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import SyncStatusIndicator from './SyncStatusIndicator';
 import { SyncStatus } from '@/hooks/useSyncStatus';
+import SystemAnnouncement from '@/components/SystemAnnouncement';
 
 interface Profile {
   nome?: string | null;
@@ -29,7 +29,9 @@ const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({
   const navigate = useNavigate();
 
   return (
-    <header className="bg-white shadow-sm border-b sticky top-0 z-40">
+    <>
+      <SystemAnnouncement />
+      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
@@ -67,6 +69,7 @@ const CotacaoHeader: React.FC<CotacaoHeaderProps> = ({
         </div>
       </div>
     </header>
+    </>
   );
 };
 
