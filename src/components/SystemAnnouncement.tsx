@@ -43,20 +43,19 @@ const SystemAnnouncement = () => {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-amber-500 text-white px-3 py-2 sm:px-4 sm:py-2">
+    <div className="bg-destructive text-destructive-foreground px-3 py-2 sm:px-4 sm:py-2">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-          <p className="text-xs sm:text-sm font-medium truncate sm:whitespace-normal">
-            <span className="hidden sm:inline">⚠️ Aviso Importante: </span>
-            Amanhã o sistema será desativado para manutenção.
+          <p className="text-xs sm:text-sm font-medium">
+            O sistema será desativado completamente amanhã ao meio-dia.
           </p>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleDismiss}
-          className="h-6 w-6 p-0 hover:bg-amber-600 text-white flex-shrink-0"
+          className="h-6 w-6 p-0 hover:bg-destructive/80 text-destructive-foreground flex-shrink-0"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Fechar aviso</span>
