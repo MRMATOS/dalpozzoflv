@@ -6,7 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ShoppingCart, Package, Calculator, History, Settings, BarChart3, Users, Store, LogOut, Building2, Shield, FileText, TestTube } from "lucide-react";
-import SystemAnnouncement from "@/components/SystemAnnouncement";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -116,7 +115,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <SystemAnnouncement />
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
