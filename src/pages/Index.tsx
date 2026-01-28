@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import SystemAnnouncement from "@/components/SystemAnnouncement";
 const Index = () => {
   const navigate = useNavigate();
   const {
@@ -24,7 +23,6 @@ const Index = () => {
       </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 flex flex-col">
-      <SystemAnnouncement />
       <div className="flex-1 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
